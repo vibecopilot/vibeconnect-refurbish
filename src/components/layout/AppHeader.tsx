@@ -297,6 +297,32 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   const currentModule = filteredModules.find(m => m.id === activeModule);
   const currentSubModule = currentModule?.subModules.find(s => s.id === activeSubModule);
 
+  // Reorder modules so active one comes first
+  const sortedModules = useMemo(() => {
+    if (!activeModule) return filteredModules;
+    const active = filteredModules.find(m => m.id === activeModule);
+    const rest = filteredModules.filter(m => m.id !== activeModule);
+    return active ? [active, ...rest] : filteredModules;
+  }, [filteredModules, activeModule]);
+
+  // Reorder submodules so active one comes first
+  const sortedSubModules = useMemo(() => {
+    if (!currentModule?.subModules || !activeSubModule) return currentModule?.subModules || [];
+    const active = currentModule.subModules.find(s => s.id === activeSubModule);
+    const rest = currentModule.subModules.filter(s => s.id !== activeSubModule);
+    return active ? [active, ...rest] : currentModule.subModules;
+  }, [currentModule, activeSubModule]);
+
+  // Reorder level 3 items so active one comes first
+  const sortedLevel3 = useMemo(() => {
+    if (!currentSubModule?.children) return [];
+    const activePath = location.pathname;
+    const activeItem = currentSubModule.children.find(c => activePath.startsWith(c.path) || activePath === c.path);
+    if (!activeItem) return currentSubModule.children;
+    const rest = currentSubModule.children.filter(c => c.path !== activeItem.path);
+    return [activeItem, ...rest];
+  }, [currentSubModule, location.pathname]);
+
   // Auto-collapse when navigating to a sub-module with children (level 3)
   useEffect(() => {
     if (currentSubModule?.children && currentSubModule.children.length > 0) {
@@ -486,7 +512,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-0 opacity-100'
           }`}
         >
-          {filteredModules.map((module) => (
+          {sortedModules.map((module) => (
             <button
               key={module.id}
               onClick={() => handleModuleClick(module.id)}
@@ -530,7 +556,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
               collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-0 opacity-100'
             }`}
           >
-            {currentModule.subModules.map((subModule) => (
+            {sortedSubModules.map((subModule) => (
               <button
                 key={subModule.id}
                 onClick={() => handleSubModuleClick(subModule.path)}
@@ -568,7 +594,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       {/* Tertiary Navigation - Level 3 */}
       {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
         <nav className="flex items-center gap-2 px-4 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
-          {currentSubModule.children.map((item, idx) => (
+          {sortedLevel3.map((item, idx) => (
             <Link
               key={idx}
               to={item.path}
