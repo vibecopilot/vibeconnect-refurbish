@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { Settings, MapPin, Package, Calendar, FileText, Shield, Plus, X } from "lucide-react";
-import FormSection from "../../components/ui/FormSection";
-import FormInput from "../../components/ui/FormInput";
-import FormGrid from "../../components/ui/FormGrid";
-import FormToggle from "../../components/ui/FormToggle";
-import { Button } from "../../components/ui/button";
+import FormSection from "../ui/FormSection";
+import FormInput from "../ui/FormInput";
+import FormGrid from "../ui/FormGrid";
+import FormToggle from "../ui/FormToggle";
+import { Button } from "@/components/ui/button";
 import { getItemInLocalStorage } from "../../utils/localStorage";
 import {
   getAssetGroups,

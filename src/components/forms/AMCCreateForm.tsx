@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Settings, FileText, Calendar } from "lucide-react";
-import FormSection from "../../components/ui/FormSection";
-import FormInput from "../../components/ui/FormInput";
-import FormGrid from "../../components/ui/FormGrid";
-import { Button } from "../../components/ui/button";
+import FormSection from "../ui/FormSection";
+import FormInput from "../ui/FormInput";
+import FormGrid from "../ui/FormGrid";
+import { Button } from "@/components/ui/button";
 
 const AMCCreateForm: React.FC = () => {
   const navigate = useNavigate();
