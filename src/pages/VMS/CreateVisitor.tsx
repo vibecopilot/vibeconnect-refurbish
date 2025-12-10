@@ -113,7 +113,8 @@ const CreateVisitor: React.FC = () => {
       }
       try {
         const response = await commonService.getBuildings(formData.site_id);
-        setBuildings(response.data || []);
+        const data = response.data;
+        setBuildings(Array.isArray(data) ? data : data?.buildings || data?.data || []);
       } catch {
         setBuildings([]);
       }
@@ -130,7 +131,8 @@ const CreateVisitor: React.FC = () => {
       }
       try {
         const response = await vmsService.getHosts(formData.site_id);
-        setHosts(response.data || []);
+        const data = response.data;
+        setHosts(Array.isArray(data) ? data : data?.hosts || data?.users || data?.data || []);
       } catch {
         setHosts([]);
       }
