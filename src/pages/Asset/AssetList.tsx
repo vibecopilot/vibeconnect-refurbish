@@ -1,26 +1,31 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PageTitle from '../../components/ui/PageTitle';
 import ListToolbar from '../../components/ui/ListToolbar';
-import TabNavigation from '../../components/ui/TabNavigation';
 import { AMCList, MeterList, ChecklistList, RoutineTaskList, PPMChecklistList, PPMActivityList, PPMCalendar, StockItemsList } from './submodules';
-
-const ASSET_TABS = [
-  { id: 'amc', label: 'AMC' },
-  { id: 'meter', label: 'Meter' },
-  { id: 'checklist', label: 'Checklist' },
-  { id: 'routine-task', label: 'Routine Task' },
-  { id: 'ppm-checklist', label: 'PPM Checklist' },
-  { id: 'ppm-activity', label: 'PPM Activity' },
-  { id: 'ppm-calendar', label: 'PPM Calendar' },
-  { id: 'stock-items', label: 'Stock Items' },
-];
 
 const AssetList: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('amc');
+  const location = useLocation();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchValue, setSearchValue] = useState('');
+
+  // Derive active tab from URL path
+  const getActiveTab = () => {
+    const path = location.pathname;
+    if (path === '/asset') return 'asset';
+    if (path === '/asset/amc') return 'amc';
+    if (path === '/asset/meter') return 'meter';
+    if (path === '/asset/checklist') return 'checklist';
+    if (path === '/asset/routine-task') return 'routine-task';
+    if (path === '/asset/ppm-checklist') return 'ppm-checklist';
+    if (path === '/asset/ppm-activity') return 'ppm-activity';
+    if (path === '/asset/ppm-calendar') return 'ppm-calendar';
+    if (path === '/asset/stock-items') return 'stock-items';
+    return 'asset';
+  };
+
+  const activeTab = getActiveTab();
 
   const handleSearch = (value: string) => setSearchValue(value);
 
@@ -48,7 +53,22 @@ const AssetList: React.FC = () => {
       'ppm-calendar': '',
       'stock-items': 'Add Stock Item',
     };
-    return labels[activeTab] || 'Add';
+    return labels[activeTab] || '';
+  };
+
+  const getPageTitle = () => {
+    const titles: Record<string, string> = {
+      'asset': 'Assets',
+      'amc': 'AMC',
+      'meter': 'Meter',
+      'checklist': 'Checklist',
+      'routine-task': 'Routine Task',
+      'ppm-checklist': 'PPM Checklist',
+      'ppm-activity': 'PPM Activity',
+      'ppm-calendar': 'PPM Calendar',
+      'stock-items': 'Stock Items',
+    };
+    return titles[activeTab] || 'Assets';
   };
 
   const renderContent = () => {
@@ -67,9 +87,7 @@ const AssetList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageTitle title="Assets" breadcrumbs={[{ label: 'Asset', path: '/asset' }, { label: activeTab.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) }]} />
-
-      <TabNavigation tabs={ASSET_TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+      <PageTitle title={getPageTitle()} breadcrumbs={[{ label: 'Asset', path: '/asset' }, { label: getPageTitle() }]} />
 
       <ListToolbar
         searchPlaceholder={`Search ${activeTab.replace('-', ' ')}...`}
