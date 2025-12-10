@@ -55,10 +55,16 @@ const CreateVisitor: React.FC = () => {
           commonService.getSites(),
           vmsService.getCategories(),
         ]);
-        setSites(sitesRes.data || []);
-        setCategories(categoriesRes.data || []);
+        // Handle different response formats
+        const sitesData = sitesRes.data;
+        setSites(Array.isArray(sitesData) ? sitesData : sitesData?.sites || sitesData?.data || []);
+        
+        const categoriesData = categoriesRes.data;
+        setCategories(Array.isArray(categoriesData) ? categoriesData : categoriesData?.categories || categoriesData?.data || []);
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
+        setSites([]);
+        setCategories([]);
       }
     };
     fetchInitialData();
