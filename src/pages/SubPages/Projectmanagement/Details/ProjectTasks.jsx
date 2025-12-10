@@ -31,7 +31,7 @@ import {
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import { FaCheck, FaPencilAlt, FaTrashAlt } from "react-icons/fa";
 import RemainingTime from "../../../../utils/RemainingTime";
-import LinearProgressBar from "../../../../components/LinearProgessBar";
+import LinearProgressBar from "../../../../components/LinearProgressBar";
 import {
   dateFormat,
   ShowFormatedDueDateOnDateField,
