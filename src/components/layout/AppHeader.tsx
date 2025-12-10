@@ -606,7 +606,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             <Link
               key={idx}
               to={item.path}
-              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 uppercase rounded-md
+              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 rounded-md
                 ${isActivePath(item.path) 
                   ? 'text-primary font-medium bg-background shadow-sm' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
