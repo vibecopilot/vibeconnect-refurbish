@@ -10,7 +10,7 @@ export const vibeMedia = "https://admin.vibecopilot.ai/api/media/";
 export const hrmsDomain = "https://api.hrms.vibecopilot.ai/";
 import DigestFetch from "digest-fetch";
 // import DigestAuth from "@mhoc/axios-digest-auth";
-import AxiosDigestAuth from "@mhoc/axios-digest-auth";
+// import AxiosDigestAuth from "@mhoc/axios-digest-auth"; // Removed - package has ES module issues
 // export const hrmsDomain = "http://13.126.205.205";
 const token = getItemInLocalStorage("TOKEN");
 export const domainPrefix = "https://admin.vibecopilot.ai";
