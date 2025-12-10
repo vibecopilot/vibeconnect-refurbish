@@ -43,12 +43,12 @@ const FitoutList: React.FC = () => {
     const status = request.status?.toLowerCase() || request.fitout_status?.name?.toLowerCase();
     if (status?.includes('approved') || status?.includes('completed')) return 'approved';
     if (status?.includes('rejected')) return 'rejected';
-    if (status?.includes('progress')) return 'in-progress';
+    if (status?.includes('progress')) return 'maintenance';
     return 'pending';
   };
 
   const columns: TableColumn<FitoutRequest>[] = [
-    { key: 'id', header: 'S.No', width: '80px', render: (_, __, idx) => (idx || 0) + 1 },
+    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
     { key: 'request_number', header: 'Request #', render: (v) => v || '-' },
     { key: 'title', header: 'Title', sortable: true, render: (v) => v || '-' },
     { key: 'unit_name', header: 'Unit', render: (v) => v || '-' },

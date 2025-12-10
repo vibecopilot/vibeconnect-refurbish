@@ -42,7 +42,7 @@ const TicketList: React.FC = () => {
   const getTicketStatus = (ticket: Ticket): StatusType => {
     const status = ticket.status?.toLowerCase() || ticket.complaint_status?.name?.toLowerCase();
     if (status?.includes('open') || status?.includes('new')) return 'pending';
-    if (status?.includes('progress') || status?.includes('assigned')) return 'in-progress';
+    if (status?.includes('progress') || status?.includes('assigned')) return 'maintenance';
     if (status?.includes('resolved') || status?.includes('closed')) return 'checked-out';
     return 'pending';
   };
@@ -54,7 +54,7 @@ const TicketList: React.FC = () => {
   };
 
   const columns: TableColumn<Ticket>[] = [
-    { key: 'id', header: 'S.No', width: '80px', render: (_, __, idx) => (idx || 0) + 1 },
+    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
     { key: 'ticket_number', header: 'Ticket #', render: (v) => v || '-' },
     { key: 'title', header: 'Subject', sortable: true, render: (v) => v || '-' },
     { key: 'category', header: 'Category', render: (_, row) => row.helpdesk_category?.name || row.category || '-' },

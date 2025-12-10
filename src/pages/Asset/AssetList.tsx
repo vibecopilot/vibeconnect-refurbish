@@ -67,7 +67,7 @@ const AssetList: React.FC = () => {
   };
 
   const columns: TableColumn<Asset>[] = [
-    { key: 'id', header: 'S.No', width: '80px', render: (_, __, idx) => (idx || 0) + 1 },
+    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
     { key: 'name', header: 'Asset Name', sortable: true },
     { key: 'asset_number', header: 'Asset ID', render: (v) => v || '-' },
     { key: 'oem_name', header: 'OEM', render: (v) => v || '-' },
