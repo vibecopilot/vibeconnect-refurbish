@@ -30,6 +30,7 @@ const Login = () => {
   const [bgImage, setBgImage] = useState(wave);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bgImages, setBgImages] = useState([wave]);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const onChange = (e) => {
     setFormData((prev) => ({
@@ -183,6 +184,43 @@ const Login = () => {
   };
 
   useEffect(() => {
+    const fetchBackgroundImages = async () => {
+      try {
+        const aks = await vibeBGImages();
+        const resp = aks.data;
+        console.log("API response:", resp);
+
+        if (resp && resp.data && resp.data.length > 0) {
+          const vibeBgImages = resp.data.filter(item => item.key === "VibeBg");
+          console.log("Filtered VibeBg images:", vibeBgImages);
+          
+          if (vibeBgImages.length > 0) {
+            const imageUrls = vibeBgImages.map(img => img.image);
+            setBgImages(imageUrls);
+            setBgImage(imageUrls[0]);
+            setCurrentImageIndex(0);
+            console.log(`Loaded ${imageUrls.length} images for slideshow`);
+          } else {
+            console.log("No VibeBg images found, using default");
+            setBgImages([wave]);
+            setBgImage(wave);
+          }
+        } else {
+          setBgImages([wave]);
+          setBgImage(wave);
+        }
+      } catch (error) {
+        console.error("Error fetching background images:", error);
+        setBgImages([wave]);
+        setBgImage(wave);
+      }
+    };
+    
+    fetchBackgroundImages();
+  }, []);
+
+  /*
+   useEffect(() => {
     const fetchBackgroundImage = async () => {
       try {
         const cachedImage = localStorage.getItem('VibeBg');
@@ -248,13 +286,34 @@ const Login = () => {
     
     fetchBackgroundImage();
   }, []);
+  */
+
+  // Slideshow effect - change image every 5 seconds
+  useEffect(() => {
+    if (bgImages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      setCurrentImageIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % bgImages.length;
+        setBgImage(bgImages[nextIndex]);
+        return nextIndex;
+      });
+      
+      setTimeout(() => setIsTransitioning(false), 700);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [bgImages]);
+
+  // 
 
   return (
     <div className="flex h-screen w-full">
       {/* Left Side - Image Panel */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden">
         <div 
-          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+          className={`absolute inset-0 bg-cover bg-center transition-all duration-700 ${isTransitioning ? 'opacity-90' : 'opacity-100'}`}
           style={{ backgroundImage: `url(${bgImage})` }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
@@ -282,11 +341,11 @@ const Login = () => {
           
           {/* Pagination Dots */}
           <div className="flex gap-2">
-            {bgImages.slice(0, 4).map((_, index) => (
+            {bgImages.map((_, index) => (
               <div
                 key={index}
                 className={`h-1 rounded-full transition-all duration-300 ${
-                  index === currentImageIndex % 4
+                  index === currentImageIndex
                     ? 'w-8 bg-white'
                     : 'w-4 bg-white/40'
                 }`}
@@ -297,15 +356,15 @@ const Login = () => {
       </div>
 
       {/* Right Side - Form Panel */}
-      <div className="flex-1 relative flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-end">
         {/* Background Image with Blur */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${bgImage})` }}
         />
-        <div className="absolute inset-0 backdrop-blur-xl bg-black/60" />
+        <div className="absolute  inset-0 bg-black/60" />
         
-        <div className="relative z-10 w-full max-w-md">
+        <div className="relative z-10 w-full pl-[8rem] pt-[15rem] pb-[4rem] py-20 shadow-lg shadow-white/25 rounded bg-black/20 backdrop-blur max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8">
             <h1 className="text-2xl font-bold text-white jersey-15-regular tracking-wider">
@@ -338,7 +397,7 @@ const Login = () => {
                 placeholder="Email"
                 onChange={onChange}
                 value={formData.email}
-                className="w-full px-4 py-3.5 rounded-lg bg-[hsl(var(--login-input-bg))] border border-[hsl(var(--login-input-border))] text-[hsl(var(--login-text))] placeholder:text-[hsl(var(--login-text-muted))] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                className="w-64 px-4 py-3.5 rounded-lg bg-[hsl(var(--login-input-bg))] border border-[hsl(var(--login-input-border))] text-[hsl(var(--login-text))] placeholder:text-[hsl(var(--login-text-muted))] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               />
             </div>
 
@@ -352,12 +411,12 @@ const Login = () => {
                   type={password ? "text" : "password"}
                   onChange={onChange}
                   value={formData.password}
-                  className="w-full px-4 py-3.5 rounded-lg bg-[hsl(var(--login-input-bg))] border border-[hsl(var(--login-input-border))] text-[hsl(var(--login-text))] placeholder:text-[hsl(var(--login-text-muted))] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all pr-12"
+                  className="w-64 px-4 py-3.5 rounded-lg bg-[hsl(var(--login-input-bg))] border border-[hsl(var(--login-input-border))] text-[hsl(var(--login-text))] placeholder:text-[hsl(var(--login-text-muted))] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all pr-12"
                 />
                 <button
                   type="button"
                   onClick={togglePassword}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(var(--login-text-muted))] hover:text-[hsl(var(--login-text))] transition-colors"
+                  className="absolute ml-4 top-1/2 -translate-y-1/2 text-[hsl(var(--login-text-muted))] hover:text-[hsl(var(--login-text))] transition-colors"
                 >
                   {password ? <AiFillEye size={20} /> : <AiFillEyeInvisible size={20} />}
                 </button>
@@ -367,13 +426,13 @@ const Login = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg shadow-primary/25"
+              className="w-64 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg shadow-primary/25"
             >
               {page === "login" ? "Login" : "Continue with SSO"}
             </button>
 
             {/* SSO Toggle */}
-            {page === "login" && (
+            {/* {page === "login" && (
               <button
                 type="button"
                 onClick={() => setPage("sso")}
@@ -381,7 +440,7 @@ const Login = () => {
               >
                 SSO Login
               </button>
-            )}
+            )} */}
           </form>
         </div>
       </div>
