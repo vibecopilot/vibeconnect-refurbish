@@ -3,13 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-"scripts": {
-  "dev": "vite",
-  "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
-  "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --mode development",
-  "lint": "cross-env NODE_OPTIONS=--max-old-space-size=8192 eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings=0",
-  "preview": "vite preview"
-},
+  "scripts": {
+    "dev": "vite",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
+    "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --mode development",
+    "lint": "cross-env NODE_OPTIONS=--max-old-space-size=8192 eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings=0",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
@@ -22,7 +22,6 @@
     "@fullcalendar/react": "^6.1.13",
     "@fullcalendar/timegrid": "^6.1.13",
     "@material-tailwind/react": "^2.1.9",
-    "@mhoc/axios-digest-auth": "^0.8.0",
     "@mui/material": "^5.15.15",
     "@mui/x-date-pickers": "^7.2.0",
     "@react-pdf-viewer/core": "^3.12.0",
