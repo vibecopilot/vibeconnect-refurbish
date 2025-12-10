@@ -5,6 +5,9 @@ import { Toaster } from "react-hot-toast";
 // Layout
 import AppHeader from "./components/layout/AppHeader";
 
+// Auth
+import Login from "./components/Authentication/Login";
+
 // Pages
 import Dashboard from "./pages/Dashboard/Dashboard";
 import { VisitorList, CreateVisitor, ViewVisitor } from "./pages/VMS";
@@ -26,125 +29,134 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   </div>
 );
 
+// Layout wrapper for authenticated pages
+const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <>
+    <AppHeader />
+    <main>{children}</main>
+  </>
+);
+
 function App() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-right" />
-      <AppHeader />
       
-      <main>
-        <Routes>
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          
-          {/* Dashboard */}
-          <Route path="/dashboard" element={<Dashboard />} />
+      <Routes>
+        {/* Login Route - No header */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Dashboard */}
+        <Route path="/dashboard" element={<AuthenticatedLayout><Dashboard /></AuthenticatedLayout>} />
 
-          {/* VMS - Visitor Management */}
-          <Route path="/vms" element={<Navigate to="/vms/visitors" replace />} />
-          <Route path="/vms/visitors" element={<VisitorList />} />
-          <Route path="/vms/visitors/create" element={<CreateVisitor />} />
-          <Route path="/vms/visitors/:id" element={<ViewVisitor />} />
-          <Route path="/vms/visitors/:id/edit" element={<CreateVisitor />} />
-          <Route path="/vms/pre-approved" element={<PlaceholderPage title="Pre-Approved Visitors" />} />
-          <Route path="/vms/blacklist" element={<PlaceholderPage title="Blacklist" />} />
-          <Route path="/vms/reports" element={<PlaceholderPage title="VMS Reports" />} />
-          <Route path="/vms/configuration" element={<PlaceholderPage title="VMS Configuration" />} />
+        {/* VMS - Visitor Management */}
+        <Route path="/vms" element={<Navigate to="/vms/visitors" replace />} />
+        <Route path="/vms/visitors" element={<AuthenticatedLayout><VisitorList /></AuthenticatedLayout>} />
+        <Route path="/vms/visitors/create" element={<AuthenticatedLayout><CreateVisitor /></AuthenticatedLayout>} />
+        <Route path="/vms/visitors/:id" element={<AuthenticatedLayout><ViewVisitor /></AuthenticatedLayout>} />
+        <Route path="/vms/visitors/:id/edit" element={<AuthenticatedLayout><CreateVisitor /></AuthenticatedLayout>} />
+        <Route path="/vms/pre-approved" element={<AuthenticatedLayout><PlaceholderPage title="Pre-Approved Visitors" /></AuthenticatedLayout>} />
+        <Route path="/vms/blacklist" element={<AuthenticatedLayout><PlaceholderPage title="Blacklist" /></AuthenticatedLayout>} />
+        <Route path="/vms/reports" element={<AuthenticatedLayout><PlaceholderPage title="VMS Reports" /></AuthenticatedLayout>} />
+        <Route path="/vms/configuration" element={<AuthenticatedLayout><PlaceholderPage title="VMS Configuration" /></AuthenticatedLayout>} />
 
-          {/* Asset Module - Only submodules with existing create pages */}
-          <Route path="/asset" element={<AssetList />} />
-          <Route path="/asset/create" element={<CreateAsset />} />
-          <Route path="/asset/:id" element={<PlaceholderPage title="Asset Details" />} />
-          <Route path="/asset/:id/edit" element={<PlaceholderPage title="Edit Asset" />} />
-          
-          {/* AMC - Has create page */}
-          <Route path="/asset/amc" element={<AssetList />} />
-          <Route path="/asset/amc/create" element={<CreateAMC />} />
-          <Route path="/asset/amc/:id" element={<PlaceholderPage title="AMC Details" />} />
-          <Route path="/asset/amc/:id/edit" element={<PlaceholderPage title="Edit AMC" />} />
-          
-          {/* Meter - NO create page */}
-          <Route path="/asset/meter" element={<AssetList />} />
-          <Route path="/asset/meter/:id" element={<PlaceholderPage title="Meter Details" />} />
-          <Route path="/asset/meter/:id/edit" element={<PlaceholderPage title="Edit Meter" />} />
-          
-          {/* Checklist - Has create page */}
-          <Route path="/asset/checklist" element={<AssetList />} />
-          <Route path="/asset/checklist/create" element={<CreateChecklist />} />
-          <Route path="/asset/checklist/:id" element={<PlaceholderPage title="Checklist Details" />} />
-          <Route path="/asset/checklist/:id/edit" element={<PlaceholderPage title="Edit Checklist" />} />
-          
-          {/* Routine Task - NO create page */}
-          <Route path="/asset/routine-task" element={<AssetList />} />
-          <Route path="/asset/routine-task/:id" element={<PlaceholderPage title="Routine Task Details" />} />
-          <Route path="/asset/routine-task/:id/edit" element={<PlaceholderPage title="Edit Routine Task" />} />
-          
-          {/* PPM Checklist - NO create page */}
-          <Route path="/asset/ppm-checklist" element={<AssetList />} />
-          <Route path="/asset/ppm-checklist/:id" element={<PlaceholderPage title="PPM Checklist Details" />} />
-          <Route path="/asset/ppm-checklist/:id/edit" element={<PlaceholderPage title="Edit PPM Checklist" />} />
-          
-          {/* PPM Activity - Has create page */}
-          <Route path="/asset/ppm-activity" element={<AssetList />} />
-          <Route path="/asset/ppm-activity/create" element={<CreatePPMActivity />} />
-          <Route path="/asset/ppm-activity/:id" element={<PlaceholderPage title="PPM Activity Details" />} />
-          <Route path="/asset/ppm-activity/:id/edit" element={<PlaceholderPage title="Edit PPM Activity" />} />
-          
-          {/* PPM Calendar - NO create (calendar view) */}
-          <Route path="/asset/ppm-calendar" element={<AssetList />} />
-          
-          {/* Stock Items - NO create page */}
-          <Route path="/asset/stock-items" element={<AssetList />} />
-          <Route path="/asset/stock-items/:id" element={<PlaceholderPage title="Stock Item Details" />} />
-          <Route path="/asset/stock-items/:id/edit" element={<PlaceholderPage title="Edit Stock Item" />} />
-          {/* Soft Services */}
-          <Route path="/soft-services" element={<SoftServiceList />} />
-          <Route path="/soft-service" element={<Navigate to="/soft-services" replace />} />
-          <Route path="/soft-service/create" element={<PlaceholderPage title="Create Service" />} />
-          <Route path="/soft-service/:id" element={<PlaceholderPage title="Service Details" />} />
-          <Route path="/soft-service/:id/edit" element={<PlaceholderPage title="Edit Service" />} />
+        {/* Asset Module */}
+        <Route path="/asset" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/create" element={<AuthenticatedLayout><CreateAsset /></AuthenticatedLayout>} />
+        <Route path="/asset/:id" element={<AuthenticatedLayout><PlaceholderPage title="Asset Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Asset" /></AuthenticatedLayout>} />
+        
+        {/* AMC */}
+        <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/amc/create" element={<AuthenticatedLayout><CreateAMC /></AuthenticatedLayout>} />
+        <Route path="/asset/amc/:id" element={<AuthenticatedLayout><PlaceholderPage title="AMC Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit AMC" /></AuthenticatedLayout>} />
+        
+        {/* Meter */}
+        <Route path="/asset/meter" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/meter/:id" element={<AuthenticatedLayout><PlaceholderPage title="Meter Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/meter/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Meter" /></AuthenticatedLayout>} />
+        
+        {/* Checklist */}
+        <Route path="/asset/checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/checklist/create" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
+        <Route path="/asset/checklist/:id" element={<AuthenticatedLayout><PlaceholderPage title="Checklist Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/checklist/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Checklist" /></AuthenticatedLayout>} />
+        
+        {/* Routine Task */}
+        <Route path="/asset/routine-task" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/routine-task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Routine Task Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/routine-task/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Routine Task" /></AuthenticatedLayout>} />
+        
+        {/* PPM Checklist */}
+        <Route path="/asset/ppm-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-checklist/:id" element={<AuthenticatedLayout><PlaceholderPage title="PPM Checklist Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit PPM Checklist" /></AuthenticatedLayout>} />
+        
+        {/* PPM Activity */}
+        <Route path="/asset/ppm-activity" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-activity/create" element={<AuthenticatedLayout><CreatePPMActivity /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-activity/:id" element={<AuthenticatedLayout><PlaceholderPage title="PPM Activity Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-activity/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit PPM Activity" /></AuthenticatedLayout>} />
+        
+        {/* PPM Calendar */}
+        <Route path="/asset/ppm-calendar" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        
+        {/* Stock Items */}
+        <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><PlaceholderPage title="Stock Item Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Stock Item" /></AuthenticatedLayout>} />
+        
+        {/* Soft Services */}
+        <Route path="/soft-services" element={<AuthenticatedLayout><SoftServiceList /></AuthenticatedLayout>} />
+        <Route path="/soft-service" element={<Navigate to="/soft-services" replace />} />
+        <Route path="/soft-service/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Service" /></AuthenticatedLayout>} />
+        <Route path="/soft-service/:id" element={<AuthenticatedLayout><PlaceholderPage title="Service Details" /></AuthenticatedLayout>} />
+        <Route path="/soft-service/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Service" /></AuthenticatedLayout>} />
 
-          {/* Service Desk */}
-          <Route path="/service-desk" element={<TicketList />} />
-          <Route path="/service-desk/create" element={<PlaceholderPage title="Create Ticket" />} />
-          <Route path="/service-desk/:id" element={<PlaceholderPage title="Ticket Details" />} />
-          <Route path="/service-desk/:id/edit" element={<PlaceholderPage title="Edit Ticket" />} />
+        {/* Service Desk */}
+        <Route path="/service-desk" element={<AuthenticatedLayout><TicketList /></AuthenticatedLayout>} />
+        <Route path="/service-desk/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Ticket" /></AuthenticatedLayout>} />
+        <Route path="/service-desk/:id" element={<AuthenticatedLayout><PlaceholderPage title="Ticket Details" /></AuthenticatedLayout>} />
+        <Route path="/service-desk/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Ticket" /></AuthenticatedLayout>} />
 
-          {/* Incident Management */}
-          <Route path="/incident" element={<PlaceholderPage title="Incident Management" />} />
-          <Route path="/incident/create" element={<PlaceholderPage title="Create Incident" />} />
-          <Route path="/incident/:id" element={<PlaceholderPage title="Incident Details" />} />
+        {/* Incident Management */}
+        <Route path="/incident" element={<AuthenticatedLayout><PlaceholderPage title="Incident Management" /></AuthenticatedLayout>} />
+        <Route path="/incident/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Incident" /></AuthenticatedLayout>} />
+        <Route path="/incident/:id" element={<AuthenticatedLayout><PlaceholderPage title="Incident Details" /></AuthenticatedLayout>} />
 
-          {/* Amenities Booking */}
-          <Route path="/amenities" element={<AmenitiesBookingList />} />
-          <Route path="/amenities/book" element={<PlaceholderPage title="Book Amenity" />} />
-          <Route path="/amenities/bookings/:id" element={<PlaceholderPage title="Booking Details" />} />
+        {/* Amenities Booking */}
+        <Route path="/amenities" element={<AuthenticatedLayout><AmenitiesBookingList /></AuthenticatedLayout>} />
+        <Route path="/amenities/book" element={<AuthenticatedLayout><PlaceholderPage title="Book Amenity" /></AuthenticatedLayout>} />
+        <Route path="/amenities/bookings/:id" element={<AuthenticatedLayout><PlaceholderPage title="Booking Details" /></AuthenticatedLayout>} />
 
-          {/* Space Booking */}
-          <Route path="/space-booking" element={<PlaceholderPage title="Space Booking" />} />
-          <Route path="/space-booking/book" element={<PlaceholderPage title="Book Space" />} />
+        {/* Space Booking */}
+        <Route path="/space-booking" element={<AuthenticatedLayout><PlaceholderPage title="Space Booking" /></AuthenticatedLayout>} />
+        <Route path="/space-booking/book" element={<AuthenticatedLayout><PlaceholderPage title="Book Space" /></AuthenticatedLayout>} />
 
-          {/* F&B */}
-          <Route path="/fb" element={<PlaceholderPage title="F&B" />} />
-          <Route path="/fb/order" element={<PlaceholderPage title="Place Order" />} />
+        {/* F&B */}
+        <Route path="/fb" element={<AuthenticatedLayout><PlaceholderPage title="F&B" /></AuthenticatedLayout>} />
+        <Route path="/fb/order" element={<AuthenticatedLayout><PlaceholderPage title="Place Order" /></AuthenticatedLayout>} />
 
-          {/* Documents */}
-          <Route path="/documents" element={<PlaceholderPage title="Documents" />} />
-          <Route path="/documents/upload" element={<PlaceholderPage title="Upload Document" />} />
+        {/* Documents */}
+        <Route path="/documents" element={<AuthenticatedLayout><PlaceholderPage title="Documents" /></AuthenticatedLayout>} />
+        <Route path="/documents/upload" element={<AuthenticatedLayout><PlaceholderPage title="Upload Document" /></AuthenticatedLayout>} />
 
-          {/* Fitout */}
-          <Route path="/fitout" element={<FitoutList />} />
-          <Route path="/fitout/create" element={<PlaceholderPage title="Create Fitout Request" />} />
-          <Route path="/fitout/:id" element={<PlaceholderPage title="Fitout Details" />} />
-          <Route path="/fitout/:id/edit" element={<PlaceholderPage title="Edit Fitout Request" />} />
+        {/* Fitout */}
+        <Route path="/fitout" element={<AuthenticatedLayout><FitoutList /></AuthenticatedLayout>} />
+        <Route path="/fitout/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Fitout Request" /></AuthenticatedLayout>} />
+        <Route path="/fitout/:id" element={<AuthenticatedLayout><PlaceholderPage title="Fitout Details" /></AuthenticatedLayout>} />
+        <Route path="/fitout/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Fitout Request" /></AuthenticatedLayout>} />
 
-          {/* Calendar */}
-          <Route path="/calendar" element={<PlaceholderPage title="Calendar" />} />
+        {/* Calendar */}
+        <Route path="/calendar" element={<AuthenticatedLayout><PlaceholderPage title="Calendar" /></AuthenticatedLayout>} />
 
-          {/* Catch all - redirect to dashboard */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </main>
+        {/* Catch all - redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
     </div>
   );
 }
