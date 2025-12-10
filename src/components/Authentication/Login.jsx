@@ -295,8 +295,15 @@ const Login = () => {
       </div>
 
       {/* Right Side - Form Panel */}
-      <div className="flex-1 flex items-center justify-center bg-[hsl(var(--login-dark))] px-6 py-12">
-        <div className="w-full max-w-md">
+      <div className="flex-1 relative flex items-center justify-center px-6 py-12">
+        {/* Background Image with Blur */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${bgImage})` }}
+        />
+        <div className="absolute inset-0 backdrop-blur-xl bg-black/60" />
+        
+        <div className="relative z-10 w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8">
             <h1 className="text-2xl font-bold text-white jersey-15-regular tracking-wider">
@@ -355,20 +362,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* Remember Me / Terms */}
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-[hsl(var(--login-input-border))] bg-[hsl(var(--login-input-bg))] text-primary focus:ring-primary focus:ring-offset-0"
-              />
-              <label htmlFor="remember" className="text-sm text-[hsl(var(--login-text-muted))]">
-                I agree to the <span className="text-primary underline cursor-pointer">Terms & Conditions</span>
-              </label>
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
@@ -387,36 +380,6 @@ const Login = () => {
                 SSO Login
               </button>
             )}
-
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[hsl(var(--login-input-border))]" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-[hsl(var(--login-dark))] text-[hsl(var(--login-text-muted))]">
-                  Or login with
-                </span>
-              </div>
-            </div>
-
-            {/* Social Login */}
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[hsl(var(--login-input-bg))] border border-[hsl(var(--login-input-border))] text-[hsl(var(--login-text))] font-medium hover:bg-[hsl(var(--login-dark-card))] transition-all"
-              >
-                <FaGoogle className="w-5 h-5" />
-                Google
-              </button>
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[hsl(var(--login-input-bg))] border border-[hsl(var(--login-input-border))] text-[hsl(var(--login-text))] font-medium hover:bg-[hsl(var(--login-dark-card))] transition-all"
-              >
-                <FaApple className="w-5 h-5" />
-                Apple
-              </button>
-            </div>
           </form>
         </div>
       </div>
