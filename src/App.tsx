@@ -17,6 +17,9 @@ import CreateAMC from "./pages/Asset/CreateAMC";
 import CreateChecklist from "./pages/Asset/CreateChecklist";
 import CreatePPMActivity from "./pages/Asset/CreatePPMActivity";
 import TicketList from "./pages/ServiceDesk/TicketList";
+import TicketCreate from "./pages/ServiceDesk/TicketCreate";
+import TicketView from "./pages/ServiceDesk/TicketView";
+import TicketEdit from "./pages/ServiceDesk/TicketEdit";
 import SoftServiceList from "./pages/SoftService/SoftServiceList";
 import AmenitiesBookingList from "./pages/Amenities/AmenitiesBookingList";
 import FitoutList from "./pages/Fitout/FitoutList";
@@ -119,9 +122,9 @@ function App() {
 
         {/* Service Desk */}
         <Route path="/service-desk" element={<AuthenticatedLayout><TicketList /></AuthenticatedLayout>} />
-        <Route path="/service-desk/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Ticket" /></AuthenticatedLayout>} />
-        <Route path="/service-desk/:id" element={<AuthenticatedLayout><PlaceholderPage title="Ticket Details" /></AuthenticatedLayout>} />
-        <Route path="/service-desk/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Ticket" /></AuthenticatedLayout>} />
+        <Route path="/service-desk/create" element={<AuthenticatedLayout><TicketCreate /></AuthenticatedLayout>} />
+        <Route path="/service-desk/:id" element={<AuthenticatedLayout><TicketView /></AuthenticatedLayout>} />
+        <Route path="/service-desk/:id/edit" element={<AuthenticatedLayout><TicketEdit /></AuthenticatedLayout>} />
 
         {/* Incident Management */}
         <Route path="/incident" element={<AuthenticatedLayout><PlaceholderPage title="Incident Management" /></AuthenticatedLayout>} />
