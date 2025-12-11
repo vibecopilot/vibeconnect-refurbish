@@ -331,12 +331,12 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     return [activeItem, ...rest];
   }, [currentSubModule, location.pathname]);
 
-  // Auto-collapse when navigating to a sub-module with children (level 3)
-  useEffect(() => {
-    if (currentSubModule?.children && currentSubModule.children.length > 0) {
-      setCollapsedLevels({ level1: true, level2: true });
-    }
-  }, [currentSubModule]);
+  // Don't auto-collapse - let user control it
+  // useEffect(() => {
+  //   if (currentSubModule?.children && currentSubModule.children.length > 0) {
+  //     setCollapsedLevels({ level1: true, level2: true });
+  //   }
+  // }, [currentSubModule]);
 
   const isActivePath = (path: string) => {
     if (path === '/asset') {
@@ -516,8 +516,8 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       {/* Module Navigation - Level 1 */}
       <div className="relative">
         <nav 
-          className={`flex items-center gap-2 px-4 pr-12 border-b border-border overflow-x-auto transition-all duration-300 ease-in-out ${
-            collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-0 opacity-100'
+          className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto transition-all duration-300 ease-in-out ${
+            collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-2 opacity-100'
           }`}
         >
           {sortedModules.map((module) => (
@@ -538,20 +538,18 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           ))}
         </nav>
 
-        {/* Collapse/Expand Button for Level 1 - Improved UI */}
+        {/* Collapse/Expand Button for Level 1 */}
         {currentModule && (
           <button
             onClick={toggleLevel1}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-background hover:bg-accent shadow-sm transition-all duration-200 z-10 ${
-              collapsedLevels.level1 ? 'opacity-90' : 'opacity-70 hover:opacity-100'
-            }`}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card hover:bg-accent hover:border-primary/50 shadow-sm transition-all duration-200 z-10 group"
             title={collapsedLevels.level1 ? "Expand modules" : "Collapse modules"}
           >
-            <ChevronDown 
-              className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${
-                collapsedLevels.level1 ? 'rotate-0' : 'rotate-180'
-              }`} 
-            />
+            {collapsedLevels.level1 ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            ) : (
+              <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            )}
           </button>
         )}
       </div>
@@ -560,8 +558,8 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       {currentModule && currentModule.subModules.length > 0 && (
         <div className="relative">
           <nav 
-            className={`flex items-center gap-2 px-4 pr-12 border-b border-border overflow-x-auto bg-secondary/30 transition-all duration-300 ease-in-out ${
-              collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-0 opacity-100'
+            className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto bg-secondary/30 transition-all duration-300 ease-in-out ${
+              collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-2 opacity-100'
             }`}
           >
             {sortedSubModules.map((subModule) => (
@@ -582,26 +580,24 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             ))}
           </nav>
 
-          {/* Collapse/Expand Button for Level 2 - Improved UI */}
+          {/* Collapse/Expand Button for Level 2 */}
           <button
             onClick={toggleLevel2}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-background hover:bg-accent shadow-sm transition-all duration-200 z-10 ${
-              collapsedLevels.level2 ? 'opacity-90' : 'opacity-70 hover:opacity-100'
-            }`}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card hover:bg-accent hover:border-primary/50 shadow-sm transition-all duration-200 z-10 group"
             title={collapsedLevels.level2 ? "Expand sub-modules" : "Collapse sub-modules"}
           >
-            <ChevronDown 
-              className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${
-                collapsedLevels.level2 ? 'rotate-0' : 'rotate-180'
-              }`} 
-            />
+            {collapsedLevels.level2 ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            ) : (
+              <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            )}
           </button>
         </div>
       )}
 
       {/* Tertiary Navigation - Level 3 */}
       {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
-        <nav className="flex items-center gap-2 px-4 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
+        <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
           {sortedLevel3.map((item, idx) => (
             <Link
               key={idx}
