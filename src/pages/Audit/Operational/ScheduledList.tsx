@@ -207,7 +207,7 @@ const ScheduledList: React.FC = () => {
         showViewToggle
         showAddButton
         addButtonLabel="Add"
-        onAddClick={() => navigate('/audit/schedule')}
+        onAddClick={() => navigate('/audit/operational/scheduled/create')}
         showFilter={false}
         showExport
         onExportClick={handleExport}
