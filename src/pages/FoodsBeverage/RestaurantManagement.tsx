@@ -53,7 +53,7 @@ const RestaurantManagement: React.FC = () => {
     setError(null);
     try {
       const response = await getFB();
-      const data = response.data || [];
+      const data = Array.isArray(response?.data) ? response.data : [];
       setRestaurants(data);
       setFilteredRestaurants(data);
       setPagination(prev => ({
@@ -65,6 +65,7 @@ const RestaurantManagement: React.FC = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch restaurants';
       setError(errorMessage);
       setRestaurants([]);
+      setFilteredRestaurants([]);
     } finally {
       setLoading(false);
     }
