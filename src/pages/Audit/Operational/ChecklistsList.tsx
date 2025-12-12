@@ -185,7 +185,7 @@ const ChecklistsList: React.FC = () => {
         showViewToggle
         showAddButton
         addButtonLabel="Add"
-        onAddClick={() => navigate('/audit/checklist')}
+        onAddClick={() => navigate('/audit/operational/checklists/create')}
         showFilter={false}
         showExport
         onExportClick={handleExport}
