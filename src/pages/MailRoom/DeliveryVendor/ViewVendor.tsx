@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../components/layout/PageHeader';
-import { getVendorDetails } from '../../../api';
+import { getVendorsDetails } from '../../../api';
 
 interface VendorData {
   id: number;
@@ -32,7 +32,7 @@ const ViewVendor: React.FC = () => {
 
   const fetchVendorDetails = async () => {
     try {
-      const response = await getVendorDetails(id);
+      const response = await getVendorsDetails(id);
       setVendor(response.data);
     } catch (error) {
       console.error('Error fetching vendor:', error);

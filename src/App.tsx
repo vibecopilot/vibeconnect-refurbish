@@ -52,6 +52,7 @@ import FitoutList from "./pages/Fitout/FitoutList";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
 import { CalendarPage, PlanMyCalendar } from "./pages/Calendar/index";
+import { MailRoomLayout, DeliveryVendorList, CreateVendor, ViewVendor, InboundList, CreateInboundPackage, ViewInbound, OutboundList, CreateOutboundPackage, ViewOutbound } from "./pages/MailRoom";
 
 // Placeholder pages for other modules
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -228,6 +229,23 @@ function App() {
         {/* Calendar */}
         <Route path="/calendar" element={<AuthenticatedLayout><CalendarPage /></AuthenticatedLayout>} />
         <Route path="/calendar/plan" element={<AuthenticatedLayout><PlanMyCalendar /></AuthenticatedLayout>} />
+
+        {/* Mail Room - FM Module */}
+        <Route path="/mail-room" element={<AuthenticatedLayout><MailRoomLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/mail-room/delivery-vendor" replace />} />
+          <Route path="delivery-vendor" element={<DeliveryVendorList />} />
+          <Route path="inbound" element={<InboundList />} />
+          <Route path="outbound" element={<OutboundList />} />
+        </Route>
+        <Route path="/mail-room/delivery-vendor/create" element={<AuthenticatedLayout><CreateVendor /></AuthenticatedLayout>} />
+        <Route path="/mail-room/delivery-vendor/:id" element={<AuthenticatedLayout><ViewVendor /></AuthenticatedLayout>} />
+        <Route path="/mail-room/delivery-vendor/:id/edit" element={<AuthenticatedLayout><CreateVendor /></AuthenticatedLayout>} />
+        <Route path="/mail-room/inbound/create" element={<AuthenticatedLayout><CreateInboundPackage /></AuthenticatedLayout>} />
+        <Route path="/mail-room/inbound/:id" element={<AuthenticatedLayout><ViewInbound /></AuthenticatedLayout>} />
+        <Route path="/mail-room/inbound/:id/edit" element={<AuthenticatedLayout><CreateInboundPackage /></AuthenticatedLayout>} />
+        <Route path="/mail-room/outbound/create" element={<AuthenticatedLayout><CreateOutboundPackage /></AuthenticatedLayout>} />
+        <Route path="/mail-room/outbound/:id" element={<AuthenticatedLayout><ViewOutbound /></AuthenticatedLayout>} />
+        <Route path="/mail-room/outbound/:id/edit" element={<AuthenticatedLayout><CreateOutboundPackage /></AuthenticatedLayout>} />
 
         {/* Catch all - redirect to dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

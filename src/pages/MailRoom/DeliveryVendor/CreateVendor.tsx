@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Building2, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../../components/layout/PageHeader';
-import { getVendorDetails, postVendors, EditVendors } from '../../../api';
+import { getVendorsDetails, postVendors, EditVendors } from '../../../api';
 
 interface VendorFormData {
   vendor_supplier_id: string;
@@ -48,7 +48,7 @@ const CreateVendor: React.FC = () => {
 
   const fetchVendorDetails = async () => {
     try {
-      const response = await getVendorDetails(id);
+      const response = await getVendorsDetails(id);
       const vendor = response.data;
       setFormData({
         vendor_supplier_id: vendor.vendor_supplier_id || '',
