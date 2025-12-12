@@ -33,11 +33,14 @@ const DeliveryVendorList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getVendors();
-      setVendors(response.data || []);
-      setFilteredData(response.data || []);
+      const data = Array.isArray(response?.data) ? response.data : [];
+      setVendors(data);
+      setFilteredData(data);
     } catch (error) {
       console.error('Error fetching vendors:', error);
       toast.error('Failed to fetch vendors');
+      setVendors([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
@@ -49,7 +52,8 @@ const DeliveryVendorList: React.FC = () => {
 
   const handleSearch = (value: string) => {
     setSearchText(value);
-    const filtered = vendors.filter((item) =>
+    const dataToFilter = Array.isArray(vendors) ? vendors : [];
+    const filtered = dataToFilter.filter((item) =>
       item.vendor_name?.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredData(filtered);
@@ -180,7 +184,7 @@ const DeliveryVendorList: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
             <div className="col-span-full text-center py-10 text-muted-foreground">Loading...</div>
-          ) : filteredData.length === 0 ? (
+          ) : !Array.isArray(filteredData) || filteredData.length === 0 ? (
             <div className="col-span-full text-center py-10 text-muted-foreground">No vendors found</div>
           ) : (
             filteredData.slice(0, recordsPerPage).map((vendor) => (
@@ -191,7 +195,7 @@ const DeliveryVendorList: React.FC = () => {
       ) : (
         <DataTable
           columns={columns}
-          data={filteredData}
+          data={Array.isArray(filteredData) ? filteredData : []}
           loading={loading}
           pagination
           paginationPerPage={recordsPerPage}
