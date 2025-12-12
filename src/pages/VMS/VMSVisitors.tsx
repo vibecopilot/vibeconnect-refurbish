@@ -148,76 +148,63 @@ const VMSVisitors: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const params: Record<string, unknown> = {
-        token,
-        page: pagination.page,
-        per_page: perPage,
-      };
-
-      // Add search query
-      if (searchValue) {
-        params['q[name_or_contact_no_or_company_name_cont]'] = searchValue;
+      if (activeTab === 'approval') {
+        const res = await vmsService.getApprovals(pagination.page, perPage);
+        const data = res.data;
+        const list = Array.isArray(data) ? data : data.data || data.visitors || [];
+        setVisitors(list);
+        setPagination(prev => ({
+          ...prev,
+          total: data.total || data.total_count || list.length,
+          totalPages: data.total_pages || Math.ceil((data.total || list.length) / perPage),
+        }));
+        return;
       }
 
-      // Add applied filters
-      if (appliedFilters.dateFrom) {
-        params['q[expected_date_gteq]'] = appliedFilters.dateFrom;
-      }
-      if (appliedFilters.dateTo) {
-        params['q[expected_date_lteq]'] = appliedFilters.dateTo;
-      }
-      if (appliedFilters.mobile) {
-        params['q[contact_no_cont]'] = appliedFilters.mobile;
-      }
-      if (appliedFilters.hostId) {
-        params['host_id'] = appliedFilters.hostId;
-      }
-      if (appliedFilters.hostApproval) {
-        params['q[skip_host_approval_eq]'] = appliedFilters.hostApproval === 'required' ? 'false' : 'true';
+      if (activeTab === 'history') {
+        const res = await vmsService.getHistory(pagination.page, perPage);
+        const data = res.data;
+        const list = Array.isArray(data) ? data : data.data || data.visitors || [];
+        setVisitors(list);
+        setPagination(prev => ({
+          ...prev,
+          total: data.total || data.total_count || list.length,
+          totalPages: data.total_pages || Math.ceil((data.total || list.length) / perPage),
+        }));
+        return;
       }
 
-      let endpoint = '/visitors.json';
-      
-      // Apply tab-specific filters with CORRECT query params
-      switch (activeTab) {
-        case 'all':
-          // All visitors - MUST use user_type_not_eq to exclude security guards
-          params['q[user_type_not_eq]'] = 'security_guard';
-          break;
-        case 'in':
-          // Visitors IN - MUST use user_type_not_eq and visitor_in_out_eq=IN
-          params['q[visitor_in_out_eq]'] = 'IN';
-          params['q[user_type_not_eq]'] = 'security_guard';
-          break;
-        case 'out':
-          // Visitors OUT - MUST use user_type_not_eq and visitor_in_out_eq=OUT
-          params['q[visitor_in_out_eq]'] = 'OUT';
-          params['q[user_type_not_eq]'] = 'security_guard';
-          break;
-        case 'approval':
-          // Approval form endpoint
-          endpoint = '/visitors/approval_form.json';
-          break;
-        case 'history':
-          // Approval history endpoint
-          endpoint = '/visitors/approval_history.json';
-          break;
-        case 'logs':
-          // Device logs endpoint
-          endpoint = '/visitor_device_logs.json';
-          break;
-        case 'self-registration':
-          // Self-registration visitors
-          endpoint = '/visitors.json';
-          params['q[self_registered_eq]'] = 'true';
-          params['q[user_type_not_eq]'] = 'security_guard';
-          break;
+      if (activeTab === 'logs') {
+        const res = await vmsService.getDeviceLogs(pagination.page, perPage);
+        const data = res.data;
+        const list = Array.isArray(data) ? data : data.data || [];
+        setVisitors(list as any);
+        setPagination(prev => ({
+          ...prev,
+          total: data.total || data.total_count || list.length,
+          totalPages: data.total_pages || Math.ceil((data.total || list.length) / perPage),
+        }));
+        return;
       }
 
-      const response = await axiosInstance.get(endpoint, { params });
-      
-      // Handle different response structures
-      const data = response.data;
+      // For All / In / Out / Self-Registration use getVisitors with VisitorFilters
+      const filterParams: any = { ...appliedFilters, search: searchValue };
+
+      if (activeTab === 'in') {
+        filterParams.visitorInOut = 'in';
+      } else if (activeTab === 'out') {
+        filterParams.visitorInOut = 'out';
+      }
+
+      // Business rule: always exclude security_guard
+      filterParams.userTypeNotEq = 'security_guard';
+
+      if (activeTab === 'self-registration') {
+        filterParams.self_registered = true;
+      }
+
+      const res = await vmsService.getVisitors(pagination.page, perPage, filterParams);
+      const data = res.data;
       if (Array.isArray(data)) {
         setVisitors(data);
         setPagination(prev => ({
@@ -237,10 +224,8 @@ const VMSVisitors: React.FC = () => {
         setVisitors([]);
         setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }));
       }
-      setError(null);
     } catch (err: any) {
       console.error('Error fetching visitors:', err);
-      // Handle 404 or other errors gracefully
       if (err?.response?.status === 404) {
         setError(`Endpoint not available for ${activeTab} tab`);
       } else {
@@ -251,7 +236,7 @@ const VMSVisitors: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, perPage, searchValue, activeTab, appliedFilters, token]);
+  }, [pagination.page, perPage, searchValue, activeTab, appliedFilters]);
 
   useEffect(() => {
     fetchVisitors();

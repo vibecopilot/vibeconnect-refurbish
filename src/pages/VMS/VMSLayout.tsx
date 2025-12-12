@@ -22,9 +22,7 @@ const VMSLayout: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Breadcrumb items={breadcrumbItems} />
-      
-      {/* Content Area */}
+      {/* Content Area - no breadcrumb as requested */}
       <div className="bg-card border border-border rounded-lg p-4">
         <Outlet />
       </div>
