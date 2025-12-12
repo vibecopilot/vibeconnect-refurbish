@@ -292,11 +292,20 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     
     for (const mod of filteredModules) {
       for (const subMod of mod.subModules) {
-        if (pathname.startsWith(subMod.path)) {
+        // Check if submodule has children - match against children paths
+        if (subMod.children && subMod.children.length > 0) {
+          for (const child of subMod.children) {
+            if (pathname === child.path || pathname.startsWith(child.path + '/')) {
+              return { moduleId: mod.id, subModuleId: subMod.id };
+            }
+          }
+        }
+        // Direct path match for submodules without children
+        if (pathname === subMod.path || pathname.startsWith(subMod.path + '/')) {
           return { moduleId: mod.id, subModuleId: subMod.id };
         }
       }
-      if (mod.path && pathname.startsWith(mod.path)) {
+      if (mod.path && (pathname === mod.path || pathname.startsWith(mod.path + '/'))) {
         return { moduleId: mod.id, subModuleId: '' };
       }
     }
