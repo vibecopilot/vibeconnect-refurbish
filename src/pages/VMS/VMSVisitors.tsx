@@ -5,6 +5,7 @@ import DataTable, { TableColumn } from '../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../components/ui/StatusBadge';
 import { vmsService, Visitor, VisitorFilters } from '../../services/vms.service';
 import { Loader2, Users, AlertCircle, RefreshCw, Eye, Edit2 } from 'lucide-react';
+import DataCard from '../../components/ui/DataCard';
 
 type SubTab = 'all' | 'in' | 'out' | 'approvals' | 'history' | 'logs' | 'self-registration';
 
@@ -12,6 +13,7 @@ const VMSVisitors: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SubTab>('all');
   const [visitorType, setVisitorType] = useState<'expected' | 'unexpected'>('expected');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchValue, setSearchValue] = useState('');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
@@ -191,8 +193,9 @@ const VMSVisitors: React.FC = () => {
         ))}
       </div>
 
-      {/* Toggle Expected/Unexpected */}
-      <div className="flex items-center gap-4 mb-4">
+      {/* Toolbar with toggle, search, and add button aligned */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        {/* Left: Expected/Unexpected Toggle */}
         <div className="flex items-center gap-2 bg-muted rounded-full p-1">
           <button
             onClick={() => setVisitorType('expected')}
@@ -215,15 +218,24 @@ const VMSVisitors: React.FC = () => {
             Unexpected visitor
           </button>
         </div>
+
+        {/* Right: Add New Visitor Button */}
+        <button
+          onClick={() => navigate('/vms/visitors/create')}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          + Add New Visitor
+        </button>
       </div>
 
       <ListToolbar
         searchPlaceholder="Search using Visitor name, Host, vehicle number"
         searchValue={searchValue}
         onSearchChange={handleSearch}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         onFilter={() => console.log('Filter clicked')}
-        onAdd={() => navigate('/vms/visitors/create')}
-        addLabel="Add New Visitor"
+        showViewToggle={true}
       />
 
       {loading && visitors.length > 0 && (
@@ -249,7 +261,7 @@ const VMSVisitors: React.FC = () => {
         </div>
       )}
 
-      {visitors.length > 0 && (
+      {visitors.length > 0 && viewMode === 'table' && (
         <DataTable
           columns={columns}
           data={visitors}
@@ -259,6 +271,26 @@ const VMSVisitors: React.FC = () => {
           onSelectAll={handleSelectAll}
           viewPath={(row) => `/vms/visitors/${row.id}`}
         />
+      )}
+
+      {visitors.length > 0 && viewMode === 'grid' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {visitors.map((visitor) => (
+            <DataCard
+              key={visitor.id}
+              title={visitor.name || 'Unknown'}
+              subtitle={visitor.contact_no || '-'}
+              fields={[
+                { label: 'Type', value: visitor.user_type || 'Guest' },
+                { label: 'Purpose', value: visitor.purpose || '-' },
+                { label: 'From', value: visitor.company_name || '-' },
+                { label: 'Expected', value: visitor.expected_date || '-' },
+              ]}
+              viewPath={`/vms/visitors/${visitor.id}`}
+              editPath={`/vms/visitors/${visitor.id}/edit`}
+            />
+          ))}
+        </div>
       )}
 
       {visitors.length > 0 && (

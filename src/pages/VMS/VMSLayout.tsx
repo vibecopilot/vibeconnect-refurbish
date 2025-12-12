@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
 const tabs = [
@@ -16,7 +16,7 @@ const VMSLayout: React.FC = () => {
   // Get current tab name for breadcrumb
   const currentTab = tabs.find(tab => location.pathname.startsWith(tab.path));
   const breadcrumbItems = [
-    { label: 'VMS', path: '/vms' },
+    { label: 'Security', path: '/vms' },
     ...(currentTab ? [{ label: currentTab.label }] : []),
   ];
 
@@ -24,33 +24,9 @@ const VMSLayout: React.FC = () => {
     <div className="p-6">
       <Breadcrumb items={breadcrumbItems} />
       
-      {/* Main Tab Navigation with Gradient Header */}
-      <div className="mb-6">
-        <div className="bg-gradient-to-r from-primary via-primary/80 to-warning rounded-t-lg px-4 py-3">
-          <nav className="flex gap-1 overflow-x-auto scrollbar-hide">
-            {tabs.map((tab) => (
-              <NavLink
-                key={tab.id}
-                to={tab.path}
-                className={({ isActive }) =>
-                  `px-4 py-2 text-sm font-medium whitespace-nowrap rounded-md transition-colors ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`
-                }
-              >
-                {tab.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-        <div className="border-x border-b border-border rounded-b-lg bg-card">
-          {/* Tab Content */}
-          <div className="p-4">
-            <Outlet />
-          </div>
-        </div>
+      {/* Content Area */}
+      <div className="bg-card border border-border rounded-lg p-4">
+        <Outlet />
       </div>
     </div>
   );
