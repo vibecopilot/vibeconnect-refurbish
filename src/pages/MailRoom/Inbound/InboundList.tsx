@@ -35,11 +35,14 @@ const InboundList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getinbound();
-      setPackages(response.data || []);
-      setFilteredData(response.data || []);
+      const data = Array.isArray(response?.data) ? response.data : [];
+      setPackages(data);
+      setFilteredData(data);
     } catch (error) {
       console.error('Error fetching inbound packages:', error);
       toast.error('Failed to fetch inbound packages');
+      setPackages([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
@@ -51,7 +54,8 @@ const InboundList: React.FC = () => {
 
   const handleSearch = (value: string) => {
     setSearchText(value);
-    const filtered = packages.filter((item) =>
+    const dataToFilter = Array.isArray(packages) ? packages : [];
+    const filtered = dataToFilter.filter((item) =>
       item.vendor_name?.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredData(filtered);
@@ -171,7 +175,7 @@ const InboundList: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
             <div className="col-span-full text-center py-10 text-muted-foreground">Loading...</div>
-          ) : filteredData.length === 0 ? (
+          ) : !Array.isArray(filteredData) || filteredData.length === 0 ? (
             <div className="col-span-full text-center py-10 text-muted-foreground">No packages found</div>
           ) : (
             filteredData.slice(0, recordsPerPage).map((pkg) => (
@@ -182,7 +186,7 @@ const InboundList: React.FC = () => {
       ) : (
         <DataTable
           columns={columns}
-          data={filteredData}
+          data={Array.isArray(filteredData) ? filteredData : []}
           loading={loading}
           pagination
           paginationPerPage={recordsPerPage}
