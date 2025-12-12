@@ -30,10 +30,13 @@ const OutboundList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getoutbound();
-      setPackages(response.data || []);
-      setFilteredData(response.data || []);
+      const data = Array.isArray(response?.data) ? response.data : [];
+      setPackages(data);
+      setFilteredData(data);
     } catch (error) {
       console.error('Error fetching outbound packages:', error);
+      setPackages([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
@@ -43,7 +46,8 @@ const OutboundList: React.FC = () => {
 
   const handleSearch = (value: string) => {
     setSearchText(value);
-    const filtered = packages.filter((item) =>
+    const dataToFilter = Array.isArray(packages) ? packages : [];
+    const filtered = dataToFilter.filter((item) =>
       item.recipient_name?.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredData(filtered);
@@ -74,7 +78,7 @@ const OutboundList: React.FC = () => {
   return (
     <div>
       <ListToolbar searchPlaceholder="Search By Sender name" searchValue={searchText} onSearchChange={handleSearch} viewMode={viewMode} onViewModeChange={setViewMode} showViewToggle showAddButton addButtonLabel="Add" onAddClick={() => navigate('/mail-room/outbound/create')} showFilter={false} showExport={false} />
-      <DataTable columns={columns} data={filteredData} loading={loading} pagination paginationPerPage={recordsPerPage} />
+      <DataTable columns={columns} data={Array.isArray(filteredData) ? filteredData : []} loading={loading} pagination paginationPerPage={recordsPerPage} />
     </div>
   );
 };
