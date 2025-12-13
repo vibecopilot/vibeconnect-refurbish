@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
@@ -7,7 +6,7 @@ const tabs = [
   { id: 'receipt-invoice', label: 'Receipt Invoice', path: '/finance/cam/receipt-invoice' },
 ];
 
-const CAMLayout: React.FC = () => {
+const CAMLayout = () => {
   const location = useLocation();
 
   return (
