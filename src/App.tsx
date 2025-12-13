@@ -56,6 +56,7 @@ import { CalendarPage, PlanMyCalendar } from "./pages/Calendar/index";
 import { MailRoomLayout, DeliveryVendorList, CreateVendor, ViewVendor, InboundList, CreateInboundPackage, ViewInbound, OutboundList, CreateOutboundPackage, ViewOutbound } from "./pages/MailRoom/index";
 import { SupplierList, CreateSupplier, ViewSupplier } from "./pages/Supplier";
 import { AuditLayout, OperationalScheduled, OperationalConducted, OperationalChecklists, VendorScheduled, VendorConducted, ScheduleAuditForm, ChecklistAuditForm } from "./pages/Audit";
+import { CommunicationsLayout, EventsList, CreateEvent, ViewEvent, BroadcastList, CreateBroadcast, ViewBroadcast, PollsList, ForumFeed, GroupsList } from "./pages/Communications";
 // Placeholder pages for other modules
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   <div className="p-6">
@@ -287,8 +288,32 @@ function App() {
 
         {/* CRM Module - Under Development Pages */}
         <Route path="/crm/opportunity" element={<AuthenticatedLayout><PlaceholderPage title="Opportunity" /></AuthenticatedLayout>} />
-        <Route path="/crm/communications" element={<AuthenticatedLayout><PlaceholderPage title="Communications" /></AuthenticatedLayout>} />
         <Route path="/crm/campaign" element={<AuthenticatedLayout><PlaceholderPage title="Campaign" /></AuthenticatedLayout>} />
+
+        {/* CRM Communications - Tabbed Layout */}
+        <Route path="/crm/communications" element={<AuthenticatedLayout><CommunicationsLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/crm/communications/events" replace />} />
+          <Route path="events" element={<EventsList />} />
+          <Route path="broadcast" element={<BroadcastList />} />
+          <Route path="polls" element={<PollsList />} />
+          <Route path="forum" element={<ForumFeed />} />
+          <Route path="groups" element={<GroupsList />} />
+        </Route>
+        {/* Events Detail Routes */}
+        <Route path="/crm/communications/events/create" element={<AuthenticatedLayout><CreateEvent /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/events/:id" element={<AuthenticatedLayout><ViewEvent /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/events/:id/edit" element={<AuthenticatedLayout><CreateEvent /></AuthenticatedLayout>} />
+        {/* Broadcast Detail Routes */}
+        <Route path="/crm/communications/broadcast/create" element={<AuthenticatedLayout><CreateBroadcast /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/broadcast/:id" element={<AuthenticatedLayout><ViewBroadcast /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/broadcast/:id/edit" element={<AuthenticatedLayout><CreateBroadcast /></AuthenticatedLayout>} />
+        {/* Polls Detail Routes */}
+        <Route path="/crm/communications/polls/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Poll" /></AuthenticatedLayout>} />
+        {/* Forum Detail Routes */}
+        <Route path="/crm/communications/forum/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Forum" /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/forum/saved" element={<AuthenticatedLayout><PlaceholderPage title="Saved Forum" /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/forum/reported" element={<AuthenticatedLayout><PlaceholderPage title="Reported Forum" /></AuthenticatedLayout>} />
+        <Route path="/crm/communications/forum/hidden" element={<AuthenticatedLayout><PlaceholderPage title="Hidden Forum" /></AuthenticatedLayout>} />
 
         {/* Booking Management - On Demand Service */}
         <Route path="/booking/on-demand-service" element={<AuthenticatedLayout><PlaceholderPage title="On Demand Service" /></AuthenticatedLayout>} />
