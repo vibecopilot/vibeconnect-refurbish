@@ -51,6 +51,7 @@ import { SpaceBookingsList, BookSpace } from "./pages/SpaceBooking";
 import FitoutList from "./pages/Fitout/FitoutList";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
+import { PermitList, CreatePermit, ViewPermit } from "./pages/Permit";
 import { CalendarPage, PlanMyCalendar } from "./pages/Calendar/index";
 import { MailRoomLayout, DeliveryVendorList, CreateVendor, ViewVendor, InboundList, CreateInboundPackage, ViewInbound, OutboundList, CreateOutboundPackage, ViewOutbound } from "./pages/MailRoom/index";
 import { SupplierList, CreateSupplier, ViewSupplier } from "./pages/Supplier";
@@ -269,8 +270,13 @@ function App() {
 
         {/* Safety Module - Under Development Pages */}
         <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />
-        <Route path="/safety/permit" element={<AuthenticatedLayout><PlaceholderPage title="Permit" /></AuthenticatedLayout>} />
         <Route path="/safety/training" element={<AuthenticatedLayout><PlaceholderPage title="Training" /></AuthenticatedLayout>} />
+
+        {/* Permit - Safety Module */}
+        <Route path="/safety/permit" element={<AuthenticatedLayout><PermitList /></AuthenticatedLayout>} />
+        <Route path="/safety/permit/create" element={<AuthenticatedLayout><CreatePermit /></AuthenticatedLayout>} />
+        <Route path="/safety/permit/:id" element={<AuthenticatedLayout><ViewPermit /></AuthenticatedLayout>} />
+        <Route path="/safety/permit/:id/edit" element={<AuthenticatedLayout><CreatePermit /></AuthenticatedLayout>} />
 
         {/* Finance Module - Under Development Pages */}
         <Route path="/finance/procurement" element={<AuthenticatedLayout><PlaceholderPage title="Procurement" /></AuthenticatedLayout>} />
