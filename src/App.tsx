@@ -36,6 +36,7 @@ import CreateAsset from "./pages/Asset/CreateAsset";
 import CreateAMC from "./pages/Asset/CreateAMC";
 import CreateChecklist from "./pages/Asset/CreateChecklist";
 import CreatePPMActivity from "./pages/Asset/CreatePPMActivity";
+import { ViewAsset, EditAsset } from "./pages/Asset";
 import TicketList from "./pages/ServiceDesk/TicketList";
 import TicketCreate from "./pages/ServiceDesk/TicketCreate";
 import TicketView from "./pages/ServiceDesk/TicketView";
@@ -118,8 +119,8 @@ function App() {
         {/* Asset Module */}
         <Route path="/asset" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/create" element={<AuthenticatedLayout><CreateAsset /></AuthenticatedLayout>} />
-        <Route path="/asset/:id" element={<AuthenticatedLayout><PlaceholderPage title="Asset Details" /></AuthenticatedLayout>} />
-        <Route path="/asset/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Asset" /></AuthenticatedLayout>} />
+        <Route path="/asset/:id" element={<AuthenticatedLayout><ViewAsset /></AuthenticatedLayout>} />
+        <Route path="/asset/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
         
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
