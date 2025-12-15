@@ -18,7 +18,7 @@ import {
   getParentAsset,
   getUnits,
   getVendors,
-  editSiteAsset,
+  EditSiteAsset,
   getSiteAssetDetails,
 } from "../../api";
 
@@ -349,7 +349,7 @@ const EditAsset: React.FC = () => {
       formData.manuals.forEach((file) => formDataSend.append("manuals[]", file));
       formData.others.forEach((file) => formDataSend.append("other_files[]", file));
 
-      await editSiteAsset(id!, formDataSend);
+      await EditSiteAsset(formDataSend, id!);
       toast.dismiss();
       toast.success("Asset Updated Successfully");
       navigate(`/asset/${id}`);

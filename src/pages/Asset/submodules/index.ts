@@ -7,3 +7,12 @@ export { default as PPMChecklistList } from './PPMChecklistList';
 export { default as PPMActivityList } from './PPMActivityList';
 export { default as PPMCalendar } from './PPMCalendar';
 export { default as StockItemsList } from './StockItemsList';
+
+// View pages
+export { default as ViewAMC } from './ViewAMC';
+export { default as ViewMeter } from './ViewMeter';
+export { default as ViewChecklist } from './ViewChecklist';
+export { default as ViewRoutineTask } from './ViewRoutineTask';
+export { default as ViewPPMChecklist } from './ViewPPMChecklist';
+export { default as ViewPPMActivity } from './ViewPPMActivity';
+export { default as ViewStockItem } from './ViewStockItem';

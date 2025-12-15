@@ -36,8 +36,9 @@ import CreateAsset from "./pages/Asset/CreateAsset";
 import CreateAMC from "./pages/Asset/CreateAMC";
 import CreateChecklist from "./pages/Asset/CreateChecklist";
 import CreatePPMActivity from "./pages/Asset/CreatePPMActivity";
-import { ViewAsset, EditAsset } from "./pages/Asset";
-import TicketList from "./pages/ServiceDesk/TicketList";
+import ViewAsset from "./pages/Asset/ViewAsset";
+import EditAsset from "./pages/Asset/EditAsset";
+import { ViewAMC, ViewMeter, ViewChecklist, ViewRoutineTask, ViewPPMChecklist, ViewPPMActivity, ViewStockItem } from "./pages/Asset/submodules";
 import TicketCreate from "./pages/ServiceDesk/TicketCreate";
 import TicketView from "./pages/ServiceDesk/TicketView";
 import TicketEdit from "./pages/ServiceDesk/TicketEdit";
@@ -125,42 +126,39 @@ function App() {
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/amc/create" element={<AuthenticatedLayout><CreateAMC /></AuthenticatedLayout>} />
-        <Route path="/asset/amc/:id" element={<AuthenticatedLayout><PlaceholderPage title="AMC Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/amc/:id" element={<AuthenticatedLayout><ViewAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit AMC" /></AuthenticatedLayout>} />
         
         {/* Meter */}
         <Route path="/asset/meter" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        <Route path="/asset/meter/:id" element={<AuthenticatedLayout><PlaceholderPage title="Meter Details" /></AuthenticatedLayout>} />
-        <Route path="/asset/meter/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Meter" /></AuthenticatedLayout>} />
+        <Route path="/asset/meter/:id" element={<AuthenticatedLayout><ViewMeter /></AuthenticatedLayout>} />
+        <Route path="/asset/meter/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
         
         {/* Checklist */}
         <Route path="/asset/checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/create" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
-        <Route path="/asset/checklist/:id" element={<AuthenticatedLayout><PlaceholderPage title="Checklist Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/checklist/:id" element={<AuthenticatedLayout><ViewChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Checklist" /></AuthenticatedLayout>} />
         
         {/* Routine Task */}
         <Route path="/asset/routine-task" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        <Route path="/asset/routine-task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Routine Task Details" /></AuthenticatedLayout>} />
-        <Route path="/asset/routine-task/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Routine Task" /></AuthenticatedLayout>} />
+        <Route path="/asset/routine-task/:id" element={<AuthenticatedLayout><ViewRoutineTask /></AuthenticatedLayout>} />
         
         {/* PPM Checklist */}
         <Route path="/asset/ppm-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        <Route path="/asset/ppm-checklist/:id" element={<AuthenticatedLayout><PlaceholderPage title="PPM Checklist Details" /></AuthenticatedLayout>} />
-        <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit PPM Checklist" /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-checklist/:id" element={<AuthenticatedLayout><ViewPPMChecklist /></AuthenticatedLayout>} />
         
         {/* PPM Activity */}
         <Route path="/asset/ppm-activity" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-activity/create" element={<AuthenticatedLayout><CreatePPMActivity /></AuthenticatedLayout>} />
-        <Route path="/asset/ppm-activity/:id" element={<AuthenticatedLayout><PlaceholderPage title="PPM Activity Details" /></AuthenticatedLayout>} />
-        <Route path="/asset/ppm-activity/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit PPM Activity" /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-activity/:assetId/:id" element={<AuthenticatedLayout><ViewPPMActivity /></AuthenticatedLayout>} />
         
         {/* PPM Calendar */}
         <Route path="/asset/ppm-calendar" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         
         {/* Stock Items */}
         <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><PlaceholderPage title="Stock Item Details" /></AuthenticatedLayout>} />
+        <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><ViewStockItem /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Stock Item" /></AuthenticatedLayout>} />
         
         {/* Soft Services - Service Tab */}
