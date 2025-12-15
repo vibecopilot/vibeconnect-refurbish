@@ -285,7 +285,7 @@ const CreateService: React.FC = () => {
       />
 
       <div className="bg-card rounded-xl border border-border overflow-hidden mt-6">
-        <FormSection title={isEdit ? 'Edit Service' : 'Create Service'} icon={<Wrench className="w-5 h-5" />}>
+        <FormSection title={isEdit ? 'Edit Service' : 'Create Service'} icon={Wrench}>
           <FormGrid columns={3}>
             <FormInput
               label="Service Name"
@@ -385,7 +385,7 @@ const CreateService: React.FC = () => {
         </FormSection>
 
         {/* Cron Setting */}
-        <FormSection title="Cron Setting" icon={<Wrench className="w-5 h-5" />}>
+        <FormSection title="Cron Setting" icon={Wrench}>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-sm text-foreground">Every</span>
             <select
@@ -426,7 +426,7 @@ const CreateService: React.FC = () => {
         </FormSection>
 
         {/* Attachments */}
-        <FormSection title="Attachments" icon={<Paperclip className="w-5 h-5" />}>
+        <FormSection title="Attachments" icon={Paperclip}>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
