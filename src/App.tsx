@@ -64,6 +64,7 @@ import { AuditLayout, OperationalScheduled, OperationalConducted, OperationalChe
 import { CommunicationsLayout, EventsList, CreateEvent, ViewEvent, BroadcastList, CreateBroadcast, ViewBroadcast, PollsList, CreatePoll, ForumFeed, CreateForum, GroupsList } from "./pages/Communications";
 import { CAMLayout, CamBillingList, AddCamBilling, ViewCamBilling, ReceiptInvoiceList, AddReceiptInvoice, ViewReceiptInvoice } from "./pages/CAM";
 import { OtherBillsList, CreateOtherBill, ViewOtherBill } from "./pages/OtherBills";
+import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, GDNList } from "./pages/Inventory";
 // Placeholder pages for other modules
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   <div className="p-6">
@@ -337,6 +338,21 @@ function App() {
 
         {/* Booking Management - On Demand Service */}
         <Route path="/booking/on-demand-service" element={<AuthenticatedLayout><PlaceholderPage title="On Demand Service" /></AuthenticatedLayout>} />
+
+        {/* Inventory - FM Module */}
+        <Route path="/inventory" element={<Navigate to="/inventory/masters" replace />} />
+        <Route path="/inventory/masters" element={<AuthenticatedLayout><MastersList /></AuthenticatedLayout>} />
+        <Route path="/inventory/masters/create" element={<AuthenticatedLayout><CreateMaster /></AuthenticatedLayout>} />
+        <Route path="/inventory/masters/:id" element={<AuthenticatedLayout><ViewMaster /></AuthenticatedLayout>} />
+        <Route path="/inventory/masters/:id/edit" element={<AuthenticatedLayout><CreateMaster /></AuthenticatedLayout>} />
+        <Route path="/inventory/stocks" element={<AuthenticatedLayout><StocksList /></AuthenticatedLayout>} />
+        <Route path="/inventory/stocks/:id" element={<AuthenticatedLayout><ViewStock /></AuthenticatedLayout>} />
+        <Route path="/inventory/grn" element={<AuthenticatedLayout><GRNList /></AuthenticatedLayout>} />
+        <Route path="/inventory/grn/create" element={<AuthenticatedLayout><PlaceholderPage title="Add GRN" /></AuthenticatedLayout>} />
+        <Route path="/inventory/grn/:id" element={<AuthenticatedLayout><PlaceholderPage title="GRN Details" /></AuthenticatedLayout>} />
+        <Route path="/inventory/gdn" element={<AuthenticatedLayout><GDNList /></AuthenticatedLayout>} />
+        <Route path="/inventory/gdn/create" element={<AuthenticatedLayout><PlaceholderPage title="Add GDN" /></AuthenticatedLayout>} />
+        <Route path="/inventory/gdn/:id" element={<AuthenticatedLayout><PlaceholderPage title="GDN Details" /></AuthenticatedLayout>} />
 
         {/* Catch all - redirect to dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
