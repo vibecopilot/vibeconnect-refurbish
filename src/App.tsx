@@ -64,7 +64,7 @@ import { AuditLayout, OperationalScheduled, OperationalConducted, OperationalChe
 import { CommunicationsLayout, EventsList, CreateEvent, ViewEvent, BroadcastList, CreateBroadcast, ViewBroadcast, PollsList, CreatePoll, ForumFeed, CreateForum, GroupsList } from "./pages/Communications";
 import { CAMLayout, CamBillingList, AddCamBilling, ViewCamBilling, ReceiptInvoiceList, AddReceiptInvoice, ViewReceiptInvoice } from "./pages/CAM";
 import { OtherBillsList, CreateOtherBill, ViewOtherBill } from "./pages/OtherBills";
-import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, CreateGRN, GDNList } from "./pages/Inventory";
+import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, CreateGRN, ViewGRN, GDNList, CreateGDN, ViewGDN } from "./pages/Inventory";
 // Placeholder pages for other modules
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   <div className="p-6">
@@ -349,11 +349,12 @@ function App() {
         <Route path="/inventory/stocks/:id" element={<AuthenticatedLayout><ViewStock /></AuthenticatedLayout>} />
         <Route path="/inventory/grn" element={<AuthenticatedLayout><GRNList /></AuthenticatedLayout>} />
         <Route path="/inventory/grn/create" element={<AuthenticatedLayout><CreateGRN /></AuthenticatedLayout>} />
-        <Route path="/inventory/grn/:id" element={<AuthenticatedLayout><CreateGRN /></AuthenticatedLayout>} />
+        <Route path="/inventory/grn/:id" element={<AuthenticatedLayout><ViewGRN /></AuthenticatedLayout>} />
         <Route path="/inventory/grn/:id/edit" element={<AuthenticatedLayout><CreateGRN /></AuthenticatedLayout>} />
         <Route path="/inventory/gdn" element={<AuthenticatedLayout><GDNList /></AuthenticatedLayout>} />
-        <Route path="/inventory/gdn/create" element={<AuthenticatedLayout><PlaceholderPage title="Add GDN" /></AuthenticatedLayout>} />
-        <Route path="/inventory/gdn/:id" element={<AuthenticatedLayout><PlaceholderPage title="GDN Details" /></AuthenticatedLayout>} />
+        <Route path="/inventory/gdn/create" element={<AuthenticatedLayout><CreateGDN /></AuthenticatedLayout>} />
+        <Route path="/inventory/gdn/:id" element={<AuthenticatedLayout><ViewGDN /></AuthenticatedLayout>} />
+        <Route path="/inventory/gdn/:id/edit" element={<AuthenticatedLayout><CreateGDN /></AuthenticatedLayout>} />
 
         {/* Catch all - redirect to dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

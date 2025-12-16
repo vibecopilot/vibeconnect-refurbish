@@ -5,4 +5,7 @@ export { default as StocksList } from './StocksList';
 export { default as ViewStock } from './ViewStock';
 export { default as GRNList } from './GRNList';
 export { default as CreateGRN } from './CreateGRN';
+export { default as ViewGRN } from './ViewGRN';
 export { default as GDNList } from './GDNList';
+export { default as CreateGDN } from './CreateGDN';
+export { default as ViewGDN } from './ViewGDN';
