@@ -10,7 +10,7 @@ import {
   getStockGroupsList, 
   getAssetSubGroups,
   getStandardUnits,
-  getSacHsnCodes
+  getHSNSetup
 } from '../../api';
 
 interface FormData {
@@ -75,7 +75,7 @@ const CreateMaster: React.FC = () => {
         const [groupsRes, unitsRes, sacRes] = await Promise.all([
           getStockGroupsList(),
           getStandardUnits?.() || Promise.resolve({ data: [] }),
-          getSacHsnCodes?.() || Promise.resolve({ data: [] }),
+          getHSNSetup?.() || Promise.resolve({ data: [] }),
         ]);
         setGroups(Array.isArray(groupsRes?.data) ? groupsRes.data : []);
         setUnits(Array.isArray(unitsRes?.data) ? unitsRes.data : []);
