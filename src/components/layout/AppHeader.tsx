@@ -73,7 +73,14 @@ const modules = [
           { name: 'Task', path: '/soft-services/task' },
         ]
       },
-      { id: 'inventory', name: 'Inventory', path: '/inventory' },
+      { id: 'inventory', name: 'Inventory', path: '/inventory/masters',
+        children: [
+          { name: 'Masters', path: '/inventory/masters' },
+          { name: 'Stocks', path: '/inventory/stocks' },
+          { name: 'GRN', path: '/inventory/grn' },
+          { name: 'GDN', path: '/inventory/gdn' },
+        ]
+      },
       { id: 'supplier', name: 'Supplier/Vendor', path: '/supplier' },
       { id: 'audit', name: 'Audit', path: '/audit/operational/scheduled',
         children: [
