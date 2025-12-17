@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Minus, Printer, Construction, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Plus, Minus, Printer, Construction, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Types
@@ -409,116 +409,117 @@ const RestaurantManagement: React.FC = () => {
 
   return (
     <div className="flex flex-col">
-      {/* Breadcrumb */}
-      <div className="text-sm text-muted-foreground mb-4">
-        Booking Management &gt; F&B
-      </div>
-
-      {/* LEVEL 3 TABS - F&B sections with collapse */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <button
-            onClick={() => setLevel3Collapsed(!level3Collapsed)}
-            className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary hover:bg-accent transition-colors"
-          >
-            {level3Collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-          <span className="text-sm font-medium text-foreground">Level 3</span>
-        </div>
-        {!level3Collapsed && (
-          <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-border">
+      {/* LEVEL 3 - F&B sections (matches Level 1/2 style) */}
+      <div className="relative bg-background border-b border-border">
+        <nav className={`px-2 overflow-x-auto transition-all duration-300 ${level3Collapsed ? 'h-0 overflow-hidden' : ''}`}>
+          <ul className="flex items-center gap-0 flex-nowrap">
             {level3Tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => handleLevel3TabClick(tab.id)}
-                className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
-                  activeLevel3Tab === tab.id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                }`}
-              >
-                {tab.label}
-              </button>
+              <li key={tab.id} className="flex-shrink-0">
+                <button
+                  onClick={() => handleLevel3TabClick(tab.id)}
+                  className={`block px-3 py-2.5 text-xs font-semibold transition-colors whitespace-nowrap uppercase tracking-wide ${
+                    activeLevel3Tab === tab.id
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-foreground hover:bg-accent'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              </li>
             ))}
-          </div>
-        )}
+          </ul>
+        </nav>
+        {/* Collapse Button */}
+        <button
+          onClick={() => setLevel3Collapsed(!level3Collapsed)}
+          className="absolute right-2 top-2 p-1 rounded hover:bg-accent transition-colors"
+          title={level3Collapsed ? "Expand" : "Collapse"}
+        >
+          {level3Collapsed ? <ChevronDown size={16} className="text-muted-foreground" /> : <ChevronUp size={16} className="text-muted-foreground" />}
+        </button>
       </div>
 
       {/* Content based on Level 3 tab */}
       {activeLevel3Tab === 'restaurant-orders' ? (
         <>
-          {/* LEVEL 4 TABS - Restaurant Orders sub-sections with collapse */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={() => setLevel4Collapsed(!level4Collapsed)}
-                className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary hover:bg-accent transition-colors"
-              >
-                {level4Collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              <span className="text-sm font-medium text-foreground">Level 4</span>
-            </div>
-            {!level4Collapsed && (
-              <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-border">
+          {/* LEVEL 4 - Restaurant Orders sub-sections */}
+          <div className="relative border-b border-border bg-muted/30">
+            <nav className={`px-2 overflow-x-auto transition-all duration-300 ${level4Collapsed ? 'h-0 overflow-hidden' : ''}`}>
+              <ul className="flex items-center gap-0 flex-nowrap">
                 {level4Tabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleLevel4TabClick(tab.id)}
-                    className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
-                      activeLevel4Tab === tab.id
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
+                  <li key={tab.id} className="flex-shrink-0">
+                    <button
+                      onClick={() => handleLevel4TabClick(tab.id)}
+                      className={`block px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap uppercase ${
+                        activeLevel4Tab === tab.id
+                          ? 'text-primary border-b-2 border-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  </li>
                 ))}
-              </div>
-            )}
+              </ul>
+            </nav>
+            {/* Collapse Button */}
+            <button
+              onClick={() => setLevel4Collapsed(!level4Collapsed)}
+              className="absolute right-2 top-1.5 p-1 rounded hover:bg-accent transition-colors"
+              title={level4Collapsed ? "Expand" : "Collapse"}
+            >
+              {level4Collapsed ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronUp size={14} className="text-muted-foreground" />}
+            </button>
           </div>
 
           {/* Content based on Level 4 tab */}
           {activeLevel4Tab === 'pos' ? (
             <>
-              {/* LEVEL 5 TABS - Category tabs with collapse */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <button
-                    onClick={() => setLevel5Collapsed(!level5Collapsed)}
-                    className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary hover:bg-accent transition-colors"
-                  >
-                    {level5Collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                  <span className="text-sm font-medium text-foreground">Level 5</span>
-                </div>
-                {!level5Collapsed && (
-                  <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-border">
+              {/* LEVEL 5 - Category tabs */}
+              <div className="relative border-b border-border bg-muted/10">
+                <nav className={`px-2 overflow-x-auto transition-all duration-300 ${level5Collapsed ? 'h-0 overflow-hidden' : ''}`}>
+                  <ul className="flex items-center gap-0 flex-nowrap">
                     {level5Tabs.map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleLevel5TabClick(tab.id)}
-                        className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
-                          activeLevel5Tab === tab.id
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
+                      <li key={tab.id} className="flex-shrink-0">
+                        <button
+                          onClick={() => handleLevel5TabClick(tab.id)}
+                          className={`block px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                            activeLevel5Tab === tab.id
+                              ? 'text-primary border-b-2 border-primary'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      </li>
                     ))}
-                  </div>
-                )}
+                  </ul>
+                </nav>
+                {/* Collapse Button */}
+                <button
+                  onClick={() => setLevel5Collapsed(!level5Collapsed)}
+                  className="absolute right-2 top-1 p-1 rounded hover:bg-accent transition-colors"
+                  title={level5Collapsed ? "Expand" : "Collapse"}
+                >
+                  {level5Collapsed ? <ChevronDown size={12} className="text-muted-foreground" /> : <ChevronUp size={12} className="text-muted-foreground" />}
+                </button>
               </div>
 
-              {/* Content based on Level 5 tab */}
-              {activeLevel5Tab === 'favourite' ? renderPOSContent() : renderUnderConstruction(level5Tabs.find(t => t.id === activeLevel5Tab)?.label || 'Section')}
+              {/* POS Content */}
+              <div className="p-4">
+                {activeLevel5Tab === 'favourite' ? renderPOSContent() : renderUnderConstruction(level5Tabs.find(t => t.id === activeLevel5Tab)?.label || 'Section')}
+              </div>
             </>
           ) : (
-            renderUnderConstruction(level4Tabs.find(t => t.id === activeLevel4Tab)?.label || 'Section')
+            <div className="p-4">
+              {renderUnderConstruction(level4Tabs.find(t => t.id === activeLevel4Tab)?.label || 'Section')}
+            </div>
           )}
         </>
       ) : (
-        renderUnderConstruction(level3Tabs.find(t => t.id === activeLevel3Tab)?.label || 'Section')
+        <div className="p-4">
+          {renderUnderConstruction(level3Tabs.find(t => t.id === activeLevel3Tab)?.label || 'Section')}
+        </div>
       )}
     </div>
   );
