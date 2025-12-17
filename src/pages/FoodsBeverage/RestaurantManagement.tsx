@@ -410,29 +410,31 @@ const RestaurantManagement: React.FC = () => {
   return (
     <div className="flex flex-col">
       {/* LEVEL 3 - F&B sections (matches Level 1/2 style) */}
-      <div className="relative bg-background border-b border-border">
-        <nav className={`px-2 overflow-x-auto transition-all duration-300 ${level3Collapsed ? 'h-0 overflow-hidden' : ''}`}>
-          <ul className="flex items-center gap-0 flex-nowrap">
-            {level3Tabs.map(tab => (
-              <li key={tab.id} className="flex-shrink-0">
-                <button
-                  onClick={() => handleLevel3TabClick(tab.id)}
-                  className={`block px-3 py-2.5 text-xs font-semibold transition-colors whitespace-nowrap uppercase tracking-wide ${
-                    activeLevel3Tab === tab.id
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-foreground hover:bg-accent'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        {/* Collapse Button */}
+      <div className="flex items-center bg-background border-b border-border">
+        <div className={`flex-1 overflow-hidden transition-all duration-300 ${level3Collapsed ? 'max-h-0' : 'max-h-12'}`}>
+          <nav className="px-2 overflow-x-auto">
+            <ul className="flex items-center gap-0 flex-nowrap">
+              {level3Tabs.map(tab => (
+                <li key={tab.id} className="flex-shrink-0">
+                  <button
+                    onClick={() => handleLevel3TabClick(tab.id)}
+                    className={`block px-3 py-2.5 text-xs font-semibold transition-colors whitespace-nowrap uppercase tracking-wide ${
+                      activeLevel3Tab === tab.id
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+        {/* Collapse Button - Always visible */}
         <button
           onClick={() => setLevel3Collapsed(!level3Collapsed)}
-          className="absolute right-2 top-2 p-1 rounded hover:bg-accent transition-colors"
+          className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
           title={level3Collapsed ? "Expand" : "Collapse"}
         >
           {level3Collapsed ? <ChevronDown size={16} className="text-muted-foreground" /> : <ChevronUp size={16} className="text-muted-foreground" />}
@@ -443,29 +445,31 @@ const RestaurantManagement: React.FC = () => {
       {activeLevel3Tab === 'restaurant-orders' ? (
         <>
           {/* LEVEL 4 - Restaurant Orders sub-sections */}
-          <div className="relative border-b border-border bg-muted/30">
-            <nav className={`px-2 overflow-x-auto transition-all duration-300 ${level4Collapsed ? 'h-0 overflow-hidden' : ''}`}>
-              <ul className="flex items-center gap-0 flex-nowrap">
-                {level4Tabs.map(tab => (
-                  <li key={tab.id} className="flex-shrink-0">
-                    <button
-                      onClick={() => handleLevel4TabClick(tab.id)}
-                      className={`block px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap uppercase ${
-                        activeLevel4Tab === tab.id
-                          ? 'text-primary border-b-2 border-primary'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-            {/* Collapse Button */}
+          <div className="flex items-center border-b border-border bg-muted/30">
+            <div className={`flex-1 overflow-hidden transition-all duration-300 ${level4Collapsed ? 'max-h-0' : 'max-h-10'}`}>
+              <nav className="px-2 overflow-x-auto">
+                <ul className="flex items-center gap-0 flex-nowrap">
+                  {level4Tabs.map(tab => (
+                    <li key={tab.id} className="flex-shrink-0">
+                      <button
+                        onClick={() => handleLevel4TabClick(tab.id)}
+                        className={`block px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap uppercase ${
+                          activeLevel4Tab === tab.id
+                            ? 'text-primary border-b-2 border-primary'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </div>
+            {/* Collapse Button - Always visible */}
             <button
               onClick={() => setLevel4Collapsed(!level4Collapsed)}
-              className="absolute right-2 top-1.5 p-1 rounded hover:bg-accent transition-colors"
+              className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
               title={level4Collapsed ? "Expand" : "Collapse"}
             >
               {level4Collapsed ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronUp size={14} className="text-muted-foreground" />}
@@ -476,29 +480,31 @@ const RestaurantManagement: React.FC = () => {
           {activeLevel4Tab === 'pos' ? (
             <>
               {/* LEVEL 5 - Category tabs */}
-              <div className="relative border-b border-border bg-muted/10">
-                <nav className={`px-2 overflow-x-auto transition-all duration-300 ${level5Collapsed ? 'h-0 overflow-hidden' : ''}`}>
-                  <ul className="flex items-center gap-0 flex-nowrap">
-                    {level5Tabs.map(tab => (
-                      <li key={tab.id} className="flex-shrink-0">
-                        <button
-                          onClick={() => handleLevel5TabClick(tab.id)}
-                          className={`block px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
-                            activeLevel5Tab === tab.id
-                              ? 'text-primary border-b-2 border-primary'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-                {/* Collapse Button */}
+              <div className="flex items-center border-b border-border bg-muted/10">
+                <div className={`flex-1 overflow-hidden transition-all duration-300 ${level5Collapsed ? 'max-h-0' : 'max-h-9'}`}>
+                  <nav className="px-2 overflow-x-auto">
+                    <ul className="flex items-center gap-0 flex-nowrap">
+                      {level5Tabs.map(tab => (
+                        <li key={tab.id} className="flex-shrink-0">
+                          <button
+                            onClick={() => handleLevel5TabClick(tab.id)}
+                            className={`block px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                              activeLevel5Tab === tab.id
+                                ? 'text-primary border-b-2 border-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                </div>
+                {/* Collapse Button - Always visible */}
                 <button
                   onClick={() => setLevel5Collapsed(!level5Collapsed)}
-                  className="absolute right-2 top-1 p-1 rounded hover:bg-accent transition-colors"
+                  className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
                   title={level5Collapsed ? "Expand" : "Collapse"}
                 >
                   {level5Collapsed ? <ChevronDown size={12} className="text-muted-foreground" /> : <ChevronUp size={12} className="text-muted-foreground" />}
