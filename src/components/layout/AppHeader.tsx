@@ -106,12 +106,7 @@ const modules = [
     id: 'booking-management',
     name: 'Booking Management',
     subModules: [
-      { id: 'fb', name: 'F&B', path: '/fb/restaurant',
-        children: [
-          { name: 'Restaurant Management', path: '/fb/restaurant' },
-          { name: 'Pantry Management', path: '/fb/pantry' },
-        ]
-      },
+      { id: 'fb', name: 'F&B', path: '/fb/restaurant' },
       { id: 'amenities', name: 'Amenities Booking', path: '/amenities',
         children: [
           { name: 'Amenities Bookings', path: '/amenities' },

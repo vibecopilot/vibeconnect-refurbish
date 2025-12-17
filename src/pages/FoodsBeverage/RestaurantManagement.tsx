@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Minus, Printer, Construction, Loader2, Eye, Edit2 } from 'lucide-react';
+import { Search, Plus, Minus, Printer, Construction, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Types
@@ -30,8 +29,26 @@ const nonVegItems: MenuItem[] = [
   { id: 6, name: "Fish Fingers", price: 200 }
 ];
 
+// Level 3 - F&B sub-sections
+const level3Tabs = [
+  { id: 'restaurant-orders', label: 'Restaurant Orders', active: true },
+  { id: 'restaurant', label: 'Restaurant', active: false },
+  { id: 'status', label: 'Status Setup', active: false },
+  { id: 'categories', label: 'Categories Setup', active: false },
+  { id: 'subcategories', label: 'Sub Categories Setup', active: false },
+  { id: 'menu', label: 'Restaurant Menu', active: false },
+  { id: 'bookings', label: 'Restaurant Bookings', active: false },
+];
+
+// Level 4 - Restaurant Orders sub-tabs
+const level4Tabs = [
+  { id: 'pos', label: 'POS', active: true },
+  { id: 'new-table', label: 'New Table', active: false },
+  { id: 'order-delivery', label: 'Order Delivery', active: false },
+];
+
 // Level 5 - Category tabs
-const categoryTabs = [
+const level5Tabs = [
   { id: 'favourite', label: 'Favourite Items', active: true },
   { id: 'starters', label: 'Starters', active: false },
   { id: 'main-course', label: 'Main Course', active: false },
@@ -48,32 +65,16 @@ const categoryTabs = [
   { id: 'fastfood', label: 'Fastfood', active: false },
 ];
 
-// Level 3 - Restaurant Management tabs
-const level3Tabs = [
-  { id: 'pos', label: 'POS', active: true },
-  { id: 'pantry', label: 'Pantry Management', active: false },
-  { id: 'restaurant', label: 'Restaurant', active: false },
-  { id: 'status', label: 'Status Setup', active: false },
-  { id: 'categories', label: 'Categories Setup', active: false },
-  { id: 'subcategories', label: 'Sub Categories Setup', active: false },
-  { id: 'menu', label: 'Restaurant Menu', active: false },
-  { id: 'bookings', label: 'Restaurant Bookings', active: false },
-];
-
-// Level 4 - POS sub-tabs
-const level4Tabs = [
-  { id: 'pos-main', label: 'POS', active: true },
-  { id: 'new-table', label: 'New Table', active: false },
-  { id: 'order-delivery', label: 'Order Delivery', active: false },
-];
-
 const RestaurantManagement: React.FC = () => {
-  const navigate = useNavigate();
+  // Collapse states for each level
+  const [level3Collapsed, setLevel3Collapsed] = useState(false);
+  const [level4Collapsed, setLevel4Collapsed] = useState(false);
+  const [level5Collapsed, setLevel5Collapsed] = useState(false);
   
   // Tab states
-  const [activeLevel3Tab, setActiveLevel3Tab] = useState('pos');
-  const [activeLevel4Tab, setActiveLevel4Tab] = useState('pos-main');
-  const [activeCategory, setActiveCategory] = useState('favourite');
+  const [activeLevel3Tab, setActiveLevel3Tab] = useState('restaurant-orders');
+  const [activeLevel4Tab, setActiveLevel4Tab] = useState('pos');
+  const [activeLevel5Tab, setActiveLevel5Tab] = useState('favourite');
   
   // POS states
   const [searchItem, setSearchItem] = useState('');
@@ -139,25 +140,25 @@ const RestaurantManagement: React.FC = () => {
 
   // Tab handlers
   const handleLevel3TabClick = (tabId: string) => {
-    if (tabId !== 'pos') {
+    if (tabId !== 'restaurant-orders') {
       toast('This section is under construction', { icon: '🚧' });
     }
     setActiveLevel3Tab(tabId);
   };
 
   const handleLevel4TabClick = (tabId: string) => {
-    if (tabId !== 'pos-main') {
+    if (tabId !== 'pos') {
       toast('This section is under construction', { icon: '🚧' });
     }
     setActiveLevel4Tab(tabId);
   };
 
-  const handleCategoryClick = (categoryId: string) => {
-    if (categoryId !== 'favourite') {
+  const handleLevel5TabClick = (tabId: string) => {
+    if (tabId !== 'favourite') {
       toast('This section is under construction', { icon: '🚧' });
       return;
     }
-    setActiveCategory(categoryId);
+    setActiveLevel5Tab(tabId);
   };
 
   // Action handlers
@@ -210,7 +211,7 @@ const RestaurantManagement: React.FC = () => {
     </div>
   );
 
-  // POS Content
+  // POS Content (60/40 split)
   const renderPOSContent = () => (
     <div className="flex gap-4 flex-1 min-h-[500px]">
       {/* LEFT SECTION - 60% */}
@@ -254,23 +255,6 @@ const RestaurantManagement: React.FC = () => {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Level 5 - Category Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-          {categoryTabs.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryClick(cat.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
-                activeCategory === cat.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:bg-accent'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
         </div>
 
         {/* Menu Items */}
@@ -427,50 +411,111 @@ const RestaurantManagement: React.FC = () => {
     <div className="flex flex-col">
       {/* Breadcrumb */}
       <div className="text-sm text-muted-foreground mb-4">
-        Booking Management &gt; F&B &gt; Restaurant Management
+        Booking Management &gt; F&B
       </div>
 
-      {/* LEVEL 3 TABS - Restaurant Management sections */}
-      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 border-b border-border">
-        {level3Tabs.map(tab => (
+      {/* LEVEL 3 TABS - F&B sections with collapse */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
           <button
-            key={tab.id}
-            onClick={() => handleLevel3TabClick(tab.id)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg whitespace-nowrap transition-colors ${
-              activeLevel3Tab === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground hover:bg-accent'
-            }`}
+            onClick={() => setLevel3Collapsed(!level3Collapsed)}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary hover:bg-accent transition-colors"
           >
-            {tab.label}
-            {!tab.active && <span className="ml-1 text-xs opacity-70">(UC)</span>}
+            {level3Collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-        ))}
-      </div>
-
-      {/* Content based on Level 3 tab */}
-      {activeLevel3Tab === 'pos' ? (
-        <>
-          {/* LEVEL 4 TABS - POS sub-sections */}
-          <div className="flex items-center gap-2 mb-4">
-            {level4Tabs.map(tab => (
+          <span className="text-sm font-medium text-foreground">Level 3</span>
+        </div>
+        {!level3Collapsed && (
+          <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-border">
+            {level3Tabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => handleLevel4TabClick(tab.id)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                  activeLevel4Tab === tab.id
-                    ? 'bg-accent text-accent-foreground border border-primary'
-                    : 'bg-secondary text-muted-foreground hover:bg-accent'
+                onClick={() => handleLevel3TabClick(tab.id)}
+                className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                  activeLevel3Tab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                 }`}
               >
                 {tab.label}
-                {!tab.active && <span className="ml-1 text-xs opacity-70">(UC)</span>}
               </button>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Content based on Level 3 tab */}
+      {activeLevel3Tab === 'restaurant-orders' ? (
+        <>
+          {/* LEVEL 4 TABS - Restaurant Orders sub-sections with collapse */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setLevel4Collapsed(!level4Collapsed)}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary hover:bg-accent transition-colors"
+              >
+                {level4Collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+              <span className="text-sm font-medium text-foreground">Level 4</span>
+            </div>
+            {!level4Collapsed && (
+              <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-border">
+                {level4Tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleLevel4TabClick(tab.id)}
+                    className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                      activeLevel4Tab === tab.id
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Content based on Level 4 tab */}
-          {activeLevel4Tab === 'pos-main' ? renderPOSContent() : renderUnderConstruction(level4Tabs.find(t => t.id === activeLevel4Tab)?.label || 'Section')}
+          {activeLevel4Tab === 'pos' ? (
+            <>
+              {/* LEVEL 5 TABS - Category tabs with collapse */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    onClick={() => setLevel5Collapsed(!level5Collapsed)}
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-secondary hover:bg-accent transition-colors"
+                  >
+                    {level5Collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  <span className="text-sm font-medium text-foreground">Level 5</span>
+                </div>
+                {!level5Collapsed && (
+                  <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-border">
+                    {level5Tabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => handleLevel5TabClick(tab.id)}
+                        className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
+                          activeLevel5Tab === tab.id
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Content based on Level 5 tab */}
+              {activeLevel5Tab === 'favourite' ? renderPOSContent() : renderUnderConstruction(level5Tabs.find(t => t.id === activeLevel5Tab)?.label || 'Section')}
+            </>
+          ) : (
+            renderUnderConstruction(level4Tabs.find(t => t.id === activeLevel4Tab)?.label || 'Section')
+          )}
         </>
       ) : (
         renderUnderConstruction(level3Tabs.find(t => t.id === activeLevel3Tab)?.label || 'Section')
