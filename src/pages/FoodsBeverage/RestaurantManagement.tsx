@@ -6,6 +6,7 @@ import FBNewTable from './FBNewTable';
 import FBOrderDelivery from './FBOrderDelivery';
 import FBTables from './FBTables';
 import FBOrders from './FBOrders';
+import FBMenu from './FBMenu';
 // Types
 interface MenuItem {
   id: number;
@@ -148,7 +149,7 @@ const RestaurantManagement: React.FC = () => {
 
   // Tab handlers
   const handleLevel3TabClick = (tabId: string) => {
-    if (tabId !== 'pos' && tabId !== 'setup' && tabId !== 'orders') {
+    if (tabId !== 'pos' && tabId !== 'setup' && tabId !== 'orders' && tabId !== 'menu') {
       toast('This section is under construction', { icon: '🚧' });
     }
     setActiveLevel3Tab(tabId);
@@ -560,6 +561,8 @@ const RestaurantManagement: React.FC = () => {
         <FBSetup />
       ) : activeLevel3Tab === 'orders' ? (
         <FBOrders />
+      ) : activeLevel3Tab === 'menu' ? (
+        <FBMenu />
       ) : (
         <div className="p-4">
           {renderUnderConstruction(getActiveLevel3Label())}
