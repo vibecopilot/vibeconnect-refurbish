@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Plus, Minus, Printer, Construction, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -29,40 +29,47 @@ const nonVegItems: MenuItem[] = [
   { id: 6, name: "Fish Fingers", price: 200 }
 ];
 
-// Level 3 - F&B sub-sections
+// Level 3 - Main F&B Navigation
 const level3Tabs = [
-  { id: 'restaurant-orders', label: 'Restaurant Orders', active: true },
-  { id: 'restaurant', label: 'Restaurant', active: false },
-  { id: 'status', label: 'Status Setup', active: false },
-  { id: 'categories', label: 'Categories Setup', active: false },
-  { id: 'subcategories', label: 'Sub Categories Setup', active: false },
-  { id: 'menu', label: 'Restaurant Menu', active: false },
-  { id: 'bookings', label: 'Restaurant Bookings', active: false },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'pos', label: 'POS' },
+  { id: 'orders', label: 'Orders' },
+  { id: 'menu', label: 'Menu' },
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'reports', label: 'Reports' },
 ];
 
-// Level 4 - Restaurant Orders sub-tabs
+// More dropdown items
+const moreDropdownItems = [
+  { id: 'customers', label: 'Customers' },
+  { id: 'staff', label: 'Staff' },
+  { id: 'settings', label: 'Settings' },
+];
+
+// Level 4 - POS sub-tabs
 const level4Tabs = [
-  { id: 'pos', label: 'POS', active: true },
-  { id: 'new-table', label: 'New Table', active: false },
-  { id: 'order-delivery', label: 'Order Delivery', active: false },
+  { id: 'pos', label: 'POS' },
+  { id: 'new-table', label: 'New Table' },
+  { id: 'order-delivery', label: 'Order Delivery' },
+  { id: 'tables', label: 'Tables' },
 ];
 
 // Level 5 - Category tabs
 const level5Tabs = [
-  { id: 'favourite', label: 'Favourite Items', active: true },
-  { id: 'starters', label: 'Starters', active: false },
-  { id: 'main-course', label: 'Main Course', active: false },
-  { id: 'beverages', label: 'Beverages', active: false },
-  { id: 'desserts', label: 'Desserts', active: false },
-  { id: 'chinese', label: 'Chinese', active: false },
-  { id: 'south-indian', label: 'South Indian', active: false },
-  { id: 'north-indian', label: 'North Indian', active: false },
-  { id: 'biryani', label: 'Biryani & Rice', active: false },
-  { id: 'bread', label: 'Bread & Roti', active: false },
-  { id: 'salads', label: 'Salads', active: false },
-  { id: 'snacks', label: 'Snacks', active: false },
-  { id: 'combos', label: 'Combos/Thalis', active: false },
-  { id: 'fastfood', label: 'Fastfood', active: false },
+  { id: 'favourite', label: 'Favourite Items' },
+  { id: 'starters', label: 'Starters' },
+  { id: 'main-course', label: 'Main Course' },
+  { id: 'beverages', label: 'Beverages' },
+  { id: 'desserts', label: 'Desserts' },
+  { id: 'chinese', label: 'Chinese' },
+  { id: 'south-indian', label: 'South Indian' },
+  { id: 'north-indian', label: 'North Indian' },
+  { id: 'biryani', label: 'Biryani & Rice' },
+  { id: 'bread', label: 'Bread & Roti' },
+  { id: 'salads', label: 'Salads' },
+  { id: 'snacks', label: 'Snacks' },
+  { id: 'combos', label: 'Combos/Thalis' },
+  { id: 'fastfood', label: 'Fastfood' },
 ];
 
 const RestaurantManagement: React.FC = () => {
@@ -72,9 +79,13 @@ const RestaurantManagement: React.FC = () => {
   const [level5Collapsed, setLevel5Collapsed] = useState(false);
   
   // Tab states
-  const [activeLevel3Tab, setActiveLevel3Tab] = useState('restaurant-orders');
+  const [activeLevel3Tab, setActiveLevel3Tab] = useState('pos');
   const [activeLevel4Tab, setActiveLevel4Tab] = useState('pos');
   const [activeLevel5Tab, setActiveLevel5Tab] = useState('favourite');
+  
+  // More dropdown state
+  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
   
   // POS states
   const [searchItem, setSearchItem] = useState('');
@@ -92,6 +103,17 @@ const RestaurantManagement: React.FC = () => {
   const [isPaid, setIsPaid] = useState(false);
   const [useLoyalty, setUseLoyalty] = useState(false);
   const [sendFeedback, setSendFeedback] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        setShowMoreDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Calculate total
   const totalAmount = useMemo(() => {
@@ -140,10 +162,17 @@ const RestaurantManagement: React.FC = () => {
 
   // Tab handlers
   const handleLevel3TabClick = (tabId: string) => {
-    if (tabId !== 'restaurant-orders') {
+    if (tabId !== 'pos') {
       toast('This section is under construction', { icon: '🚧' });
     }
     setActiveLevel3Tab(tabId);
+    setShowMoreDropdown(false);
+  };
+
+  const handleMoreDropdownClick = (tabId: string) => {
+    toast('This section is under construction', { icon: '🚧' });
+    setActiveLevel3Tab(tabId);
+    setShowMoreDropdown(false);
   };
 
   const handleLevel4TabClick = (tabId: string) => {
@@ -407,9 +436,17 @@ const RestaurantManagement: React.FC = () => {
     </div>
   );
 
+  // Get active tab label for under construction
+  const getActiveLevel3Label = () => {
+    const tab = level3Tabs.find(t => t.id === activeLevel3Tab);
+    if (tab) return tab.label;
+    const moreTab = moreDropdownItems.find(t => t.id === activeLevel3Tab);
+    return moreTab?.label || 'Section';
+  };
+
   return (
     <div className="flex flex-col">
-      {/* LEVEL 3 - F&B sections (matches Level 1/2 style) */}
+      {/* LEVEL 3 - Main F&B Navigation */}
       <div className="flex items-center bg-background border-b border-border">
         <div className={`flex-1 overflow-hidden transition-all duration-300 ${level3Collapsed ? 'max-h-0' : 'max-h-12'}`}>
           <nav className="px-2 overflow-x-auto">
@@ -428,10 +465,40 @@ const RestaurantManagement: React.FC = () => {
                   </button>
                 </li>
               ))}
+              {/* More Dropdown */}
+              <li className="flex-shrink-0 relative" ref={moreDropdownRef}>
+                <button
+                  onClick={() => setShowMoreDropdown(!showMoreDropdown)}
+                  className={`flex items-center gap-1 px-3 py-2.5 text-xs font-semibold transition-colors whitespace-nowrap uppercase tracking-wide ${
+                    moreDropdownItems.some(item => item.id === activeLevel3Tab)
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-foreground hover:bg-accent'
+                  }`}
+                >
+                  More
+                  <ChevronDown size={14} className={`transition-transform ${showMoreDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {/* Dropdown Menu */}
+                {showMoreDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[150px]">
+                    {moreDropdownItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleMoreDropdownClick(item.id)}
+                        className={`block w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent ${
+                          activeLevel3Tab === item.id ? 'text-primary bg-accent' : 'text-foreground'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
             </ul>
           </nav>
         </div>
-        {/* Collapse Button - Always visible */}
+        {/* Collapse Button */}
         <button
           onClick={() => setLevel3Collapsed(!level3Collapsed)}
           className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
@@ -442,9 +509,9 @@ const RestaurantManagement: React.FC = () => {
       </div>
 
       {/* Content based on Level 3 tab */}
-      {activeLevel3Tab === 'restaurant-orders' ? (
+      {activeLevel3Tab === 'pos' ? (
         <>
-          {/* LEVEL 4 - Restaurant Orders sub-sections */}
+          {/* LEVEL 4 - POS sub-navigation */}
           <div className="flex items-center border-b border-border bg-muted/30">
             <div className={`flex-1 overflow-hidden transition-all duration-300 ${level4Collapsed ? 'max-h-0' : 'max-h-10'}`}>
               <nav className="px-2 overflow-x-auto">
@@ -466,7 +533,7 @@ const RestaurantManagement: React.FC = () => {
                 </ul>
               </nav>
             </div>
-            {/* Collapse Button - Always visible */}
+            {/* Collapse Button */}
             <button
               onClick={() => setLevel4Collapsed(!level4Collapsed)}
               className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
@@ -501,7 +568,7 @@ const RestaurantManagement: React.FC = () => {
                     </ul>
                   </nav>
                 </div>
-                {/* Collapse Button - Always visible */}
+                {/* Collapse Button */}
                 <button
                   onClick={() => setLevel5Collapsed(!level5Collapsed)}
                   className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
@@ -524,7 +591,7 @@ const RestaurantManagement: React.FC = () => {
         </>
       ) : (
         <div className="p-4">
-          {renderUnderConstruction(level3Tabs.find(t => t.id === activeLevel3Tab)?.label || 'Section')}
+          {renderUnderConstruction(getActiveLevel3Label())}
         </div>
       )}
     </div>
