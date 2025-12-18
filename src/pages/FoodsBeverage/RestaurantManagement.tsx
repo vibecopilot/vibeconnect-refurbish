@@ -493,15 +493,15 @@ const RestaurantManagement: React.FC = () => {
           {activeLevel4Tab === 'pos' ? (
             <>
               {/* LEVEL 5 - Category tabs */}
-              <div className="flex items-center w-full border-b border-border bg-muted/10">
-                <div className={`flex-1 overflow-hidden transition-all duration-300 ${level5Collapsed ? 'max-h-0' : 'max-h-12'}`}>
+              <div className="flex items-center w-full border-b border-border bg-muted/20">
+                <div className={`flex-1 overflow-hidden transition-all duration-300 ${level5Collapsed ? 'max-h-0' : 'max-h-14'}`}>
                   <nav className="w-full overflow-x-auto scrollbar-hide">
-                    <ul className="flex items-center w-full">
+                    <ul className="flex flex-row items-center w-full">
                       {level5Tabs.map(tab => (
-                        <li key={tab.id} className="flex-1 min-w-0">
+                        <li key={tab.id} className="flex-1 min-w-[100px]">
                           <button
                             onClick={() => handleLevel5TabClick(tab.id)}
-                            className={`w-full px-2 py-3 text-xs font-semibold transition-colors whitespace-nowrap uppercase tracking-wide text-center ${
+                            className={`w-full px-4 py-3.5 text-xs font-semibold transition-colors whitespace-nowrap uppercase tracking-wide text-center ${
                               activeLevel5Tab === tab.id
                                 ? 'text-primary border-b-2 border-primary bg-accent/30'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -520,7 +520,7 @@ const RestaurantManagement: React.FC = () => {
                   className="flex-shrink-0 p-2 rounded hover:bg-accent transition-colors mr-2"
                   title={level5Collapsed ? "Expand" : "Collapse"}
                 >
-                  {level5Collapsed ? <ChevronDown size={12} className="text-muted-foreground" /> : <ChevronUp size={12} className="text-muted-foreground" />}
+                  {level5Collapsed ? <ChevronDown size={16} className="text-muted-foreground" /> : <ChevronUp size={16} className="text-muted-foreground" />}
                 </button>
               </div>
 
