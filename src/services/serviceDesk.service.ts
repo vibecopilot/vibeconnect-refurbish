@@ -91,11 +91,17 @@ export const serviceDeskService = {
     });
   },
 
-  createTicket: async (data: FormData) => {
-    return axiosInstance.post(`/pms/complaints.json?token=${getToken()}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
+createTicket: async (data: FormData) => {
+  return axiosInstance.post(
+    `/pms/complaints.json?token=${getToken()}`, 
+    data,
+    {
+      headers: { 
+        'Content-Type': 'multipart/form-data' 
+      },
+    }
+  );
+},
 
   updateTicket: async (id: number | string, data: Partial<Ticket>) => {
     return axiosInstance.put(`/pms/complaints/${id}.json`, data, {
@@ -127,6 +133,8 @@ export const serviceDeskService = {
     });
   },
 
+
+
   exportTickets: async (statusFilter?: string) => {
     const params: Record<string, unknown> = { token: getToken() };
     if (statusFilter) params['q[complaint_status_name_eq]'] = statusFilter;
@@ -135,6 +143,54 @@ export const serviceDeskService = {
       responseType: 'blob',
     });
   },
+
+  //! Added by prathamesh
+  getAllTickets: async () => {
+  return axiosInstance.get('/pms/admin/complaints.json', {
+    params: { token: getToken() },
+  });
+},
+
+ // Get sub-categories based on category ID
+  getSubCategories: async (categoryId: number) => {
+    return axiosInstance.get('/pms/admin/get_sub_categories.json', {
+      params: {
+        token: getToken(),
+        category_type_id: categoryId,
+      },
+    });
+  },
+
+  // Get assigned users
+  getAssignedUsers: async () => {
+    return axiosInstance.get('/users/pms_admins.json', {
+      params: { token: getToken() },
+    });
+  },
+
+  // Get floors by building ID
+  getFloors: async (buildingId: number) => {
+    return axiosInstance.get(`/floors.json?q[building_id_eq]=${buildingId}`, {
+      params: { token: getToken() },
+    });
+  },
+
+  // Get units by floor ID
+  getUnits: async (floorId: number) => {
+    return axiosInstance.get(`/units.json?q[floor_id_eq]=${floorId}`, {
+      params: { token: getToken() },
+    });
+  },
+
+  // Get complaint modes
+  getComplaintModes: async () => {
+    return axiosInstance.get('/complaint_modes.json', {
+      params: { token: getToken() },
+    });
+  },
+
 };
+
+
 
 export default serviceDeskService;

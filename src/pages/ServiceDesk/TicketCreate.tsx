@@ -38,6 +38,11 @@ interface AssignedUser {
   lastname?: string;
 }
 
+interface ComplaintMode {
+  id: number;
+  name: string;
+}
+
 const TicketCreate: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -47,7 +52,10 @@ const TicketCreate: React.FC = () => {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [assignedUsers, setAssignedUsers] = useState<AssignedUser[]>([]);
+  const [complaintModes, setComplaintModes] = useState<ComplaintMode[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+
+  const siteID = getItemInLocalStorage('SITEID');
 
   const [formData, setFormData] = useState({
     issue_type_id: '',
@@ -62,73 +70,100 @@ const TicketCreate: React.FC = () => {
     priority: '',
     assigned_to: '',
     complaint_mode_id: '',
+    of_phase: 'pms',
+    site_id: '',
   });
 
   useEffect(() => {
+    // Load from localStorage
     const storedCategories = getItemInLocalStorage('categories') || [];
     const storedBuildings = getItemInLocalStorage('Building') || [];
+    const storedSiteId = getItemInLocalStorage('SITEID');
+    
     setCategories(storedCategories);
     setBuildings(storedBuildings);
+    setFormData(prev => ({ ...prev, site_id: storedSiteId }));
+
+    // Fetch data from APIs
     fetchAssignedUsers();
+    fetchComplaintModes();
   }, []);
 
   const fetchAssignedUsers = async () => {
     try {
-      const response = await fetch('/api/assigned_users');
-      // Fallback to localStorage if API fails
-      const users = getItemInLocalStorage('assignedUsers') || [];
-      setAssignedUsers(users);
+      const response = await serviceDeskService.getAssignedUsers();
+      setAssignedUsers(response.data || []);
     } catch (error) {
       console.error('Error fetching assigned users:', error);
     }
   };
 
+  const fetchComplaintModes = async () => {
+    try {
+      const response = await serviceDeskService.getComplaintModes();
+      setComplaintModes(response.data || []);
+    } catch (error) {
+      console.error('Error fetching complaint modes:', error);
+    }
+  };
+
   const handleCategoryChange = async (categoryId: string) => {
-    setFormData(prev => ({ ...prev, category_type_id: categoryId, sub_category_id: '' }));
+    setFormData(prev => ({ 
+      ...prev, 
+      category_type_id: categoryId, 
+      sub_category_id: '' 
+    }));
+    
+    setSubCategories([]);
+    
     if (categoryId) {
       try {
-        // Fetch sub-categories based on category
-        const category = categories.find(c => c.id === Number(categoryId));
-        if (category) {
-          // Mock sub-categories - in real app, fetch from API
-          setSubCategories([]);
-        }
+        const response = await serviceDeskService.getSubCategories(Number(categoryId));
+        const subCats = response.data?.sub_categories || [];
+        setSubCategories(subCats);
       } catch (error) {
         console.error('Error fetching sub-categories:', error);
       }
-    } else {
-      setSubCategories([]);
     }
   };
 
   const handleBuildingChange = async (buildingId: string) => {
-    setFormData(prev => ({ ...prev, building_name: buildingId, floor_name: '', unit_id: '' }));
+    setFormData(prev => ({ 
+      ...prev, 
+      building_name: buildingId, 
+      floor_name: '', 
+      unit_id: '' 
+    }));
+    
+    setFloors([]);
+    setUnits([]);
+    
     if (buildingId) {
       try {
-        // Fetch floors based on building
-        const storedFloors = getItemInLocalStorage('Floors') || [];
-        setFloors(storedFloors.filter((f: Floor & { building_id?: number }) => f.building_id === Number(buildingId)));
+        const response = await serviceDeskService.getFloors(Number(buildingId));
+        setFloors(response.data || []);
       } catch (error) {
         console.error('Error fetching floors:', error);
       }
-    } else {
-      setFloors([]);
-      setUnits([]);
     }
   };
 
   const handleFloorChange = async (floorId: string) => {
-    setFormData(prev => ({ ...prev, floor_name: floorId, unit_id: '' }));
+    setFormData(prev => ({ 
+      ...prev, 
+      floor_name: floorId, 
+      unit_id: '' 
+    }));
+    
+    setUnits([]);
+    
     if (floorId) {
       try {
-        // Fetch units based on floor
-        const storedUnits = getItemInLocalStorage('Units') || [];
-        setUnits(storedUnits.filter((u: Unit & { floor_id?: number }) => u.floor_id === Number(floorId)));
+        const response = await serviceDeskService.getUnits(Number(floorId));
+        setUnits(response.data || []);
       } catch (error) {
         console.error('Error fetching units:', error);
       }
-    } else {
-      setUnits([]);
     }
   };
 
@@ -150,7 +185,7 @@ const TicketCreate: React.FC = () => {
     if (fileList) {
       const newFiles = Array.from(fileList);
       if (files.length + newFiles.length > 4) {
-        toast.error('Maximum 4 files allowed');
+        toast.error('You can upload maximum up to 4 images.');
         return;
       }
       setFiles(prev => [...prev, ...newFiles]);
@@ -162,55 +197,144 @@ const TicketCreate: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  // Validations (matching existing project)
+  if (!formData.building_name) {
+    return toast.error('Please Select Building Name');
+  }
+  if (!formData.floor_name) {
+    return toast.error('Please Select Floor Name!');
+  }
+  if (!formData.category_type_id) {
+    return toast.error('Please select category');
+  }
+  if (!formData.heading) {
+    return toast.error('Please provide title');
+  }
+  if (files.length > 4) {
+    return toast.error('You can upload maximum up to 4 images.');
+  }
+
+  setLoading(true);
+  const toastId = toast.loading('Please wait generating ticket!');
+  
+  try {
+    const submitData = new FormData();
     
-    if (!formData.heading) {
-      toast.error('Please provide a title');
-      return;
+    // 🔥 REMOVE the complaints[] prefix - send fields directly
+    if (formData.category_type_id) {
+      submitData.append('category_type_id', formData.category_type_id);
     }
-    if (!formData.category_type_id) {
-      toast.error('Please select a category');
-      return;
+    if (formData.sub_category_id) {
+      submitData.append('sub_category_id', formData.sub_category_id);
+    }
+    if (formData.text) {
+      submitData.append('text', formData.text);
+    }
+    if (formData.heading) {
+      submitData.append('heading', formData.heading);
+    }
+    
+    // Always append these
+    submitData.append('of_phase', formData.of_phase);
+    submitData.append('site_id', formData.site_id);
+    
+    if (formData.assigned_to) {
+      submitData.append('assigned_to', formData.assigned_to);
+    }
+    if (formData.priority) {
+      submitData.append('priority', formData.priority);
+    }
+    if (formData.building_name) {
+      submitData.append('building_name', formData.building_name);
+    }
+    if (formData.unit_id) {
+      submitData.append('unit_id', formData.unit_id);
+    }
+    if (formData.floor_name) {
+      submitData.append('floor_name', formData.floor_name);
+    }
+    if (formData.issue_type_id) {
+      submitData.append('issue_type_id', formData.issue_type_id);
+    }
+    if (formData.complaint_type) {
+      submitData.append('complaint_type', formData.complaint_type);
+    }
+    if (formData.complaint_mode_id) {
+      submitData.append('complaint_mode_id', formData.complaint_mode_id);
     }
 
-    setLoading(true);
-    try {
-      const submitData = new FormData();
-      
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value) {
-          submitData.append(`complaints[${key}]`, value);
-        }
-      });
-      
-      submitData.append('complaints[of_phase]', 'pms');
-      
-      files.forEach((file) => {
-        submitData.append('documents[]', file);
-      });
+    // Append files
+    files.forEach((file) => {
+      submitData.append('documents[]', file);
+    });
 
-      await serviceDeskService.createTicket(submitData);
-      toast.success('Ticket created successfully');
-      navigate('/service-desk');
-    } catch (error) {
-      console.error('Error creating ticket:', error);
-      toast.error('Failed to create ticket');
-    } finally {
-      setLoading(false);
+    // Debug: Log what's being sent
+    console.log('FormData entries:');
+    for (let pair of submitData.entries()) {
+      console.log(pair[0] + ': ' + pair[1]);
     }
+
+    const response = await serviceDeskService.createTicket(submitData);
+    console.log('API Response:', response.data);
+    
+    toast.dismiss(toastId);
+    toast.success(`Ticket #${response.data.ticket_number} generated successfully!`);
+    
+    // Navigate with refresh state
+    navigate('/service-desk', { 
+      replace: true, 
+      state: { refresh: true } 
+    });
+  } catch (error) {
+    console.error('Error creating ticket:', error);
+    toast.dismiss(toastId);
+    toast.error('Failed to create ticket');
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Add this useEffect to watch form changes
+useEffect(() => {
+  console.log('📝 Form Data Changed:', formData);
+}, [formData]);
+
+  const handleReset = () => {
+    setFormData({
+      issue_type_id: '',
+      complaint_type: '',
+      category_type_id: '',
+      sub_category_id: '',
+      building_name: '',
+      floor_name: '',
+      unit_id: '',
+      heading: '',
+      text: '',
+      priority: '',
+      assigned_to: '',
+      complaint_mode_id: '',
+      of_phase: 'pms',
+      site_id: formData.site_id,
+    });
+    setFiles([]);
+    setSubCategories([]);
+    setFloors([]);
+    setUnits([]);
   };
 
   const priorityOptions = [
-    { value: 'P1', label: 'P1 - Critical' },
-    { value: 'P2', label: 'P2 - High' },
-    { value: 'P3', label: 'P3 - Medium' },
-    { value: 'P4', label: 'P4 - Low' },
-    { value: 'P5', label: 'P5 - Very Low' },
+    { value: 'P1', label: 'P1' },
+    { value: 'P2', label: 'P2' },
+    { value: 'P3', label: 'P3' },
+    { value: 'P4', label: 'P4' },
+    { value: 'P5', label: 'P5' },
   ];
 
   const issueTypeOptions = [
     { value: 'Apartment', label: 'Apartment' },
-    { value: 'Common Area', label: 'Common Area' },
+    { value: 'common Area', label: 'Common Area' },
   ];
 
   const complaintTypeOptions = [
@@ -228,36 +352,39 @@ const TicketCreate: React.FC = () => {
 
       <div className="bg-card border border-border rounded-xl shadow-sm mt-4">
         <div className="bg-primary text-primary-foreground px-6 py-4 rounded-t-xl">
-          <h1 className="text-xl font-semibold">Create New Ticket</h1>
-          <p className="text-primary-foreground/80 text-sm mt-1">Fill in the details to submit a new support ticket</p>
+          <h1 className="text-xl font-semibold">Create Ticket</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
           {/* Basic Information */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">1</span>
+            <h2 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b">
               Basic Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Show Related To only for specific site */}
+              {siteID === 25 && (
+                <FormInput
+                  label="Related To"
+                  name="issue_type_id"
+                  type="select"
+                  value={formData.issue_type_id}
+                  onChange={handleChange}
+                  options={issueTypeOptions}
+                  placeholder="Select Area"
+                />
+              )}
+              
               <FormInput
-                label="Related To"
-                name="issue_type_id"
-                type="select"
-                value={formData.issue_type_id}
-                onChange={handleChange}
-                options={issueTypeOptions}
-                placeholder="Select Area"
-              />
-              <FormInput
-                label="Type"
+                label="Type of"
                 name="complaint_type"
                 type="select"
                 value={formData.complaint_type}
                 onChange={handleChange}
                 options={complaintTypeOptions}
-                placeholder="Select Type"
+                placeholder="Select Issue Type"
               />
+
               <FormInput
                 label="Priority"
                 name="priority"
@@ -272,22 +399,22 @@ const TicketCreate: React.FC = () => {
 
           {/* Location Information */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">2</span>
+            <h2 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b">
               Location Details
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormInput
-                label="Building"
+                label="Building Name"
                 name="building_name"
                 type="select"
                 value={formData.building_name}
                 onChange={handleChange}
                 options={buildings.map(b => ({ value: String(b.id), label: b.name }))}
                 placeholder="Select Building"
+                required
               />
               <FormInput
-                label="Floor"
+                label="Floor Name"
                 name="floor_name"
                 type="select"
                 value={formData.floor_name}
@@ -295,9 +422,10 @@ const TicketCreate: React.FC = () => {
                 options={floors.map(f => ({ value: String(f.id), label: f.name }))}
                 placeholder="Select Floor"
                 disabled={!formData.building_name}
+                required
               />
               <FormInput
-                label="Unit"
+                label="Unit Name"
                 name="unit_id"
                 type="select"
                 value={formData.unit_id}
@@ -311,8 +439,7 @@ const TicketCreate: React.FC = () => {
 
           {/* Category Information */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">3</span>
+            <h2 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b">
               Category & Assignment
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -333,11 +460,11 @@ const TicketCreate: React.FC = () => {
                 value={formData.sub_category_id}
                 onChange={handleChange}
                 options={subCategories.map(s => ({ value: String(s.id), label: s.name }))}
-                placeholder="Select Sub Category"
+                placeholder="Sub Category"
                 disabled={!formData.category_type_id}
               />
               <FormInput
-                label="Assign To"
+                label="Assigned To"
                 name="assigned_to"
                 type="select"
                 value={formData.assigned_to}
@@ -346,15 +473,14 @@ const TicketCreate: React.FC = () => {
                   value: String(u.id), 
                   label: `${u.firstname} ${u.lastname || ''}`.trim() 
                 }))}
-                placeholder="Select Assignee"
+                placeholder="Select Assign To"
               />
             </div>
           </div>
 
           {/* Ticket Details */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">4</span>
+            <h2 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b">
               Ticket Details
             </h2>
             <div className="space-y-4">
@@ -364,7 +490,7 @@ const TicketCreate: React.FC = () => {
                 type="text"
                 value={formData.heading}
                 onChange={handleChange}
-                placeholder="Enter ticket title"
+                placeholder="Enter Title"
                 required
               />
               <FormInput
@@ -373,7 +499,7 @@ const TicketCreate: React.FC = () => {
                 type="textarea"
                 value={formData.text}
                 onChange={handleChange}
-                placeholder="Describe your issue in detail..."
+                placeholder="Describe your concern!"
                 rows={4}
               />
             </div>
@@ -381,9 +507,8 @@ const TicketCreate: React.FC = () => {
 
           {/* Attachments */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">5</span>
-              Attachments
+            <h2 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b">
+              Attachment
             </h2>
             <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
               <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
@@ -429,30 +554,31 @@ const TicketCreate: React.FC = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
-            <button
-              type="button"
-              onClick={() => navigate('/service-desk')}
-              className="px-6 py-2.5 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
+          <div className="flex items-center justify-center gap-3 pt-6 border-t border-border">
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating...
+                  Submitting...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Create Ticket
+                  Submit
                 </>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Reset
             </button>
           </div>
         </form>
