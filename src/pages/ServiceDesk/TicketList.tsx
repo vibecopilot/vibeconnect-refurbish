@@ -1,80 +1,542 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import Breadcrumb from '../../components/ui/Breadcrumb';
-import ListToolbar from '../../components/ui/ListToolbar';
-import DataCard from '../../components/ui/DataCard';
-import DataTable, { TableColumn } from '../../components/ui/DataTable';
-import StatusBadge, { StatusType } from '../../components/ui/StatusBadge';
-import { serviceDeskService, Ticket } from '../../services/serviceDesk.service';
-import { Loader2, Ticket as TicketIcon, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from "react";
+import * as XLSX from 'xlsx'; 
+import toast from 'react-hot-toast'; // Add this import
+import { useNavigate, Link } from "react-router-dom";
+import Breadcrumb from "../../components/ui/Breadcrumb";
+import ListToolbar from "../../components/ui/ListToolbar";
+import DataCard from "../../components/ui/DataCard";
+import DataTable, { TableColumn } from "../../components/ui/DataTable";
+import StatusBadge, { StatusType } from "../../components/ui/StatusBadge";
+import { serviceDeskService, Ticket } from "../../services/serviceDesk.service";
+import {
+  Loader2,
+  Ticket as TicketIcon,
+  AlertCircle,
+  RefreshCw,
+  ChevronDown,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 const TicketList: React.FC = () => {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [searchValue, setSearchValue] = useState('');
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [searchValue, setSearchValue] = useState("");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [allTickets, setAllTickets] = useState<Ticket[]>([]); // For client-side search
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<any | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
   
+  // Quick filter state
+  const [quickFilter, setQuickFilter] = useState<"All" | "Open" | "Closed" | "Pending" | "Completed">("All");
+  
+  const [filters, setFilters] = useState<{
+    building_name?: string;
+    floor_name?: string;
+    unit_name?: string;
+    status?: string;
+    priority?: string;
+    category?: string;
+    assigned_to?: string;
+    date_start?: string;
+    date_end?: string;
+  }>({});
+
+  const [lookups, setLookups] = useState<{
+    buildings: string[];
+    floors: string[];
+    units: string[];
+    categories: string[];
+    statuses: string[];
+    priorities: string[];
+    assignees: string[];
+  }>({
+    buildings: [],
+    floors: [],
+    units: [],
+    categories: [],
+    statuses: [],
+    priorities: [],
+    assignees: [],
+  });
+
+  // Hidden columns state
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+
   // Records per page: 12 for grid, 10 for table
-  const getPerPage = (mode: 'grid' | 'table') => mode === 'grid' ? 12 : 10;
-  const [pagination, setPagination] = useState({ page: 1, perPage: getPerPage('grid'), total: 0, totalPages: 0 });
+  const getPerPage = (mode: "grid" | "table") => (mode === "grid" ? 12 : 10);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    perPage: getPerPage("table"),
+    total: 0,
+    totalPages: 0,
+  });
 
   // Update perPage when viewMode changes
   useEffect(() => {
-    setPagination(prev => ({ ...prev, perPage: getPerPage(viewMode), page: 1 }));
+    setPagination((prev) => ({
+      ...prev,
+      perPage: getPerPage(viewMode),
+      page: 1,
+    }));
   }, [viewMode]);
 
+  // Fetch paginated tickets for display
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await serviceDeskService.getTickets(pagination.page, pagination.perPage);
+      const response = await serviceDeskService.getTickets(
+        pagination.page,
+        pagination.perPage,
+        filters
+      );
       const data = response.data;
-      const ticketList = Array.isArray(data) ? data : data?.complaints || data?.data || [];
+      const ticketList = Array.isArray(data)
+        ? data
+        : data?.complaints || data?.data || [];
       setTickets(ticketList);
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        total: data.total || data.total_count || ticketList.length,
-        totalPages: data.total_pages || Math.ceil((data.total || ticketList.length) / prev.perPage),
+        total: data.count || data.total || data.total_count || ticketList.length,
+        totalPages:
+          data.total_pages ||
+          Math.ceil((data.count || data.total || ticketList.length) / prev.perPage),
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tickets');
+      setError(err instanceof Error ? err.message : "Failed to fetch tickets");
       setTickets([]);
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage]);
+  }, [pagination.page, pagination.perPage, filters]);
 
-  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+  // Fetch ALL tickets for client-side search (like existing project)
+  const fetchAllTickets = useCallback(async () => {
+    try {
+      const response = await serviceDeskService.getAllTickets();
+      const data = response.data;
+      const ticketList = Array.isArray(data)
+        ? data
+        : data?.complaints || data?.data || [];
+      setAllTickets(ticketList);
+    } catch (err) {
+      console.error("Failed to fetch all tickets:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  useEffect(() => {
+    fetchAllTickets();
+  }, [fetchAllTickets]);
+
+  // CLIENT-SIDE SEARCH AND FILTERING (like existing project)
+  useEffect(() => {
+    let filtered = [...allTickets];
+
+    // Apply quick filter
+    if (quickFilter !== "All") {
+      filtered = filtered.filter((item) => {
+        const status = (item.status || (item as any).issue_status || "").toLowerCase();
+        
+        if (quickFilter === "Open") {
+          return status === "pending" || status === "open";
+        } else if (quickFilter === "Closed") {
+          return status === "closed";
+        } else if (quickFilter === "Pending") {
+          return status === "pending";
+        } else if (quickFilter === "Completed") {
+          return status === "complete" || status === "completed" || status === "work completed";
+        }
+        return true;
+      });
+    }
+
+    // Apply search filter (client-side like existing project)
+    if (searchValue.trim() !== "") {
+      const searchLower = searchValue.toLowerCase().trim();
+      filtered = filtered.filter((item) => {
+        const ticketNumber = (item.ticket_number || "").toLowerCase();
+        const categoryType = ((item as any).category_type || item.category || "").toLowerCase();
+        const issueType = ((item as any).issue_type || "").toLowerCase();
+        const heading = ((item as any).heading || item.title || "").toLowerCase();
+        const priority = (item.priority || "").toLowerCase();
+        const unit = ((item as any).unit || item.unit_name || "").toLowerCase();
+        
+        return (
+          ticketNumber.includes(searchLower) ||
+          categoryType.includes(searchLower) ||
+          issueType.includes(searchLower) ||
+          heading.includes(searchLower) ||
+          priority.includes(searchLower) ||
+          unit.includes(searchLower)
+        );
+      });
+    }
+
+    // Apply advanced filters
+    if (filters.building_name) {
+      filtered = filtered.filter(
+        (item) => item.building_name === filters.building_name
+      );
+    }
+    if (filters.floor_name) {
+      filtered = filtered.filter(
+        (item) => item.floor_name === filters.floor_name
+      );
+    }
+    if (filters.unit_name) {
+      filtered = filtered.filter(
+        (item) => ((item as any).unit || item.unit_name) === filters.unit_name
+      );
+    }
+    if (filters.category) {
+      filtered = filtered.filter(
+        (item) => ((item as any).category_type || item.category) === filters.category
+      );
+    }
+    if (filters.status) {
+      filtered = filtered.filter(
+        (item) => (item.status || (item as any).issue_status) === filters.status
+      );
+    }
+    if (filters.priority) {
+      filtered = filtered.filter(
+        (item) => item.priority === filters.priority
+      );
+    }
+    if (filters.assigned_to) {
+      filtered = filtered.filter(
+        (item) => item.assigned_to === filters.assigned_to
+      );
+    }
+    if (filters.date_start) {
+      filtered = filtered.filter(
+        (item) => new Date(item.created_at || "") >= new Date(filters.date_start!)
+      );
+    }
+    if (filters.date_end) {
+      filtered = filtered.filter(
+        (item) => new Date(item.created_at || "") <= new Date(filters.date_end!)
+      );
+    }
+
+    // Update displayed tickets with pagination
+    const startIndex = (pagination.page - 1) * pagination.perPage;
+    const endIndex = startIndex + pagination.perPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+    
+    setTickets(paginatedData);
+    setPagination((prev) => ({
+      ...prev,
+      total: filtered.length,
+      totalPages: Math.ceil(filtered.length / prev.perPage),
+    }));
+  }, [searchValue, quickFilter, filters, allTickets, pagination.page, pagination.perPage]);
 
   const getTicketStatus = (ticket: Ticket): StatusType => {
-    const status = ticket.status?.toLowerCase() || ticket.complaint_status?.name?.toLowerCase();
-    if (status?.includes('open') || status?.includes('new')) return 'pending';
-    if (status?.includes('progress') || status?.includes('assigned')) return 'maintenance';
-    if (status?.includes('resolved') || status?.includes('closed')) return 'checked-out';
-    return 'pending';
+    const status =
+      ticket.status?.toLowerCase() ||
+      ticket.complaint_status?.name?.toLowerCase() ||
+      (ticket as any).issue_status?.toLowerCase();
+    if (status?.includes("open") || status?.includes("new") || status?.includes("pending")) return "pending";
+    if (status?.includes("progress") || status?.includes("assigned") || status?.includes("process"))
+      return "maintenance";
+    if (status?.includes("resolved") || status?.includes("closed") || status?.includes("complete"))
+      return "checked-out";
+    return "pending";
   };
 
   const getPriorityType = (priority?: string): StatusType => {
-    if (priority?.toLowerCase() === 'high' || priority?.toLowerCase() === 'critical') return 'breakdown';
-    if (priority?.toLowerCase() === 'medium') return 'maintenance';
-    return 'in-store';
+    if (
+      priority?.toLowerCase() === "high" ||
+      priority?.toLowerCase() === "critical" ||
+      priority === "P1"
+    )
+      return "breakdown";
+    if (priority?.toLowerCase() === "medium" || priority === "P2") return "maintenance";
+    return "in-store";
   };
 
-  const columns: TableColumn<Ticket>[] = [
-    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
-    { key: 'ticket_number', header: 'Ticket #', render: (v) => v || '-' },
-    { key: 'title', header: 'Subject', sortable: true, render: (v) => v || '-' },
-    { key: 'category', header: 'Category', render: (_, row) => row.helpdesk_category?.name || row.category || '-' },
-    { key: 'status', header: 'Status', render: (_, row) => <StatusBadge status={getTicketStatus(row)} /> },
-    { key: 'priority', header: 'Priority', render: (v) => v ? <StatusBadge status={getPriorityType(v)} /> : '-' },
-    { key: 'assigned_to', header: 'Assigned To', render: (v) => v || 'Unassigned' },
-    { key: 'created_at', header: 'Created', render: (v) => v ? new Date(v).toLocaleDateString() : '-' },
+  const getStatusCount = (label: string) => dashboard?.by_status?.[label] ?? 0;
+
+  const getTypeCount = (label: string) => dashboard?.by_type?.[label] ?? 0;
+
+  const fetchDashboard = useCallback(async () => {
+    try {
+      const resp = await serviceDeskService.getDashboard();
+      setDashboard(resp.data);
+    } catch (e) {
+      console.error("Failed to load dashboard", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  useEffect(() => {
+    if (!allTickets.length) return;
+
+    const buildings = new Set<string>();
+    const floors = new Set<string>();
+    const units = new Set<string>();
+    const categories = new Set<string>();
+    const statuses = new Set<string>();
+    const priorities = new Set<string>();
+    const assignees = new Set<string>();
+
+    allTickets.forEach((t) => {
+      if (t.building_name) buildings.add(t.building_name);
+      if (t.floor_name) floors.add(t.floor_name);
+      if ((t as any).unit_name || (t as any).unit) {
+        units.add((t as any).unit_name || (t as any).unit);
+      }
+      if ((t as any).category_type || t.category) {
+        categories.add((t as any).category_type || (t.category as string));
+      }
+      const st =
+        t.status || (t as any).issue_status || t.complaint_status?.name;
+      if (st) statuses.add(st);
+
+      if (t.priority) priorities.add(t.priority);
+      if (t.assigned_to) assignees.add(t.assigned_to);
+    });
+
+    setLookups({
+      buildings: Array.from(buildings),
+      floors: Array.from(floors),
+      units: Array.from(units),
+      categories: Array.from(categories),
+      statuses: Array.from(statuses),
+      priorities: Array.from(priorities),
+      assignees: Array.from(assignees),
+    });
+  }, [allTickets]);
+
+  // Define all columns
+  const allColumns: Array<TableColumn<Ticket> & { id: string; label: string }> = [
+    {
+      id: "ticket_number",
+      label: "Ticket Number",
+      key: "ticket_number",
+      header: "Ticket Number",
+      render: (v, row) => row.ticket_number || "-",
+    },
+    {
+      id: "building_name",
+      label: "Building Name",
+      key: "building_name",
+      header: "Building Name",
+      render: (v, row) => row.building_name || "-",
+    },
+    {
+      id: "floor_name",
+      label: "Floor Name",
+      key: "floor_name",
+      header: "Floor Name",
+      render: (v, row) => row.floor_name || "-",
+    },
+    {
+      id: "unit_name",
+      label: "Unit Name",
+      key: "unit_name",
+      header: "Unit Name",
+      render: (v, row) => row.unit_name || (row as any).unit || "-",
+    },
+    {
+      id: "reporter_name",
+      label: "Customer Name",
+      key: "reporter_name",
+      header: "Customer Name",
+      render: (v, row) => row.reporter_name || (row as any).created_by || "-",
+    },
+    {
+      id: "category",
+      label: "Category",
+      key: "category",
+      header: "Category",
+      render: (v, row) =>
+        row.helpdesk_category?.name ||
+        (row as any).category_type ||
+        row.category ||
+        "-",
+    },
+    {
+      id: "sub_category",
+      label: "Sub Category",
+      key: "sub_category",
+      header: "Sub Category",
+      render: (v, row) => (row as any).sub_category || row.sub_category || "-",
+    },
+    {
+      id: "title",
+      label: "Title",
+      key: "title",
+      header: "Title",
+      sortable: true,
+      render: (v, row) =>
+        row.title || (row as any).heading || (row as any).text || "-",
+    },
+    {
+      id: "status",
+      label: "Status",
+      key: "status",
+      header: "Status",
+      render: (v, row) => {
+        const status =
+          row.status ||
+          (row as any).issue_status ||
+          row.complaint_status?.name ||
+          "";
+        return <StatusBadge status={getTicketStatus({ ...row, status })} />;
+      },
+    },
+    {
+      id: "priority",
+      label: "Priority",
+      key: "priority",
+      header: "Priority",
+      render: (v, row) =>
+        row.priority ? (
+          <StatusBadge status={getPriorityType(row.priority)} />
+        ) : (
+          "-"
+        ),
+    },
+    {
+      id: "assigned_to",
+      label: "Assigned To",
+      key: "assigned_to",
+      header: "Assigned To",
+      render: (v, row) => row.assigned_to || "Unassigned",
+    },
+    {
+      id: "issue_type",
+      label: "Ticket Type",
+      key: "issue_type",
+      header: "Ticket Type",
+      render: (v, row) => (row as any).issue_type || "-",
+    },
+    {
+      id: "total_time",
+      label: "Total Time",
+      key: "total_time",
+      header: "Total Time",
+      render: (v, row) => {
+        if (!row.created_at) return "-";
+        const created = new Date(row.created_at);
+        const diffMs = Date.now() - created.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) return "Today";
+        if (diffDays === 1) return "1 day ago";
+        return `${diffDays} days ago`;
+      },
+    },
   ];
 
-  if (loading && tickets.length === 0) {
+  // Export excel function
+  const exportToExcel = async () => {
+  try {
+    toast.loading('Preparing export...');
+    
+    // Fetch all tickets for export
+    const response = await serviceDeskService.getAllTickets();
+    const data = response.data;
+    const allTicketsData = Array.isArray(data)
+      ? data
+      : data?.complaints || data?.data || [];
+
+    if (allTicketsData.length === 0) {
+      toast.dismiss();
+      toast.error('No tickets to export');
+      return;
+    }
+
+    // Format the data for Excel (matching existing project format)
+    const formattedData = allTicketsData.map((ticket: any) => {
+      // Format complaint logs as a single string
+      const complaintLogs = (ticket.complaint_logs || [])
+        .map((log: any) => {
+          return `Log By: ${log.log_by || 'N/A'}, Status: ${log.log_status || 'N/A'}, Date: ${
+            log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'
+          }`;
+        })
+        .join(' | ');
+
+      return {
+        'Site Name': ticket.site_name || '-',
+        'Ticket No.': ticket.ticket_number || '-',
+        'Related To': ticket.issue_type_id || '-',
+        'Title': ticket.heading || ticket.title || '-',
+        'Description': ticket.text || ticket.description || '-',
+        'Building': ticket.building_name || '-',
+        'Floor': ticket.floor_name || '-',
+        'Unit': ticket.unit || ticket.unit_name || '-',
+        'Category': ticket.category_type || ticket.category || '-',
+        'Sub Category': ticket.sub_category || '-',
+        'Status': ticket.issue_status || ticket.status || '-',
+        'Type': ticket.issue_type || '-',
+        'Priority': ticket.priority || '-',
+        'Assigned To': ticket.assigned_to || '-',
+        'Created By': ticket.created_by || '-',
+        'Created On': ticket.created_at
+          ? new Date(ticket.created_at).toLocaleString()
+          : '-',
+        'Updated On': ticket.updated_at
+          ? new Date(ticket.updated_at).toLocaleString()
+          : '-',
+        'Updated By': ticket.updated_by || '-',
+        'Resolution Breached': ticket.resolution_breached ? 'Yes' : 'No',
+        'Response Breached': ticket.response_breached ? 'Yes' : 'No',
+        'Complaint Logs': complaintLogs || '-',
+      };
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tickets');
+
+    // Generate filename with current date
+    const fileName = `helpdesk_tickets_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(wb, fileName);
+
+    toast.dismiss();
+    toast.success('Tickets exported successfully!');
+  } catch (error) {
+    console.error('Export error:', error);
+    toast.dismiss();
+    toast.error('Failed to export tickets');
+  }
+};
+  // Filter visible columns
+  const visibleColumns = allColumns.filter(col => !hiddenColumns.has(col.id));
+
+  const toggleColumnVisibility = (columnId: string) => {
+    setHiddenColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnId)) {
+        newSet.delete(columnId);
+      } else {
+        newSet.add(columnId);
+      }
+      return newSet;
+    });
+  };
+
+  if (loading && allTickets.length === 0) {
     return (
       <div className="p-6">
         <div className="flex flex-col items-center justify-center py-20">
@@ -85,14 +547,20 @@ const TicketList: React.FC = () => {
     );
   }
 
-  if (error && tickets.length === 0) {
+  if (error && allTickets.length === 0) {
     return (
       <div className="p-6">
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-12 h-12 text-error mb-4" />
           <h3 className="text-lg font-semibold mb-2">Failed to Load Tickets</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <button onClick={fetchTickets} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+          <button
+            onClick={() => {
+              fetchTickets();
+              fetchAllTickets();
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+          >
             <RefreshCw className="w-4 h-4" /> Retry
           </button>
         </div>
@@ -102,66 +570,527 @@ const TicketList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Breadcrumb items={[{ label: 'Service Desk', path: '/service-desk' }, { label: 'Tickets' }]} />
-
-      <ListToolbar
-        searchPlaceholder="Search tickets..."
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onFilter={() => {}}
-        onExport={() => {}}
-        onAdd={() => navigate('/service-desk/create')}
-        addLabel="Create Ticket"
+      <Breadcrumb
+        items={[
+          { label: "Service Desk", path: "/service-desk" },
+          { label: "Tickets" },
+        ]}
       />
 
-      {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
+      {/* Dashboard Statistics */}
+      {dashboard && (
+        <div className="mb-6 space-y-4">
+          {/* Status row */}
+          <div className="flex flex-wrap gap-3">
+            {[
+              "Pending",
+              "Closed",
+              "Complete",
+              "Work Completed",
+              "Reopened",
+              "Approved",
+              "Work In Process",
+              "Approval Pending",
+              "Plumbing",
+            ].map((label) => (
+              <div
+                key={label}
+                className="flex min-w-[140px] flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-5 py-2 text-xs shadow-sm"
+              >
+                <span className="font-medium text-gray-700">{label}</span>
+                <span className="mt-1 text-base font-semibold text-purple-700">
+                  {getStatusCount(label)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Type row */}
+          <div className="flex flex-wrap gap-3">
+            {["Complaint", "Request", "Suggestion", "Req"].map((label) => (
+              <div
+                key={label}
+                className="flex min-w-[140px] flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-5 py-2 text-xs shadow-sm"
+              >
+                <span className="font-medium text-gray-700">{label}</span>
+                <span className="mt-1 text-base font-semibold text-purple-700">
+                  {getTypeCount(label)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Filters Radio Buttons */}
+      <div className="mb-4 flex items-center gap-4 flex-wrap">
+        {["All", "Open", "Closed", "Pending", "Completed"].map((filter) => (
+          <label key={filter} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="quickFilter"
+              value={filter}
+              checked={quickFilter === filter}
+              onChange={(e) => {
+                setQuickFilter(e.target.value as typeof quickFilter);
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              className="w-4 h-4 text-primary"
+            />
+            <span className="text-sm font-medium">{filter}</span>
+          </label>
+        ))}
+      </div>
+
+      {/* Toolbar */}
+      <div className="mb-4">
+        <ListToolbar
+          searchPlaceholder="Search by Title, Ticket number, Category, Ticket type, Priority or Unit"
+          searchValue={searchValue}
+          onSearchChange={(val) => {
+            setSearchValue(val);
+            setPagination((prev) => ({ ...prev, page: 1 }));
+          }}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onFilter={() => setIsFilterOpen(true)}
+          onExport={exportToExcel} 
+          onAdd={() => navigate("/service-desk/create")}
+          addLabel="Create Ticket"
+        />
+        
+        {/* Hide Columns Button */}
+        <div className="mt-2 flex justify-end">
+          <div className="relative">
+            <button
+              onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+              className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+            >
+              Hide Columns
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            
+            {isColumnMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-30" 
+                  onClick={() => setIsColumnMenuOpen(false)}
+                />
+                
+                <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-40 max-h-96 overflow-y-auto">
+                  <div className="p-2">
+                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                      Toggle Column Visibility
+                    </div>
+                    {allColumns.map((col) => (
+                      <label
+                        key={col.id}
+                        className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!hiddenColumns.has(col.id)}
+                          onChange={() => toggleColumnVisibility(col.id)}
+                          className="w-4 h-4"
+                        />
+                        <span className="flex items-center gap-2 text-sm">
+                          {hiddenColumns.has(col.id) ? (
+                            <EyeOff className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="w-4 h-4 text-primary" />
+                          )}
+                          {col.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Modal */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-4xl rounded-xl bg-card shadow-xl border border-border">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <h2 className="text-lg font-semibold">Filter By</h2>
+              <button
+                className="text-xl leading-none"
+                onClick={() => setIsFilterOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Building Name */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Building Name
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.building_name || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        building_name: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Building</option>
+                    {lookups.buildings.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Floor Name */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Floor Name
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.floor_name || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        floor_name: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Floor</option>
+                    {lookups.floors.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Unit Name */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Unit Name
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.unit_name || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        unit_name: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Unit</option>
+                    {lookups.units.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date Start */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Date Start
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.date_start || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        date_start: e.target.value || undefined,
+                      }))
+                    }
+                  />
+                </div>
+
+                {/* Date End */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Date End
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.date_end || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        date_end: e.target.value || undefined,
+                      }))
+                    }
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Category
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.category || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        category: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Category</option>
+                    {lookups.categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Status
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.status || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        status: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Status</option>
+                    {lookups.statuses.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Priority Level */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Priority Level
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.priority || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        priority: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Priority Level</option>
+                    {lookups.priorities.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Assigned To */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Assigned To
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={filters.assigned_to || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        assigned_to: e.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">Select Assign To</option>
+                    {lookups.assignees.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+              <button
+                className="rounded-md border border-border px-4 py-2 text-sm"
+                onClick={() => {
+                  setFilters({});
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                  setIsFilterOpen(false);
+                }}
+              >
+                Reset
+              </button>
+              <button
+                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+                onClick={() => {
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                  setIsFilterOpen(false);
+                }}
+              >
+                Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!loading && tickets.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
           <TicketIcon className="w-16 h-16 text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Tickets Found</h3>
-          <p className="text-muted-foreground mb-4">No support tickets have been created yet</p>
-          <Link to="/service-desk/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Create Ticket</Link>
+          <p className="text-muted-foreground mb-4">
+            {searchValue || Object.keys(filters).length > 0
+              ? "No tickets match your search criteria"
+              : "No support tickets have been created yet"}
+          </p>
+          <Link
+            to="/service-desk/create"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
+          >
+            + Create Ticket
+          </Link>
         </div>
       )}
 
-      {viewMode === 'grid' && tickets.length > 0 ? (
+      {viewMode === "grid" && tickets.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {tickets.map((ticket) => (
             <DataCard
               key={ticket.id}
-              title={ticket.title || `Ticket #${ticket.ticket_number}`}
-              subtitle={ticket.ticket_number || '-'}
+              title={ticket.title || (ticket as any).heading || `Ticket #${ticket.ticket_number}`}
+              subtitle={ticket.ticket_number || "-"}
               status={getTicketStatus(ticket)}
               fields={[
-                { label: 'Category', value: ticket.helpdesk_category?.name || ticket.category || '-' },
-                { label: 'Priority', value: ticket.priority || '-' },
-                { label: 'Assigned', value: ticket.assigned_to || 'Unassigned' },
-                { label: 'Created', value: ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '-' },
+                {
+                  label: "Category",
+                  value:
+                    ticket.helpdesk_category?.name || (ticket as any).category_type || ticket.category || "-",
+                },
+                { label: "Priority", value: ticket.priority || "-" },
+                {
+                  label: "Assigned",
+                  value: ticket.assigned_to || "Unassigned",
+                },
+                {
+                  label: "Created",
+                  value: ticket.created_at
+                    ? new Date(ticket.created_at).toLocaleDateString()
+                    : "-",
+                },
               ]}
               viewPath={`/service-desk/${ticket.id}`}
               editPath={`/service-desk/${ticket.id}/edit`}
             />
           ))}
         </div>
-      ) : tickets.length > 0 && (
-        <DataTable columns={columns} data={tickets} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === tickets.length ? [] : tickets.map(t => String(t.id)))} viewPath={(row) => `/service-desk/${row.id}`} />
+      ) : (
+        tickets.length > 0 && (
+          <DataTable
+            columns={visibleColumns}
+            data={tickets}
+            selectable
+            selectedRows={selectedRows}
+            onSelectRow={(id) =>
+              setSelectedRows((prev) =>
+                prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+              )
+            }
+            onSelectAll={() =>
+              setSelectedRows(
+                selectedRows.length === tickets.length
+                  ? []
+                  : tickets.map((t) => String(t.id))
+              )
+            }
+            viewPath={(row) => `/service-desk/${row.id}`}
+          />
+        )
       )}
 
       {tickets.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
-          <div className="text-sm text-muted-foreground">Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records</div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
-            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+          <div className="text-sm text-muted-foreground">
+            Showing {(pagination.page - 1) * pagination.perPage + 1} to{" "}
+            {Math.min(pagination.page * pagination.perPage, pagination.total)}{" "}
+            of {pagination.total} records
           </div>
-          <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
-            <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              «
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              ‹ Prev
+            </button>
+            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
+              {pagination.page}
+            </span>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              Next ›
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.totalPages }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              »
+            </button>
+          </div>
+          <select
+            value={pagination.perPage}
+            onChange={(e) =>
+              setPagination((prev) => ({
+                ...prev,
+                perPage: Number(e.target.value),
+                page: 1,
+              }))
+            }
+            className="px-2 py-1.5 text-sm border border-border rounded-md bg-background"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
           </select>
         </div>
       )}
