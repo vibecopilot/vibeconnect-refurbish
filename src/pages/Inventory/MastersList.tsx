@@ -4,7 +4,7 @@ import { Eye, Edit2, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../components/list/ListToolbar';
 import DataTable from '../../components/table/DataTable';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getInventory } from '../../api';
 import { useViewMode } from '../../hooks/useViewMode';
 
@@ -174,14 +174,8 @@ const MastersList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title=""
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/masters' },
-          { label: 'Inventory', path: '/inventory/masters' },
-          { label: 'Masters' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/masters' }, { label: 'Masters' }]} />
+
 
       <ListToolbar
         searchPlaceholder="Search by Name, Code..."

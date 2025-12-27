@@ -251,11 +251,11 @@ body::before {
 }
 
 .rdt_TableHead {
-  @apply bg-primary !important;
+  @apply bg-muted !important;
 }
 
 .rdt_TableHeadRow {
-  @apply bg-primary text-primary-foreground !important;
+  @apply bg-muted text-foreground !important;
 }
 
 .rdt_TableRow {

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
 import * as XLSX from 'xlsx'; 
+import React, { useState, useEffect, useCallback } from "react";
 import toast from 'react-hot-toast'; // Add this import
 import { useNavigate, Link } from "react-router-dom";
 import Breadcrumb from "../../components/ui/Breadcrumb";
+
 import ListToolbar from "../../components/ui/ListToolbar";
 import DataCard from "../../components/ui/DataCard";
 import DataTable, { TableColumn } from "../../components/ui/DataTable";
@@ -570,18 +571,14 @@ const TicketList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Breadcrumb
-        items={[
-          { label: "Service Desk", path: "/service-desk" },
-          { label: "Tickets" },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Service Desk', path: '/service-desk' }, { label: 'Service' }]} />
+
 
       {/* Dashboard Statistics */}
       {dashboard && (
-        <div className="mb-6 space-y-4">
-          {/* Status row */}
-          <div className="flex flex-wrap gap-3">
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-4">
+            {/* Status stats */}
             {[
               "Pending",
               "Closed",
@@ -595,25 +592,48 @@ const TicketList: React.FC = () => {
             ].map((label) => (
               <div
                 key={label}
-                className="flex min-w-[140px] flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-5 py-2 text-xs shadow-sm"
+                onClick={() => {
+                  // Map status labels to quickFilter values
+                  const quickFilterMap: { [key: string]: typeof quickFilter } = {
+                    "Pending": "Pending",
+                    "Closed": "Closed",
+                    "Complete": "Completed",
+                    "Work Completed": "Completed",
+                    "Reopened": "Open",
+                    "Approved": "Open",
+                    "Work In Process": "Open",
+                    "Approval Pending": "Pending",
+                    "Plumbing": "All", // Default to All for unmapped
+                  };
+                  const filterValue = quickFilterMap[label] || "All";
+                  setQuickFilter(filterValue);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="flex flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-4 py-3 text-sm shadow-sm cursor-pointer hover:bg-purple-100 hover:border-purple-400 transition-colors min-w-[140px]"
               >
                 <span className="font-medium text-gray-700">{label}</span>
-                <span className="mt-1 text-base font-semibold text-purple-700">
+                <span className="mt-1 text-lg font-semibold text-purple-700">
                   {getStatusCount(label)}
                 </span>
               </div>
             ))}
-          </div>
 
-          {/* Type row */}
-          <div className="flex flex-wrap gap-3">
+            {/* Type stats */}
             {["Complaint", "Request", "Suggestion", "Req"].map((label) => (
               <div
                 key={label}
-                className="flex min-w-[140px] flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-5 py-2 text-xs shadow-sm"
+                onClick={() => {
+                  // Set filter for issue type
+                  setFilters((prev) => ({
+                    ...prev,
+                    category: label === "Req" ? "Request" : label, // Map "Req" to "Request"
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="flex flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-4 py-3 text-sm shadow-sm cursor-pointer hover:bg-purple-100 hover:border-purple-400 transition-colors min-w-[140px]"
               >
                 <span className="font-medium text-gray-700">{label}</span>
-                <span className="mt-1 text-base font-semibold text-purple-700">
+                <span className="mt-1 text-lg font-semibold text-purple-700">
                   {getTypeCount(label)}
                 </span>
               </div>
@@ -622,28 +642,29 @@ const TicketList: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Filters Radio Buttons */}
-      <div className="mb-4 flex items-center gap-4 flex-wrap">
-        {["All", "Open", "Closed", "Pending", "Completed"].map((filter) => (
-          <label key={filter} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="quickFilter"
-              value={filter}
-              checked={quickFilter === filter}
-              onChange={(e) => {
-                setQuickFilter(e.target.value as typeof quickFilter);
-                setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
-              className="w-4 h-4 text-primary"
-            />
-            <span className="text-sm font-medium">{filter}</span>
-          </label>
-        ))}
-      </div>
+      {/* Combined Filters and Toolbar */}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        {/* Left side - Quick Filters Radio Buttons */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {["All", "Open", "Closed", "Pending", "Completed"].map((filter) => (
+            <label key={filter} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="quickFilter"
+                value={filter}
+                checked={quickFilter === filter}
+                onChange={(e) => {
+                  setQuickFilter(e.target.value as typeof quickFilter);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="w-4 h-4 text-primary"
+              />
+              <span className="text-sm font-medium">{filter}</span>
+            </label>
+          ))}
+        </div>
 
-      {/* Toolbar */}
-      <div className="mb-4">
+        {/* Right side - Toolbar */}
         <ListToolbar
           searchPlaceholder="Search by Title, Ticket number, Category, Ticket type, Priority or Unit"
           searchValue={searchValue}
@@ -654,61 +675,59 @@ const TicketList: React.FC = () => {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onFilter={() => setIsFilterOpen(true)}
-          onExport={exportToExcel} 
+          onExport={exportToExcel}
           onAdd={() => navigate("/service-desk/create")}
           addLabel="Create Ticket"
-        />
-        
-        {/* Hide Columns Button */}
-        <div className="mt-2 flex justify-end">
-          <div className="relative">
-            <button
-              onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
-              className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
-            >
-              Hide Columns
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            
-            {isColumnMenuOpen && (
-              <>
-                <div 
-                  className="fixed inset-0 z-30" 
-                  onClick={() => setIsColumnMenuOpen(false)}
-                />
-                
-                <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-40 max-h-96 overflow-y-auto">
-                  <div className="p-2">
-                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
-                      Toggle Column Visibility
+          additionalButtons={
+            <div className="relative">
+              <button
+                onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+              >
+                Hide Columns
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {isColumnMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsColumnMenuOpen(false)}
+                  />
+
+                  <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-40 max-h-96 overflow-y-auto">
+                    <div className="p-2">
+                      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                        Toggle Column Visibility
+                      </div>
+                      {allColumns.map((col) => (
+                        <label
+                          key={col.id}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!hiddenColumns.has(col.id)}
+                            onChange={() => toggleColumnVisibility(col.id)}
+                            className="w-4 h-4"
+                          />
+                          <span className="flex items-center gap-2 text-sm">
+                            {hiddenColumns.has(col.id) ? (
+                              <EyeOff className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="w-4 h-4 text-primary" />
+                            )}
+                            {col.label}
+                          </span>
+                        </label>
+                      ))}
                     </div>
-                    {allColumns.map((col) => (
-                      <label
-                        key={col.id}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!hiddenColumns.has(col.id)}
-                          onChange={() => toggleColumnVisibility(col.id)}
-                          className="w-4 h-4"
-                        />
-                        <span className="flex items-center gap-2 text-sm">
-                          {hiddenColumns.has(col.id) ? (
-                            <EyeOff className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <Eye className="w-4 h-4 text-primary" />
-                          )}
-                          {col.label}
-                        </span>
-                      </label>
-                    ))}
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+                </>
+              )}
+            </div>
+          }
+        />
       </div>
 
       {/* Filter Modal */}

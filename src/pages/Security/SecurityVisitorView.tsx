@@ -31,7 +31,7 @@ const SecurityVisitorView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading visitor details...</p>
@@ -42,7 +42,7 @@ const SecurityVisitorView: React.FC = () => {
 
   if (error || !visitor) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-12 h-12 text-destructive mb-4" />
           <p className="text-muted-foreground mb-4">{error || 'Visitor not found'}</p>
@@ -69,7 +69,7 @@ const SecurityVisitorView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title="VISITOR DETAILS"
         breadcrumbs={[
@@ -99,7 +99,7 @@ const SecurityVisitorView: React.FC = () => {
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {/* Header with photo and status */}
-        <div className="bg-primary p-6 flex items-center gap-6">
+        <div className="p-6 flex items-center gap-6 border-b border-border">
           <div className="w-24 h-24 rounded-full bg-primary-foreground/20 flex items-center justify-center overflow-hidden border-4 border-primary-foreground/30">
             {visitor.photo_url ? (
               <img src={visitor.photo_url} alt={visitor.name} className="w-full h-full object-cover" />

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Building2, MapPin, Landmark, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getVendorsDetails, postVendors, EditVendors, getVendorsType, getVendorCategory } from '../../api';
 import { stateCityModal } from '../../utils/stateCityModal';
 
@@ -211,14 +211,8 @@ const CreateSupplier: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title={isEditMode ? 'Edit Supplier' : 'Add Supplier'}
-        breadcrumbs={[
-          { label: 'FM Module', path: '/supplier' },
-          { label: 'Supplier/Vendor', path: '/supplier' },
-          { label: isEditMode ? 'Edit Supplier' : 'Add Supplier' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Supplier/Vendor', path: '/supplier' }, { label: isEditMode ? 'Edit Supplier' : 'Add Supplier' }]} />
+
 
       <form onSubmit={handleSubmit}>
         {/* Company Details Section */}

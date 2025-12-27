@@ -40,25 +40,30 @@ const AuditLayout: React.FC = () => {
       <Breadcrumb items={breadcrumbItems} />
 
       {/* Sub-Tab Navigation (Scheduled / Conducted / Checklists) */}
-      {subTabs.length > 0 && (
-        <div className="mb-6">
-          <nav className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {subTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => navigate(tab.path)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  location.pathname === tab.path
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
+      {/* Sub-Tab Navigation (Scheduled / Conducted / Checklists) */}
+{subTabs.length > 0 && (
+  <div className="mb-6">
+    <nav className="flex gap-2 overflow-x-auto scrollbar-hide">
+      {subTabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => navigate(tab.path)}
+          className={`px-4 py-2.5 text-sm whitespace-nowrap transition-colors relative uppercase
+            ${location.pathname === tab.path
+              ? 'text-primary font-medium'
+              : 'text-muted-foreground hover:text-foreground'
+            }`}
+        >
+          {tab.label}
+          {location.pathname === tab.path && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+          )}
+        </button>
+      ))}
+    </nav>
+  </div>
+)}
+
       
       {/* Content Area */}
       <div className="bg-card border border-border rounded-lg p-4">

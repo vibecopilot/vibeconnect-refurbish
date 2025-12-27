@@ -126,7 +126,7 @@ const GoodsView: React.FC = () => {
   const personName = getPersonName();
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title={`Goods ${goods.ward_type === 'in' ? 'Inward' : 'Outward'} - ${goods.id}`}
         breadcrumbs={[

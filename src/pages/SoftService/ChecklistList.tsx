@@ -14,12 +14,23 @@ interface Checklist {
   name: string;
   start_date?: string;
   end_date?: string;
+
+  // API may return either
   priority?: string;
+  priority_level?: string | number;
+
   frequency?: string;
+
+  // API may return either
   group_count?: number;
+  groups?: any[];
+
   association_count?: number;
   associations?: any[];
+
+  created_at?: string;
 }
+
 
 const ChecklistList: React.FC = () => {
   const navigate = useNavigate();
@@ -43,15 +54,39 @@ const ChecklistList: React.FC = () => {
       const response = await getServicesChecklist();
       const data = response.data;
       const checklistList = Array.isArray(data) ? data : data?.checklists || data?.data || [];
+      const normalized: Checklist[] = (checklistList || [])
+  .map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    start_date: c.start_date,
+    end_date: c.end_date,
+    frequency: c.frequency,
+
+    // ✅ priority fix
+    priority: c.priority ?? c.priority_level,
+
+    // ✅ groups count fix
+    group_count: c.group_count ?? (Array.isArray(c.groups) ? c.groups.length : 0),
+    groups: c.groups,
+
+    associations: c.associations ?? [],
+    association_count: c.association_count ?? (Array.isArray(c.associations) ? c.associations.length : 0),
+
+    created_at: c.created_at,
+  }))
+  // ✅ newest first (same as old project)
+  .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
       
       // Filter by search
-      const filtered = searchValue 
-        ? checklistList.filter((c: Checklist) => 
-            c.name?.toLowerCase().includes(searchValue.toLowerCase())
-          )
-        : checklistList;
-      
-      setChecklists(filtered);
+const filtered = searchValue
+  ? normalized.filter((c) =>
+      (c.name || "").toLowerCase().includes(searchValue.toLowerCase())
+    )
+  : normalized;
+
+setChecklists(filtered);
+
       setPagination(prev => ({
         ...prev,
         total: filtered.length,
@@ -128,7 +163,12 @@ const ChecklistList: React.FC = () => {
     { key: 'end_date', header: 'END DATE', render: (v) => formatDate(v) },
     { key: 'priority', header: 'PRIORITY LEVEL', render: (v) => v ? <StatusBadge status={getPriorityStatus(v)} label={v} /> : '-' },
     { key: 'frequency', header: 'FREQUENCY', render: (v) => v || '-' },
-    { key: 'group_count', header: 'NO. OF GROUPS', render: (v) => v || '0' },
+    {
+  key: 'group_count',
+  header: 'NO. OF GROUPS',
+  render: (_, row) => String(row.group_count ?? (row.groups?.length ?? 0)),
+},
+
     { 
       key: 'associations', 
       header: 'ASSOCIATIONS', 

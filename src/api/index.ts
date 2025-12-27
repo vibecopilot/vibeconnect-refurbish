@@ -1999,12 +1999,19 @@ export const postServiceAssociation = async (data) =>
     },
   });
 
-export const getSoftServices = async () =>
-  axiosInstance.get("/soft_services.json", {
-    params: {
+export const getSoftServices = () => {
+  return axiosInstance.get('/soft_services.json', {
+    params: { 
       token: token,
+      _t: Date.now() // Cache buster
     },
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
   });
+};
+
 export const getServicesChecklist = async () =>
   axiosInstance.get("/checklists.json?q[ctype_eq]=soft_service", {
     params: {
@@ -10129,7 +10136,7 @@ export const getCamBillingDownload = async (ids) =>
     },
   });
 
-export const gatCamBillFilter = async (
+export const getCamBillFilter = async (
   block,
   floor_name,
   flat,
@@ -10362,3 +10369,4 @@ export const postReceiptNumber = async (data) =>
 
 // Default export for backward compatibility
 export default axiosInstance;
+

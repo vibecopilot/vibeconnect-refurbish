@@ -648,20 +648,23 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
         </div>
       )}
 
-      {/* Tertiary Navigation - Level 3 */}
+            {/* Tertiary Navigation - Level 3 */}
       {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
         <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
           {sortedLevel3.map((item, idx) => (
             <Link
               key={idx}
               to={item.path}
-              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 rounded-md
-                ${isActivePath(item.path) 
-                  ? 'text-primary font-medium bg-background shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 relative
+                ${isActivePath(item.path)
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               {item.name}
+              {isActivePath(item.path) && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+              )}
             </Link>
           ))}
         </nav>

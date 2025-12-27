@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../../components/layout/PageHeader';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
 import { getVendors, createInbound, getInboundDetail, editInbound } from '../../../api';
 import { stateCityModal } from '../../../utils/stateCityModal';
 
@@ -146,15 +146,12 @@ const CreateInboundPackage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title={isEditMode ? 'Edit Inbound Package' : 'Create New Inbound Package'}
-        breadcrumbs={[
-          { label: 'FM Module', path: '/mail-room' },
-          { label: 'Mail Room', path: '/mail-room' },
-          { label: 'Inbound', path: '/mail-room/inbound' },
-          { label: isEditMode ? 'Edit Package' : 'Create Package' },
-        ]}
-      />
+      <Breadcrumb items={[
+  { label: 'FM Module', path: '/mail-room' },
+  { label: 'Mail Room', path: '/mail-room' },
+  { label: 'Inbound', path: '/mail-room/inbound' },
+  { label: isEditMode ? 'Edit Package' : 'Create Package' },
+]} />
 
       <form onSubmit={handleSubmit}>
         {/* Vendor & Date Selection */}

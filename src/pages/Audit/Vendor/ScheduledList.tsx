@@ -187,16 +187,20 @@ const VendorScheduledList: React.FC = () => {
           <button
             key={filter}
             onClick={() => handleFilterChange(filter)}
-            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+            className={`px-3 py-1.5 text-sm transition-colors relative ${
               activeFilter === filter
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-accent'
+                ? 'text-primary font-medium'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {filter}
+            {activeFilter === filter && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+            )}
           </button>
         ))}
       </div>
+
 
       <ListToolbar
         searchPlaceholder="Search audits..."

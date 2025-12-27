@@ -14,6 +14,7 @@ interface ListToolbarProps {
   addLabel?: string;
   showViewToggle?: boolean;
   showQrCode?: boolean;
+  additionalButtons?: React.ReactNode;
 }
 
 const ListToolbar: React.FC<ListToolbarProps> = ({
@@ -29,20 +30,10 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
   addLabel = 'Add',
   showViewToggle = true,
   showQrCode = false,
+  additionalButtons,
 }) => {
   return (
     <div className="flex items-center justify-between gap-4 mb-6">
-      {/* Left Side - Add Button */}
-      {onAdd && (
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {addLabel}
-        </button>
-      )}
-
       {/* Right Side - Search and Actions */}
       <div className="flex items-center gap-3 ml-auto">
         {/* Search */}
@@ -107,6 +98,20 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
             Export
           </button>
         )}
+
+        {/* Add Button */}
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            {addLabel}
+          </button>
+        )}
+
+        {/* Additional Buttons */}
+        {additionalButtons}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import ListToolbar from '../../components/ui/ListToolbar';
 import DataCard from '../../components/ui/DataCard';
@@ -12,12 +12,19 @@ import {
 import { Loader2, Wrench, AlertCircle, RefreshCw, Eye, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+interface Unit {
+  id: number;
+  name: string;
+}
+
 interface SoftService {
   id: number | string;
   name: string;
   building_name?: string;
   floor_name?: string;
   unit_name?: string;
+  units?: Unit[]; // Array of units
+  user_name?: string; // Created by field
   created_by?: string;
   created_at?: string;
   status?: string;
@@ -25,6 +32,7 @@ interface SoftService {
 
 const ServiceList: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // ADD THIS LINE
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchValue, setSearchValue] = useState('');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -39,36 +47,76 @@ const ServiceList: React.FC = () => {
     setPagination(prev => ({ ...prev, perPage: getPerPage(viewMode), page: 1 }));
   }, [viewMode]);
 
-  const fetchServices = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getSoftServices();
-      const data = response.data;
-      const serviceList = Array.isArray(data) ? data : data?.soft_services || data?.data || [];
-      
-      // Filter by search
-      const filtered = searchValue 
-        ? serviceList.filter((s: SoftService) => 
-            s.name?.toLowerCase().includes(searchValue.toLowerCase())
-          )
-        : serviceList;
-      
-      setServices(filtered);
-      setPagination(prev => ({
-        ...prev,
-        total: filtered.length,
-        totalPages: Math.ceil(filtered.length / prev.perPage),
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch services');
-      setServices([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchValue]);
+const fetchServices = useCallback(async () => {
+  setLoading(true);
+  setError(null);
 
-  useEffect(() => { fetchServices(); }, [fetchServices]);
+  try {
+    const response = await getSoftServices();
+    const data = response.data;
+
+    // ✅ support multiple response shapes
+    const serviceList =
+      (Array.isArray(data) && data) ||
+      data?.results ||
+      data?.soft_services ||
+      data?.data ||
+      [];
+
+    // ✅ DEBUG: show what API returns
+    console.log("GET /soft-services raw:", data);
+    console.log("Normalized serviceList length:", serviceList.length);
+
+    // ✅ sort newest first (this is why old project shows instantly)
+    const sorted = [...serviceList].sort(
+      (a: any, b: any) =>
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
+
+    // ✅ filter from sorted (not from old filtered array)
+    const filtered = searchValue
+      ? sorted.filter((s: any) =>
+          (s.name || "").toLowerCase().includes(searchValue.toLowerCase())
+        )
+      : sorted;
+
+    setServices(filtered);
+
+    setPagination((prev) => {
+      const totalPages = Math.max(1, Math.ceil(filtered.length / prev.perPage));
+      return {
+        ...prev,
+        page: 1,               // ✅ ALWAYS go back to page 1 so new record shows
+        total: filtered.length,
+        totalPages,
+      };
+    });
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to fetch services");
+    setServices([]);
+  } finally {
+    setLoading(false);
+  }
+}, [searchValue]);
+
+
+useEffect(() => {
+  fetchServices();
+}, [fetchServices, location.key]); // ✅ route change/back navigation triggers refetch
+
+
+// Also fetch when component becomes visible (for navigation back)
+useEffect(() => {
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') {
+      fetchServices();
+    }
+  };
+  
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, []);
+
 
   const handleExport = async () => {
     try {
@@ -134,12 +182,55 @@ const ServiceList: React.FC = () => {
         </div>
       )
     },
-    { key: 'name', header: 'SERVICE NAME', sortable: true },
-    { key: 'building_name', header: 'BUILDING', render: (v) => v || '-' },
-    { key: 'floor_name', header: 'FLOOR', render: (v) => v || '-' },
-    { key: 'unit_name', header: 'UNIT', render: (v) => v || '-' },
-    { key: 'created_by', header: 'CREATED BY', render: (v) => v || '-' },
-    { key: 'created_at', header: 'CREATED ON', render: (v) => formatDate(v) },
+    { 
+      key: 'name', 
+      header: 'SERVICE NAME', 
+      sortable: true,
+      render: (v) => v || '-'
+    },
+    { 
+      key: 'building_name', 
+      header: 'BUILDING', 
+      render: (v) => v || '-' 
+    },
+    { 
+      key: 'floor_name', 
+      header: 'FLOOR', 
+      render: (v) => v || '-' 
+    },
+    { 
+      key: 'units', 
+      header: 'UNIT', 
+      render: (_, row) => {
+        // Handle units array (matching existing project)
+        if (row.units && Array.isArray(row.units) && row.units.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1">
+              {row.units.map((unit, idx) => (
+                <span key={unit.id || idx} className="text-sm">
+                  {unit.name}{idx < row.units.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </div>
+          );
+        }
+        // Fallback to single unit_name
+        return row.unit_name || '-';
+      }
+    },
+    { 
+      key: 'user_name', 
+      header: 'CREATED BY', 
+      render: (_, row) => {
+        // Check both user_name and created_by fields
+        return row.user_name || row.created_by || '-';
+      }
+    },
+    { 
+      key: 'created_at', 
+      header: 'CREATED ON', 
+      render: (v) => formatDate(v) 
+    },
   ];
 
   if (loading && services.length === 0) {
@@ -199,21 +290,28 @@ const ServiceList: React.FC = () => {
 
       {viewMode === 'grid' && paginatedServices.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedServices.map((service) => (
-            <DataCard 
-              key={service.id} 
-              title={service.name} 
-              subtitle={`Building: ${service.building_name || '-'}`}
-              fields={[
-                { label: 'Floor', value: service.floor_name || '-' },
-                { label: 'Unit', value: service.unit_name || '-' },
-                { label: 'Created By', value: service.created_by || '-' },
-                { label: 'Created On', value: formatDate(service.created_at) },
-              ]} 
-              viewPath={`/soft-services/${service.id}`} 
-              editPath={`/soft-services/${service.id}/edit`} 
-            />
-          ))}
+          {paginatedServices.map((service) => {
+            // Format units for display in card
+            const unitDisplay = service.units && Array.isArray(service.units) && service.units.length > 0
+              ? service.units.map(u => u.name).join(', ')
+              : service.unit_name || '-';
+
+            return (
+              <DataCard 
+                key={service.id} 
+                title={service.name} 
+                subtitle={`Building: ${service.building_name || '-'}`}
+                fields={[
+                  { label: 'Floor', value: service.floor_name || '-' },
+                  { label: 'Unit', value: unitDisplay },
+                  { label: 'Created By', value: service.user_name || service.created_by || '-' },
+                  { label: 'Created On', value: formatDate(service.created_at) },
+                ]} 
+                viewPath={`/soft-services/${service.id}`} 
+                editPath={`/soft-services/${service.id}/edit`} 
+              />
+            );
+          })}
         </div>
       ) : paginatedServices.length > 0 && (
         <DataTable 

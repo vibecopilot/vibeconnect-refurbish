@@ -213,7 +213,7 @@ const CreatePermit: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <Breadcrumb items={[
         { label: 'Safety', path: '/safety/incident' },
         { label: 'Permit', path: '/safety/permit' },
@@ -221,18 +221,10 @@ const CreatePermit: React.FC = () => {
       ]} />
 
       <div className="bg-card border border-border rounded-xl shadow-sm mt-4">
-        <div className="bg-primary text-primary-foreground px-6 py-4 rounded-t-xl">
-          <h1 className="text-xl font-semibold">{isEdit ? 'Edit Permit' : 'Add Permit'}</h1>
-          <p className="text-primary-foreground/80 text-sm mt-1">Fill in the details to {isEdit ? 'update the' : 'create a new'} permit</p>
-        </div>
-
         <form onSubmit={handleSubmit} className="p-6">
           {/* Details Section */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">
-                <FileCheck className="w-4 h-4" />
-              </span>
+            <h2 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b">
               Permit Details
             </h2>
             

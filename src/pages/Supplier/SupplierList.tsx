@@ -4,7 +4,8 @@ import { Eye, Edit2, Download, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../components/list/ListToolbar';
 import DataTable from '../../components/table/DataTable';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
+
 import { getVendors, removeVendor } from '../../api';
 import { useViewMode } from '../../hooks/useViewMode';
 
@@ -182,13 +183,8 @@ const SupplierList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title=""
-        breadcrumbs={[
-          { label: 'FM Module', path: '/supplier' },
-          { label: 'Supplier/Vendor' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Supplier/Vendor', path: '/supplier' }]} />
+
 
       <ListToolbar
         searchPlaceholder="Search By Company name"

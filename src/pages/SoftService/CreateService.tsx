@@ -11,24 +11,23 @@ import {
   getBuildings,
   getFloors,
   getUnits,
-  getGenericGroup
+  getGenericGroup,
+  getGenericSubGroup
 } from '../../api';
-import { Loader2, Wrench, Save, ChevronDown, ChevronUp, Paperclip, X } from 'lucide-react';
+import { Loader2, Wrench, Save, Paperclip, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
+import CronChecklist from '../../components/Cron';
 
 interface ServiceFormData {
   name: string;
   building_id: string;
   floor_id: string;
-  unit_id: string;
+  unit_id: any[];  // Changed to array for multi-select
   group_id: string;
   sub_group_id: string;
   latitude: string;
   longitude: string;
-  cron_day: string;
-  cron_hour: string;
-  cron_minute: string;
   attachments: File[];
 }
 
@@ -39,18 +38,17 @@ const CreateService: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [cronExpression, setCronExpression] = useState('0 0 * * *');
+  
   const [formData, setFormData] = useState<ServiceFormData>({
     name: '',
     building_id: '',
     floor_id: '',
-    unit_id: '',
+    unit_id: [],  // Changed to empty array
     group_id: '',
     sub_group_id: '',
     latitude: '',
     longitude: '',
-    cron_day: '*',
-    cron_hour: '0',
-    cron_minute: '0',
     attachments: [],
   });
 
@@ -60,17 +58,6 @@ const CreateService: React.FC = () => {
   const [groups, setGroups] = useState<any[]>([]);
   const [subGroups, setSubGroups] = useState<any[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
-
-  const dayOptions = [
-    { value: '*', label: 'Every day' },
-    { value: '1', label: 'Monday' },
-    { value: '2', label: 'Tuesday' },
-    { value: '3', label: 'Wednesday' },
-    { value: '4', label: 'Thursday' },
-    { value: '5', label: 'Friday' },
-    { value: '6', label: 'Saturday' },
-    { value: '0', label: 'Sunday' },
-  ];
 
   useEffect(() => {
     fetchDropdownData();
@@ -103,16 +90,21 @@ const CreateService: React.FC = () => {
         name: data.name || '',
         building_id: data.building_id?.toString() || '',
         floor_id: data.floor_id?.toString() || '',
-        unit_id: data.unit_id?.toString() || '',
+        unit_id: Array.isArray(data.unit_id) 
+          ? data.unit_id.map((id: any) => ({ value: id, label: id }))
+          : data.unit_id 
+            ? [{ value: data.unit_id, label: data.unit_id }]
+            : [],
         group_id: data.group_id?.toString() || '',
         sub_group_id: data.sub_group_id?.toString() || '',
         latitude: data.latitude?.toString() || '',
         longitude: data.longitude?.toString() || '',
-        cron_day: data.cron_day || '*',
-        cron_hour: data.cron_hour?.toString() || '0',
-        cron_minute: data.cron_minute?.toString() || '0',
         attachments: [],
       });
+      
+      if (data.cron_expression) {
+        setCronExpression(data.cron_expression);
+      }
       
       if (data.building_id) {
         await fetchFloors(data.building_id.toString());
@@ -145,7 +137,11 @@ const CreateService: React.FC = () => {
   const fetchUnits = async (floorId: string) => {
     try {
       const response = await getUnits(floorId);
-      setUnits(response.data || []);
+      const unitList = (response.data || []).map((u: any) => ({
+        value: u.id,
+        label: u.name || u.unit_name
+      }));
+      setUnits(unitList);
     } catch (error) {
       console.error('Error fetching units:', error);
     }
@@ -153,18 +149,15 @@ const CreateService: React.FC = () => {
 
   const fetchSubGroups = async (groupId: string) => {
     try {
-      // Fetch sub-groups based on parent group
-      const response = await getGenericGroup();
-      const allGroups = response.data || [];
-      const filtered = allGroups.filter((g: any) => g.parent_id?.toString() === groupId);
-      setSubGroups(filtered);
+      const response = await getGenericSubGroup(groupId);
+      setSubGroups(response.data || []);
     } catch (error) {
       console.error('Error fetching sub-groups:', error);
     }
   };
 
   const handleBuildingChange = async (value: string) => {
-    setFormData(prev => ({ ...prev, building_id: value, floor_id: '', unit_id: '' }));
+    setFormData(prev => ({ ...prev, building_id: value, floor_id: '', unit_id: [] }));
     setFloors([]);
     setUnits([]);
     if (value) {
@@ -173,7 +166,7 @@ const CreateService: React.FC = () => {
   };
 
   const handleFloorChange = async (value: string) => {
-    setFormData(prev => ({ ...prev, floor_id: value, unit_id: '' }));
+    setFormData(prev => ({ ...prev, floor_id: value, unit_id: [] }));
     setUnits([]);
     if (value) {
       await fetchUnits(value);
@@ -204,15 +197,6 @@ const CreateService: React.FC = () => {
     }));
   };
 
-  const clearCron = () => {
-    setFormData(prev => ({
-      ...prev,
-      cron_day: '*',
-      cron_hour: '0',
-      cron_minute: '0',
-    }));
-  };
-
   const handleSubmit = async (showDetails = false) => {
     if (!formData.name) {
       toast.error('Service name is required');
@@ -222,19 +206,62 @@ const CreateService: React.FC = () => {
     setSubmitting(true);
     try {
       const payload = new FormData();
-      payload.append('soft_service[name]', formData.name);
+
+// ✅ MUST match old project (scope + user)
+const siteId = localStorage.getItem("SITEID") || "";
+const userId = localStorage.getItem("UserId") || "";
+
+payload.append("soft_service[site_id]", siteId);
+payload.append("soft_service[user_id]", userId);
+
+payload.append("soft_service[name]", formData.name);
+if (formData.building_id) payload.append("soft_service[building_id]", formData.building_id);
+if (formData.floor_id) payload.append("soft_service[floor_id]", formData.floor_id);
+
+// ✅ Multi unit (same as old)
+if (formData.unit_id && Array.isArray(formData.unit_id)) {
+  formData.unit_id.forEach((unit: any) => {
+    payload.append("soft_service[unit_id][]", unit.value || unit);
+  });
+}
+
+// ✅ IMPORTANT: old backend uses generic_info_id naming
+if (formData.group_id) payload.append("soft_service[generic_info_id]", formData.group_id);
+if (formData.sub_group_id) payload.append("soft_service[generic_sub_info_id]", formData.sub_group_id);
+
+if (formData.latitude) payload.append("soft_service[latitude]", formData.latitude);
+if (formData.longitude) payload.append("soft_service[longitude]", formData.longitude);
+
+payload.append("soft_service[cron_expression]", cronExpression);
+
+// ✅ attachments key must match old project
+formData.attachments.forEach((file) => {
+  payload.append("attachfiles[]", file);
+});
+
+// ✅ DEBUG (see what exactly goes)
+console.log("CREATE payload keys:");
+for (const pair of payload.entries()) console.log(pair[0], pair[1]);
+
       if (formData.building_id) payload.append('soft_service[building_id]', formData.building_id);
       if (formData.floor_id) payload.append('soft_service[floor_id]', formData.floor_id);
-      if (formData.unit_id) payload.append('soft_service[unit_id]', formData.unit_id);
+      
+      // Multi-unit support
+      if (formData.unit_id && Array.isArray(formData.unit_id)) {
+        formData.unit_id.forEach((unit: any) => {
+          payload.append('soft_service[unit_id][]', unit.value || unit);
+        });
+      }
+      
       if (formData.group_id) payload.append('soft_service[group_id]', formData.group_id);
       if (formData.sub_group_id) payload.append('soft_service[sub_group_id]', formData.sub_group_id);
       if (formData.latitude) payload.append('soft_service[latitude]', formData.latitude);
       if (formData.longitude) payload.append('soft_service[longitude]', formData.longitude);
-      payload.append('soft_service[cron_day]', formData.cron_day);
-      payload.append('soft_service[cron_hour]', formData.cron_hour);
-      payload.append('soft_service[cron_minute]', formData.cron_minute);
       
-      formData.attachments.forEach((file, index) => {
+      // Add cron expression
+      payload.append('soft_service[cron_expression]', cronExpression);
+      
+      formData.attachments.forEach((file) => {
         payload.append(`soft_service[attachments][]`, file);
       });
 
@@ -242,8 +269,30 @@ const CreateService: React.FC = () => {
         await EditSoftServices(payload, id);
         toast.success('Service updated successfully');
       } else {
-        const response = await postSoftServices(payload);
-        toast.success('Service created successfully');
+       const response = await postSoftServices(payload);
+console.log("CREATE response:", response.data);
+
+toast.success("Service created successfully");
+
+// ✅ DEBUG: confirm it appears in list API immediately
+try {
+  const listResp = await getSoftServices();
+  const listData = listResp.data;
+  const list =
+    (Array.isArray(listData) && listData) ||
+    listData?.results ||
+    listData?.soft_services ||
+    listData?.data ||
+    [];
+
+  const newId = String(response.data?.id);
+  const found = list.find((x: any) => String(x.id) === newId);
+
+  console.log("AFTER CREATE - is new record in list API?", !!found, found);
+} catch (e) {
+  console.log("AFTER CREATE list check failed:", e);
+}
+
         if (showDetails && response.data?.id) {
           navigate(`/soft-services/${response.data.id}`);
           return;
@@ -326,17 +375,18 @@ const CreateService: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Select Unit</label>
-              <select
+              <Select
+                isMulti
+                closeMenuOnSelect={false}
                 value={formData.unit_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, unit_id: e.target.value }))}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={!formData.floor_id}
-              >
-                <option value="">Select Unit</option>
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name || u.unit_name}</option>
-                ))}
-              </select>
+                onChange={(selected) => setFormData(prev => ({ ...prev, unit_id: selected || [] }))}
+                options={units}
+                placeholder="Select Units"
+                className="react-select-container"
+                classNamePrefix="react-select"
+                isDisabled={!formData.floor_id}
+                noOptionsMessage={() => "No Units Available"}
+              />
             </div>
 
             <div>
@@ -370,6 +420,7 @@ const CreateService: React.FC = () => {
 
             <FormInput
               label="Latitude"
+              type="number"
               value={formData.latitude}
               onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
               placeholder="Enter latitude"
@@ -377,6 +428,7 @@ const CreateService: React.FC = () => {
 
             <FormInput
               label="Longitude"
+              type="number"
               value={formData.longitude}
               onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
               placeholder="Enter longitude"
@@ -386,43 +438,10 @@ const CreateService: React.FC = () => {
 
         {/* Cron Setting */}
         <FormSection title="Cron Setting" icon={Wrench}>
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-sm text-foreground">Every</span>
-            <select
-              value={formData.cron_day}
-              onChange={(e) => setFormData(prev => ({ ...prev, cron_day: e.target.value }))}
-              className="px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-            >
-              {dayOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <span className="text-sm text-foreground">at</span>
-            <input
-              type="number"
-              min="0"
-              max="23"
-              value={formData.cron_hour}
-              onChange={(e) => setFormData(prev => ({ ...prev, cron_hour: e.target.value }))}
-              className="w-16 px-3 py-2 border border-border rounded-lg bg-background text-foreground text-center"
-            />
-            <span className="text-sm text-foreground">:</span>
-            <input
-              type="number"
-              min="0"
-              max="59"
-              value={formData.cron_minute}
-              onChange={(e) => setFormData(prev => ({ ...prev, cron_minute: e.target.value }))}
-              className="w-16 px-3 py-2 border border-border rounded-lg bg-background text-foreground text-center"
-            />
-            <button
-              type="button"
-              onClick={clearCron}
-              className="px-4 py-2 text-sm text-destructive border border-destructive rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-colors"
-            >
-              Clear
-            </button>
-          </div>
+          <CronChecklist 
+            value={cronExpression} 
+            onChange={setCronExpression}
+          />
         </FormSection>
 
         {/* Attachments */}
