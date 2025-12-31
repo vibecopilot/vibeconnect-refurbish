@@ -3,104 +3,150 @@ import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { amcService, AMC } from '../../../services/assetSubModules.service';
-import { Loader2, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, Package, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { getAMC } from '../../../api';
+
+interface AMC {
+  id: number;
+  vendor_id: number;
+  asset_id: number;
+  asset_name: string;
+  vendor_name: string | null;
+  start_date: string;
+  end_date: string;
+  frequency: string;
+  first_service?: string;
+  status?: string;
+  created_at: string;
+  updated_at?: string;
+  attachments: any[];
+  url: string;
+}
 
 interface AMCListProps {
   viewMode: 'grid' | 'table';
   searchValue: string;
   perPage?: number;
+  isFilterOpen: boolean;
+  setIsFilterOpen: (value: boolean) => void;
+  isColumnMenuOpen: boolean;
+  setIsColumnMenuOpen: (value: boolean) => void;
 }
 
-const AMCList: React.FC<AMCListProps> = ({ viewMode, searchValue, perPage = 10 }) => {
-  const [amcs, setAmcs] = useState<AMC[]>([]);
+const AMCList: React.FC<AMCListProps> = ({ 
+  viewMode, 
+  searchValue, 
+  perPage = 10,
+  isFilterOpen,
+  setIsFilterOpen,
+  isColumnMenuOpen,
+  setIsColumnMenuOpen
+}) => {
+  const [amcList, setAmcList] = useState<AMC[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
-  // Update perPage when prop changes
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
-  const fetchAMCs = useCallback(async () => {
+  const fetchAMC = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await amcService.getAMCs(pagination.page, pagination.perPage);
-      const data = response.data;
-      const amcList = Array.isArray(data) ? data : data?.asset_amcs || data?.data || [];
-      setAmcs(amcList);
+      const response = await getAMC();
+      const sortedAmc = response.data.sort((a: AMC, b: AMC) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setAmcList(sortedAmc);
       setPagination(prev => ({
         ...prev,
-        total: data.total || data.total_count || amcList.length,
-        totalPages: data.total_pages || Math.ceil((data.total || amcList.length) / prev.perPage),
+        total: sortedAmc.length,
+        totalPages: Math.ceil(sortedAmc.length / prev.perPage),
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch AMCs');
-      setAmcs([]);
+      setError(err instanceof Error ? err.message : 'Failed to fetch AMC data');
+      setAmcList([]);
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage]);
+  }, []);
 
-  useEffect(() => { fetchAMCs(); }, [fetchAMCs]);
+  useEffect(() => { fetchAMC(); }, [fetchAMC]);
 
-  const getAMCStatus = (amc: AMC): StatusType => {
-    const today = new Date();
-    const endDate = amc.end_date ? new Date(amc.end_date) : null;
-    if (endDate && endDate < today) return 'breakdown';
-    if (amc.status?.toLowerCase() === 'active') return 'in-use';
-    if (amc.status?.toLowerCase() === 'expired') return 'breakdown';
-    return 'pending';
+  const dateFormat = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
   };
 
-  const filteredAMCs = amcs.filter(amc => 
+  // Client-side search filtering
+  const filteredAMC = amcList.filter(amc => 
     !searchValue || 
-    amc.vendor_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    amc.contract_number?.toLowerCase().includes(searchValue.toLowerCase())
+    amc.asset_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
+    amc.vendor_name?.toLowerCase().includes(searchValue.toLowerCase())
   );
 
-  const columns: TableColumn<AMC>[] = [
-    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
-    { key: 'contract_number', header: 'Contract #', render: (v) => v || '-' },
-    { key: 'vendor_name', header: 'Vendor', sortable: true, render: (v) => v || '-' },
-    { key: 'amc_type', header: 'Type', render: (v) => v || '-' },
-    { key: 'start_date', header: 'Start Date', render: (v) => v || '-' },
-    { key: 'end_date', header: 'End Date', render: (v) => v || '-' },
-    { key: 'status', header: 'Status', render: (_, row) => <StatusBadge status={getAMCStatus(row)} /> },
-    { key: 'amount', header: 'Amount', render: (v) => v ? `₹${v.toLocaleString()}` : '-' },
+  // Client-side pagination
+  const startIndex = (pagination.page - 1) * pagination.perPage;
+  const endIndex = startIndex + pagination.perPage;
+  const paginatedAMC = filteredAMC.slice(startIndex, endIndex);
+
+  const allColumns: Array<TableColumn<AMC> & { id: string; label: string }> = [
+    { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
+    { id: 'asset_name', label: 'Asset Name', key: 'asset_name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
+    { id: 'vendor_name', label: 'Vendor', key: 'vendor_name', header: 'Vendor', render: (v) => v || '-' },
+    { id: 'start_date', label: 'Start Date', key: 'start_date', header: 'Start Date', render: (v) => v || '-' },
+    { id: 'end_date', label: 'End Date', key: 'end_date', header: 'End Date', render: (v) => v || '-' },
+    { id: 'frequency', label: 'Frequency', key: 'frequency', header: 'Frequency', render: (v) => v || '-' },
+    { id: 'first_service', label: 'First Service', key: 'first_service', header: 'First Service', render: (v) => v || '-' },
+    { id: 'status', label: 'Status', key: 'status', header: 'Status', render: (v) => v || '-' },
+    { id: 'created_at', label: 'Created On', key: 'created_at', header: 'Created On', render: (v) => dateFormat(v) },
   ];
 
-  if (loading && amcs.length === 0) {
+  const visibleColumns = allColumns.filter(col => !hiddenColumns.has(col.id));
+
+  const toggleColumnVisibility = (columnId: string) => {
+    setHiddenColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnId)) {
+        newSet.delete(columnId);
+      } else {
+        newSet.add(columnId);
+      }
+      return newSet;
+    });
+  };
+
+  if (loading && amcList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading AMCs...</p>
+        <p className="text-muted-foreground">Loading AMC...</p>
       </div>
     );
   }
 
-  if (error && amcs.length === 0) {
+  if (error && amcList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <AlertCircle className="w-12 h-12 text-error mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Failed to Load AMCs</h3>
+        <h3 className="text-lg font-semibold mb-2">Failed to Load AMC</h3>
         <p className="text-muted-foreground mb-4">{error}</p>
-        <button onClick={fetchAMCs} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+        <button onClick={fetchAMC} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
           <RefreshCw className="w-4 h-4" /> Retry
         </button>
       </div>
     );
   }
 
-  if (filteredAMCs.length === 0) {
+  if (paginatedAMC.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
-        <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No AMC Records Found</h3>
-        <p className="text-muted-foreground mb-4">{searchValue ? `No AMCs match "${searchValue}"` : 'No AMC contracts added yet'}</p>
+        <Package className="w-16 h-16 text-muted-foreground/50 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No AMC Found</h3>
+        <p className="text-muted-foreground mb-4">{searchValue ? `No AMC match "${searchValue}"` : 'No AMC added yet'}</p>
         <Link to="/asset/amc/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add AMC</Link>
       </div>
     );
@@ -108,21 +154,44 @@ const AMCList: React.FC<AMCListProps> = ({ viewMode, searchValue, perPage = 10 }
 
   return (
     <>
+      {/* Hide Columns Dropdown */}
+      {isColumnMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setIsColumnMenuOpen(false)} />
+          <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-40 max-h-96 overflow-y-auto">
+            <div className="p-2">
+              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                Toggle Column Visibility
+              </div>
+              {allColumns.map((col) => (
+                <label key={col.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer">
+                  <input type="checkbox" checked={!hiddenColumns.has(col.id)} onChange={() => toggleColumnVisibility(col.id)} className="w-4 h-4" />
+                  <span className="flex items-center gap-2 text-sm">
+                    {hiddenColumns.has(col.id) ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-primary" />}
+                    {col.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
       {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredAMCs.map((amc) => (
+          {paginatedAMC.map((amc) => (
             <DataCard
               key={amc.id}
-              title={amc.vendor_name || `AMC #${amc.id}`}
-              subtitle={amc.contract_number || '-'}
-              status={getAMCStatus(amc)}
+              title={amc.asset_name || `AMC #${amc.id}`}
+              subtitle={`Vendor: ${amc.vendor_name || 'N/A'}`}
+              status="available"
               fields={[
-                { label: 'Type', value: amc.amc_type || '-' },
-                { label: 'Start', value: amc.start_date || '-' },
-                { label: 'End', value: amc.end_date || '-' },
-                { label: 'Amount', value: amc.amount ? `₹${amc.amount.toLocaleString()}` : '-' },
+                { label: 'Start Date', value: amc.start_date || '-' },
+                { label: 'End Date', value: amc.end_date || '-' },
+                { label: 'Frequency', value: amc.frequency || '-' },
+                { label: 'Status', value: amc.status || '-' },
               ]}
               viewPath={`/asset/amc/${amc.id}`}
               editPath={`/asset/amc/${amc.id}/edit`}
@@ -130,18 +199,28 @@ const AMCList: React.FC<AMCListProps> = ({ viewMode, searchValue, perPage = 10 }
           ))}
         </div>
       ) : (
-        <DataTable columns={columns} data={filteredAMCs} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === filteredAMCs.length ? [] : filteredAMCs.map(a => String(a.id)))} viewPath={(row) => `/asset/amc/${row.id}`} />
+        <DataTable 
+          columns={visibleColumns} 
+          data={paginatedAMC} 
+          selectable 
+          selectedRows={selectedRows} 
+          onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} 
+          onSelectAll={() => setSelectedRows(selectedRows.length === paginatedAMC.length ? [] : paginatedAMC.map(a => String(a.id)))} 
+          viewPath={(row) => `/asset/amc/${row.id}`} 
+        />
       )}
 
-      {filteredAMCs.length > 0 && (
+      {paginatedAMC.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
-          <div className="text-sm text-muted-foreground">Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records</div>
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredAMC.length)} of {filteredAMC.length} records
+          </div>
           <div className="flex items-center gap-1">
             <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
             <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredAMC.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredAMC.length / prev.perPage) }))} disabled={endIndex >= filteredAMC.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>

@@ -7,8 +7,10 @@ import { AssetMainList, AMCList, MeterList, ChecklistList, RoutineTaskList, PPMC
 const AssetList: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid'); // Default to grid
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchValue, setSearchValue] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
   
   // Records per page: 12 for grid, 10 for table
   const recordsPerPage = viewMode === 'grid' ? 12 : 10;
@@ -81,17 +83,27 @@ const AssetList: React.FC = () => {
   };
 
   const renderContent = () => {
+    const commonProps = {
+      viewMode,
+      searchValue,
+      perPage: recordsPerPage,
+      isFilterOpen,
+      setIsFilterOpen,
+      isColumnMenuOpen,
+      setIsColumnMenuOpen,
+    };
+
     switch (activeTab) {
-      case 'asset': return <AssetMainList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      case 'amc': return <AMCList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      case 'meter': return <MeterList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      case 'checklist': return <ChecklistList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      case 'routine-task': return <RoutineTaskList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      case 'ppm-checklist': return <PPMChecklistList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      case 'ppm-activity': return <PPMActivityList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
+      case 'asset': return <AssetMainList {...commonProps} />;
+      case 'amc': return <AMCList {...commonProps} />;
+      case 'meter': return <MeterList {...commonProps} />;
+      case 'checklist': return <ChecklistList {...commonProps} />;
+      case 'routine-task': return <RoutineTaskList {...commonProps} />;
+      case 'ppm-checklist': return <PPMChecklistList {...commonProps} />;
+      case 'ppm-activity': return <PPMActivityList {...commonProps} />;
       case 'ppm-calendar': return <PPMCalendar searchValue={searchValue} />;
-      case 'stock-items': return <StockItemsList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
-      default: return <AssetMainList viewMode={viewMode} searchValue={searchValue} perPage={recordsPerPage} />;
+      case 'stock-items': return <StockItemsList {...commonProps} />;
+      default: return <AssetMainList {...commonProps} />;
     }
   };
 
@@ -106,12 +118,23 @@ const AssetList: React.FC = () => {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         showViewToggle={activeTab !== 'ppm-calendar'}
-        onFilter={() => {}}
+        onFilter={() => setIsFilterOpen(true)}
         onExport={() => {}}
         onAdd={getAddLabel() ? () => navigate(getAddPath()) : undefined}
         addLabel={getAddLabel()}
         showQrCode={activeTab === 'meter' || activeTab === 'asset'}
         onQrCode={(activeTab === 'meter' || activeTab === 'asset') ? () => {} : undefined}
+        additionalButtons={
+          <button
+            onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+            className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+          >
+            Hide Columns
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        }
       />
 
       {renderContent()}
