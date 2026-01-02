@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
-import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { Loader2, ClipboardList, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import { getChecklist } from '../../../api';
+import { Loader2, ClipboardList, AlertCircle, RefreshCw, Eye, EyeOff, Upload, Download, Edit } from 'lucide-react';
+import { getChecklist, ChecklistImport, exportChecklist, downloadSampleChecklist } from '../../../api';
+import { getItemInLocalStorage } from '../../../utils/localStorage';
+import toast from 'react-hot-toast';
 
 interface Checklist {
   id: number;
@@ -38,6 +39,9 @@ interface ChecklistListProps {
   setIsFilterOpen: (value: boolean) => void;
   isColumnMenuOpen: boolean;
   setIsColumnMenuOpen: (value: boolean) => void;
+  isImportOpen: boolean;
+  setIsImportOpen: (value: boolean) => void;
+  onExportSet?: (fn: () => void) => void;
 }
 
 const ChecklistList: React.FC<ChecklistListProps> = ({ 
@@ -47,7 +51,10 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
   isFilterOpen,
   setIsFilterOpen,
   isColumnMenuOpen,
-  setIsColumnMenuOpen
+  setIsColumnMenuOpen,
+  isImportOpen,
+  setIsImportOpen,
+  onExportSet
 }) => {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +62,7 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [importFiles, setImportFiles] = useState<File[]>([]);
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
@@ -84,6 +92,89 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
 
   useEffect(() => { fetchChecklists(); }, [fetchChecklists]);
 
+  // Import Functionality
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (importFiles.length === 0) {
+      toast.error('No files selected.');
+      return;
+    }
+
+    const formData = new FormData();
+    importFiles.forEach((file) => {
+      formData.append("file", file);
+    });
+
+    try {
+      toast.loading('Uploading checklist...');
+      const response = await ChecklistImport(formData);
+      
+      toast.dismiss();
+      if (response.status === 200) {
+        toast.success('Checklist successfully imported!');
+        setIsImportOpen(false);
+        setImportFiles([]);
+        fetchChecklists(); // Refresh the list
+      } else {
+        toast.error('Failed to import checklist.');
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error importing checklist:", error);
+      toast.error('An error occurred during import.');
+    }
+  };
+
+  // Export Functionality
+  const handleExportToExcel = async () => {
+    try {
+      toast.loading('Exporting checklists...');
+      const response = await exportChecklist();
+
+      const blob = new Blob([response.data], { type: response.headers["content-type"] });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = "export_checklist.xlsx";
+      link.click();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast.dismiss();
+      toast.success('Checklist exported successfully');
+    } catch (error) {
+      toast.dismiss();
+      console.error("Failed to export checklist:", error);
+      toast.error('Error exporting checklist. Please try again.');
+    }
+  };
+
+  // Download Sample Format
+  const handleDownloadSample = async () => {
+    try {
+      const response = await downloadSampleChecklist();
+      const blob = new Blob([response.data], { type: response.headers["content-type"] });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = "sample_format_checklist.xlsx";
+      link.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast.success('Sample format downloaded');
+    } catch (error) {
+      console.error("Failed to download sample:", error);
+      toast.error('Error downloading sample format.');
+    }
+  };
+
+  // Expose export function to parent
+  useEffect(() => {
+    if (onExportSet) {
+      onExportSet(() => handleExportToExcel);
+    }
+  }, [onExportSet, checklists]);
+
   // Client-side search filtering
   const filteredChecklists = checklists.filter(checklist => 
     !searchValue || checklist.name?.toLowerCase().includes(searchValue.toLowerCase())
@@ -95,6 +186,24 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
   const paginatedChecklists = filteredChecklists.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<Checklist> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/asset/checklist/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/asset/checklist/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { id: 'name', label: 'Name', key: 'name', header: 'Name', sortable: true, render: (v) => v || '-' },
     { id: 'frequency', label: 'Frequency', key: 'frequency', header: 'Frequency', render: (v) => v || '-' },
@@ -169,6 +278,60 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
 
   return (
     <>
+      {/* Import Modal */}
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-card shadow-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Bulk Upload Checklist
+              </h2>
+              <button className="text-xl leading-none" onClick={() => setIsImportOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleImportSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Select Checklist File(s)
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  multiple
+                  required
+                  onChange={(e) => setImportFiles(Array.from(e.target.files || []))}
+                  className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleDownloadSample}
+                  className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                >
+                  Download Sample Format
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsImportOpen(false)}
+                  className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
+                >
+                  Import
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Hide Columns Dropdown */}
       {isColumnMenuOpen && (
         <>

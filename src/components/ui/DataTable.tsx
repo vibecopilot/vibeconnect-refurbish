@@ -24,6 +24,7 @@ interface DataTableProps<T> {
   getRowId?: (row: T) => string;
   viewPath?: (row: T) => string;
   onView?: (row: T) => void;
+  showActions?: boolean;
 }
 
 // Custom Checkbox component for better styling
@@ -68,6 +69,7 @@ function DataTable<T extends Record<string, any>>({
   getRowId = (row) => row.id,
   viewPath,
   onView,
+  showActions = true,
 }: DataTableProps<T>) {
   const allSelected = data.length > 0 && selectedRows.length === data.length;
   const someSelected = selectedRows.length > 0 && selectedRows.length < data.length;
@@ -87,9 +89,6 @@ function DataTable<T extends Record<string, any>>({
                   />
                 </th>
               )}
-              <th className="w-16 px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Actions
-              </th>
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -123,8 +122,8 @@ function DataTable<T extends Record<string, any>>({
               const isSelected = selectedRows.includes(rowId);
               
               return (
-                <tr 
-                  key={rowId} 
+                <tr
+                  key={rowId}
                   className={`border-b border-border hover:bg-accent/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
                 >
                   {selectable && (
@@ -135,26 +134,9 @@ function DataTable<T extends Record<string, any>>({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3">
-                    {viewPath ? (
-                      <Link 
-                        to={viewPath(row)}
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </Link>
-                    ) : onView ? (
-                      <button
-                        onClick={() => onView(row)}
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    ) : null}
-                  </td>
                   {columns.map((column) => (
                     <td key={column.key} className="px-4 py-3 text-sm text-foreground">
-                      {column.render 
+                      {column.render
                         ? column.render(row[column.key], row, rowIndex)
                         : row[column.key] ?? '-'
                       }

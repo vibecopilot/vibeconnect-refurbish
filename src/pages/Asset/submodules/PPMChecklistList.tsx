@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { Loader2, ClipboardCheck, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Loader2, ClipboardCheck, AlertCircle, RefreshCw, Eye, EyeOff, Edit } from 'lucide-react';
 import { getAssetPPMList } from '../../../api';
 
 interface PPMChecklist {
@@ -95,6 +95,24 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
   const paginatedChecklists = filteredChecklists.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<PPMChecklist> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/asset/ppm-checklist/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/asset/edit-ppm/${row.id}`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { id: 'name', label: 'Name', key: 'name', header: 'Name', sortable: true, render: (v) => v || '-' },
     { id: 'start_date', label: 'Start Date', key: 'start_date', header: 'Start Date', render: (v) => v || '-' },

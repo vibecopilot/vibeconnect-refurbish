@@ -6,3 +6,4 @@ export { default as ChecklistList } from './ChecklistList';
 export { default as CreateChecklist } from './CreateChecklist';
 export { default as ViewChecklist } from './ViewChecklist';
 export { default as TaskList } from './TaskList';
+export { default as SoftServicesOverview } from './SoftServicesOverview';

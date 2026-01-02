@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
-import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { Loader2, Package, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Package, AlertCircle, RefreshCw, Eye, EyeOff, Download, Edit } from 'lucide-react';
 import { getAMC } from '../../../api';
+import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 interface AMC {
   id: number;
@@ -31,6 +32,7 @@ interface AMCListProps {
   setIsFilterOpen: (value: boolean) => void;
   isColumnMenuOpen: boolean;
   setIsColumnMenuOpen: (value: boolean) => void;
+  onExportSet?: (fn: () => void) => void;
 }
 
 const AMCList: React.FC<AMCListProps> = ({ 
@@ -40,7 +42,8 @@ const AMCList: React.FC<AMCListProps> = ({
   isFilterOpen,
   setIsFilterOpen,
   isColumnMenuOpen,
-  setIsColumnMenuOpen
+  setIsColumnMenuOpen,
+  onExportSet
 }) => {
   const [amcList, setAmcList] = useState<AMC[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +96,49 @@ const AMCList: React.FC<AMCListProps> = ({
   const endIndex = startIndex + pagination.perPage;
   const paginatedAMC = filteredAMC.slice(startIndex, endIndex);
 
+  // Export to Excel functionality
+  const handleExportToExcel = () => {
+    const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+    const fileName = "AMC_data.xlsx";
+    const ws = XLSX.utils.json_to_sheet(filteredAMC);
+    const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const data = new Blob([excelBuffer], { type: fileType });
+    const url = URL.createObjectURL(data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    
+    toast.success('Excel file exported successfully');
+  };
+
+  // Expose export function to parent
+  useEffect(() => {
+    if (onExportSet) {
+      onExportSet(() => handleExportToExcel);
+    }
+  }, [onExportSet, filteredAMC]);
+
   const allColumns: Array<TableColumn<AMC> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/asset/amc/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/asset/amc/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { id: 'asset_name', label: 'Asset Name', key: 'asset_name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
     { id: 'vendor_name', label: 'Vendor', key: 'vendor_name', header: 'Vendor', render: (v) => v || '-' },
@@ -147,7 +192,6 @@ const AMCList: React.FC<AMCListProps> = ({
         <Package className="w-16 h-16 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No AMC Found</h3>
         <p className="text-muted-foreground mb-4">{searchValue ? `No AMC match "${searchValue}"` : 'No AMC added yet'}</p>
-        <Link to="/asset/amc/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add AMC</Link>
       </div>
     );
   }

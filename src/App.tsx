@@ -53,7 +53,7 @@ import EditAsset from "./pages/Asset/EditAsset";
 import EditStockItem from "./pages/Asset/EditStockItem";
 import { ViewAMC, ViewMeter, ViewChecklist as ViewAssetChecklist, ViewRoutineTask, ViewPPMChecklist, ViewPPMActivity, ViewStockItem } from "./pages/Asset/submodules";
 import { TicketList, TicketCreate, TicketView, TicketEdit } from "./pages/ServiceDesk";
-import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList } from "./pages/SoftService";
+import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList, SoftServicesOverview } from "./pages/SoftService";
 import {
   AmenitiesList,
   HotelBookingsList,
@@ -191,6 +191,8 @@ function App() {
         <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><ViewStockItem /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><EditStockItem /></AuthenticatedLayout>} />
+
+        <Route path="/asset/overview" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         
         {/* Soft Services - Service Tab */}
         <Route path="/soft-services" element={<AuthenticatedLayout><ServiceList /></AuthenticatedLayout>} />
@@ -207,7 +209,10 @@ function App() {
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
         <Route path="/soft-services/task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Task Details" /></AuthenticatedLayout>} />
-        
+
+        {/* Soft Services - Overview Tab */}
+        <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} isColumnMenuOpen={false} setIsColumnMenuOpen={() => {}} /></AuthenticatedLayout>} />
+
         <Route path="/soft-service" element={<Navigate to="/soft-services" replace />} />
 
         {/* Service Desk */}

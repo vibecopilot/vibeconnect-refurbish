@@ -167,9 +167,9 @@ useEffect(() => {
   );
 
   const columns: TableColumn<SoftService>[] = [
-    { 
-      key: 'actions', 
-      header: 'ACTION', 
+    {
+      key: 'actions',
+      header: 'ACTION',
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-2">
@@ -182,9 +182,9 @@ useEffect(() => {
         </div>
       )
     },
-    { 
-      key: 'name', 
-      header: 'SERVICE NAME', 
+    {
+      key: 'name',
+      header: 'SERVICE NAME',
       sortable: true,
       render: (v) => v || '-'
     },
@@ -208,7 +208,7 @@ useEffect(() => {
             <div className="flex flex-wrap gap-1">
               {row.units.map((unit, idx) => (
                 <span key={unit.id || idx} className="text-sm">
-                  {unit.name}{idx < row.units.length - 1 ? ', ' : ''}
+                  {unit.name}{idx < (row.units?.length || 0) - 1 ? ', ' : ''}
                 </span>
               ))}
             </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import ListToolbar from '../../components/ui/ListToolbar';
-import { AssetMainList, AMCList, MeterList, ChecklistList, RoutineTaskList, PPMChecklistList, PPMActivityList, PPMCalendar, StockItemsList } from './submodules';
+import { AssetMainList, AMCList, MeterList, ChecklistList, RoutineTaskList, PPMChecklistList, PPMActivityList, PPMCalendar, StockItemsList,AssetOverview } from './submodules';
 
 const AssetList: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +11,10 @@ const AssetList: React.FC = () => {
   const [searchValue, setSearchValue] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
-  
+  const [exportCallback, setExportCallback] = useState<(() => void) | null>(null);
+  const [qrCallback, setQrCallback] = useState<(() => void) | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isChecklistImportOpen, setIsChecklistImportOpen] = useState(false);
   // Records per page: 12 for grid, 10 for table
   const recordsPerPage = viewMode === 'grid' ? 12 : 10;
 
@@ -27,6 +30,7 @@ const AssetList: React.FC = () => {
     if (path === '/asset/ppm-activity') return 'ppm-activity';
     if (path === '/asset/ppm-calendar') return 'ppm-calendar';
     if (path === '/asset/stock-items') return 'stock-items';
+    if (path === '/asset/overview') return 'overview'; // ✅ Add this
     return 'asset';
   };
 
@@ -34,16 +38,28 @@ const AssetList: React.FC = () => {
 
   const handleSearch = (value: string) => setSearchValue(value);
 
-  // Only submodules with existing create pages
-  const submodulesWithCreate = ['asset', 'amc', 'checklist', 'ppm-activity'];
+  // Tabs with Add button
+  const submodulesWithCreate = ['asset', 'meter', 'checklist', 'ppm-checklist'];
+
+  // Tabs with Filter button
+  const tabsWithFilter = ['asset', 'meter'];
+
+  // Tabs with QR Code button
+  const tabsWithQrCode = ['asset'];
+
+  // Tabs with Export button
+  const tabsWithExport = ['asset', 'amc', 'checklist'];
+
+  // Tabs with Import button
+  const tabsWithImport = ['asset', 'checklist'];
 
   const getAddPath = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const paths: Record<string, string> = {
       'asset': '/asset/create',
-      'amc': '/asset/amc/create',
+      'meter': '/asset/meter/create',
       'checklist': '/asset/checklist/create',
-      'ppm-activity': '/asset/ppm-activity/create',
+      'ppm-checklist': '/asset/ppm-checklist/create',
     };
     return paths[activeTab] || '';
   };
@@ -52,9 +68,9 @@ const AssetList: React.FC = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const labels: Record<string, string> = {
       'asset': 'Add Asset',
-      'amc': 'Add AMC',
+      'meter': 'Add Meter',
       'checklist': 'Add Checklist',
-      'ppm-activity': 'Add PPM Activity',
+      'ppm-checklist': 'Add PPM Checklist',
     };
     return labels[activeTab] || '';
   };
@@ -70,6 +86,7 @@ const AssetList: React.FC = () => {
       'ppm-activity': 'PPM Activity',
       'ppm-calendar': 'PPM Calendar',
       'stock-items': 'Stock Items',
+       'overview': 'Overview', // ✅ Add this
     };
     return titles[activeTab] || 'Assets';
   };
@@ -94,16 +111,43 @@ const AssetList: React.FC = () => {
     };
 
     switch (activeTab) {
-      case 'asset': return <AssetMainList {...commonProps} />;
-      case 'amc': return <AMCList {...commonProps} />;
-      case 'meter': return <MeterList {...commonProps} />;
-      case 'checklist': return <ChecklistList {...commonProps} />;
-      case 'routine-task': return <RoutineTaskList {...commonProps} />;
-      case 'ppm-checklist': return <PPMChecklistList {...commonProps} />;
-      case 'ppm-activity': return <PPMActivityList {...commonProps} />;
-      case 'ppm-calendar': return <PPMCalendar searchValue={searchValue} />;
-      case 'stock-items': return <StockItemsList {...commonProps} />;
-      default: return <AssetMainList {...commonProps} />;
+      case 'asset': 
+        return (
+          <AssetMainList 
+            {...commonProps} 
+            isImportOpen={isImportOpen} 
+            setIsImportOpen={setIsImportOpen} 
+            onExportSet={setExportCallback}
+            onQrSet={setQrCallback}
+          />
+        );
+      case 'amc': 
+        return <AMCList {...commonProps} onExportSet={setExportCallback} />;
+      case 'meter': 
+        return <MeterList {...commonProps} />;
+      case 'checklist': 
+  return (
+    <ChecklistList 
+      {...commonProps} 
+      onExportSet={setExportCallback}
+      isImportOpen={isChecklistImportOpen} // ✅ Use separate state
+      setIsImportOpen={setIsChecklistImportOpen} // ✅ Use separate state
+    />
+  );
+      case 'routine-task': 
+        return <RoutineTaskList {...commonProps} />;
+      case 'ppm-checklist': 
+        return <PPMChecklistList {...commonProps} />;
+      case 'ppm-activity': 
+        return <PPMActivityList {...commonProps} />;
+      case 'ppm-calendar': 
+        return <PPMCalendar searchValue={searchValue} />;
+      case 'stock-items': 
+        return <StockItemsList {...commonProps} />;
+      case 'overview': 
+        return <AssetOverview />; // ✅ Add this
+      default: 
+        return <AssetMainList {...commonProps} isImportOpen={isImportOpen} setIsImportOpen={setIsImportOpen} onExportSet={setExportCallback} onQrSet={setQrCallback} />;
     }
   };
 
@@ -111,31 +155,50 @@ const AssetList: React.FC = () => {
     <div className="p-6">
       <Breadcrumb items={getBreadcrumbs()} />
 
-      <ListToolbar
-        searchPlaceholder={`Search ${activeTab.replace('-', ' ')}...`}
-        searchValue={searchValue}
-        onSearchChange={handleSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle={activeTab !== 'ppm-calendar'}
-        onFilter={() => setIsFilterOpen(true)}
-        onExport={() => {}}
-        onAdd={getAddLabel() ? () => navigate(getAddPath()) : undefined}
-        addLabel={getAddLabel()}
-        showQrCode={activeTab === 'meter' || activeTab === 'asset'}
-        onQrCode={(activeTab === 'meter' || activeTab === 'asset') ? () => {} : undefined}
-        additionalButtons={
+     <ListToolbar
+  searchPlaceholder={`Search ${activeTab.replace('-', ' ')}...`}
+  searchValue={searchValue}
+  onSearchChange={handleSearch}
+  viewMode={viewMode}
+  onViewModeChange={setViewMode}
+  showViewToggle={activeTab !== 'ppm-calendar' && activeTab !== 'overview'} // ✅ Hide for overview
+  onFilter={tabsWithFilter.includes(activeTab) ? () => setIsFilterOpen(true) : undefined}
+  onExport={tabsWithExport.includes(activeTab) ? (exportCallback || (() => {})) : undefined}
+  onAdd={getAddLabel() ? () => navigate(getAddPath()) : undefined}
+  addLabel={getAddLabel()}
+  showQrCode={tabsWithQrCode.includes(activeTab)}
+  onQrCode={tabsWithQrCode.includes(activeTab) ? qrCallback || undefined : undefined}
+  additionalButtons={
+    activeTab !== 'overview' ? ( // ✅ Hide buttons for overview
+      <>
+        {tabsWithImport.includes(activeTab) && (
           <button
-            onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+            onClick={() => {
+              if (activeTab === 'asset') {
+                setIsImportOpen(true);
+              } else if (activeTab === 'checklist') {
+                setIsChecklistImportOpen(true);
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
           >
-            Hide Columns
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            Import
           </button>
-        }
-      />
+        )}
+        
+        <button
+          onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+          className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+        >
+          Hide Columns
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </>
+    ) : null
+  }
+/>
 
       {renderContent()}
     </div>

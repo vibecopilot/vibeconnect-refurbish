@@ -64,6 +64,7 @@ const modules = [
           { name: 'PPM Activity', path: '/asset/ppm-activity' },
           { name: 'PPM Calendar', path: '/asset/ppm-calendar' },
           { name: 'Stock Items', path: '/asset/stock-items' },
+          { name: 'Overview', path: '/asset/overview' },
         ]
       },
       { id: 'soft-services', name: 'Soft Services', path: '/soft-services',
@@ -71,6 +72,7 @@ const modules = [
           { name: 'Service', path: '/soft-services' },
           { name: 'Checklist', path: '/soft-services/checklist' },
           { name: 'Task', path: '/soft-services/task' },
+          { name: 'Overview', path: '/soft-services/overview' },
         ]
       },
       { id: 'inventory', name: 'Inventory', path: '/inventory/masters',
@@ -83,10 +85,6 @@ const modules = [
       },
       { id: 'supplier', name: 'Supplier/Vendor', path: '/supplier' },
       { id: 'audit', name: 'Audit', path: '/audit/operational/scheduled',
-        children: [
-          { name: 'Operational', path: '/audit/operational/scheduled' },
-          { name: 'Vendor', path: '/audit/vendor/scheduled' },
-        ]
       },
       { id: 'mail-room', name: 'Mail Room', path: '/mail-room' },
     ]
@@ -322,33 +320,62 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   // Derive active module and sub-module from current path
   const getActiveFromPath = () => {
     const pathname = location.pathname;
+    console.log('🔍 getActiveFromPath called with pathname:', pathname);
     
     for (const mod of filteredModules) {
+      console.log('  Checking module:', mod.name, 'id:', mod.id);
       for (const subMod of mod.subModules) {
-        // Check if submodule has children - match against children paths
+        console.log('    Checking submodule:', subMod.name, 'path:', subMod.path);
+        
+        // Check if submodule has children - PRIORITIZE EXACT MATCHES
         if (subMod.children && subMod.children.length > 0) {
+          console.log('      Submodule has children:', subMod.children.length);
+          
+          // FIRST: Check all children for exact matches
           for (const child of subMod.children) {
-            if (pathname === child.path || pathname.startsWith(child.path + '/')) {
+            console.log('        Checking child (exact):', child.name, 'path:', child.path);
+            if (pathname === child.path) {
+              console.log('          ✅ EXACT MATCH: Returning module:', mod.id, 'submodule:', subMod.id);
+              return { moduleId: mod.id, subModuleId: subMod.id };
+            }
+          }
+          
+          // SECOND: If no exact match found, check startsWith for nested routes
+          for (const child of subMod.children) {
+            if (child.path !== '/asset' && pathname.startsWith(child.path + '/')) {
+              console.log('          ✅ STARTSWITH MATCH: Returning module:', mod.id, 'submodule:', subMod.id);
               return { moduleId: mod.id, subModuleId: subMod.id };
             }
           }
         }
-        // Direct path match for submodules without children
-        if (pathname === subMod.path || pathname.startsWith(subMod.path + '/')) {
-          return { moduleId: mod.id, subModuleId: subMod.id };
+        // Direct path match for submodules without children - only exact match
+        // Skip this check if submodule has children (handled above)
+        if (!subMod.children || subMod.children.length === 0) {
+          const exactMatch = pathname === subMod.path;
+          console.log('      Exact match check for', subMod.path, ':', exactMatch);
+          if (exactMatch) {
+            console.log('      ✅ EXACT MATCH: Returning module:', mod.id, 'submodule:', subMod.id);
+            return { moduleId: mod.id, subModuleId: subMod.id };
+          }
+        } else {
+          console.log('      Skipping direct path check for submodule with children');
         }
       }
       if (mod.path && (pathname === mod.path || pathname.startsWith(mod.path + '/'))) {
+        console.log('  ✅ MODULE MATCH: Returning module:', mod.id, 'submodule: empty');
         return { moduleId: mod.id, subModuleId: '' };
       }
     }
+    console.log('  ❌ NO MATCH: Returning default');
     return { moduleId: 'fm-module', subModuleId: '' };
   };
 
   const { moduleId: activeModule, subModuleId: activeSubModule } = getActiveFromPath();
+  console.log('🎯 Active module:', activeModule, 'Active submodule:', activeSubModule);
 
   const currentModule = filteredModules.find(m => m.id === activeModule);
   const currentSubModule = currentModule?.subModules.find(s => s.id === activeSubModule);
+  console.log('🎯 Current module:', currentModule?.name, 'Current submodule:', currentSubModule?.name);
 
   // Reorder modules so active one comes first
   const sortedModules = useMemo(() => {
@@ -368,19 +395,46 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
   // Reorder level 3 items so active one comes first
   const sortedLevel3 = useMemo(() => {
-    if (!currentSubModule?.children) return [];
-    const activePath = location.pathname;
+    console.log('🔄 sortedLevel3 called with currentSubModule:', currentSubModule?.name, 'activePath:', location.pathname);
     
-    // Find active item - exact match first, then startsWith for nested paths
+    if (!currentSubModule?.children) {
+      console.log('  ❌ No children found');
+      return [];
+    }
+    
+    const activePath = location.pathname;
+    console.log('  Checking children for active path:', activePath);
+    
+    // Find active item with improved logic
     const activeItem = currentSubModule.children.find(c => {
+      console.log('    Checking child:', c.name, 'path:', c.path);
+      
+      // Handle exact match for /asset path
       if (c.path === '/asset') {
-        return activePath === '/asset';
+        const match = activePath === '/asset';
+        console.log('      Exact match for /asset:', match);
+        return match;
       }
-      return activePath === c.path || activePath.startsWith(c.path + '/');
+      // Handle other paths with exact match only (no startsWith for SoftService)
+      const exactMatch = activePath === c.path;
+      console.log('      exact match for', c.path, ':', exactMatch);
+      
+      if (exactMatch) {
+        console.log('      ✅ EXACT MATCH: Selecting', c.name);
+        return true;
+      }
+      return false;
     });
     
-    if (!activeItem) return currentSubModule.children;
+    console.log('  Active item found:', activeItem?.name);
+    
+    if (!activeItem) {
+      console.log('  ❌ No active item found, returning all children');
+      return currentSubModule.children;
+    }
+    
     const rest = currentSubModule.children.filter(c => c.path !== activeItem.path);
+    console.log('  Returning reordered list with active item first');
     return [activeItem, ...rest];
   }, [currentSubModule, location.pathname]);
 
@@ -391,12 +445,12 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   //   }
   // }, [currentSubModule]);
 
-  const isActivePath = (path: string) => {
-    if (path === '/asset') {
-      return location.pathname === '/asset';
-    }
-    return location.pathname.startsWith(path);
-  };
+ const isActivePath = (path: string) => {
+  const pathname = location.pathname;
+  
+  // Exact match only - no startsWith
+  return pathname === path;
+};
 
   const handleModuleClick = (moduleId: string) => {
     const mod = filteredModules.find(m => m.id === moduleId);
@@ -669,6 +723,11 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           ))}
         </nav>
       )}
+      
+      {/* Debug Info */}
+      <div className="hidden debug-info p-2 text-xs text-muted-foreground border-t">
+        Debug: Module={activeModule} | SubModule={activeSubModule} | CurrentSubModule={currentSubModule?.name} | Level3Count={sortedLevel3.length}
+      </div>
     </header>
   );
 };

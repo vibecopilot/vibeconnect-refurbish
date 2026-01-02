@@ -4,9 +4,12 @@ import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
 import { assetService, Asset } from '../../../services/asset.service';
-import { Loader2, Package, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import { getFloors, getUnits } from '../../../api';
+import { Loader2, Package, AlertCircle, RefreshCw, Eye, EyeOff, Upload, Download, QrCode, Edit } from 'lucide-react';
+import { getFloors, getUnits, downloadQrCode } from '../../../api'; // ✅ Import downloadQrCode from api
 import { getItemInLocalStorage } from '../../../utils/localStorage';
+import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+
 
 interface AssetMainListProps {
   viewMode: 'grid' | 'table';
@@ -16,7 +19,14 @@ interface AssetMainListProps {
   setIsFilterOpen: (value: boolean) => void;
   isColumnMenuOpen: boolean;
   setIsColumnMenuOpen: (value: boolean) => void;
+  isImportOpen: boolean;
+  setIsImportOpen: (value: boolean) => void;
+  onQrDownload?: () => void;
+  onExport?: () => void;
+  onExportSet?: (fn: () => void) => void;
+  onQrSet?: (fn: () => void) => void; // ✅ Add this
 }
+
 
 const AssetMainList: React.FC<AssetMainListProps> = ({ 
   viewMode, 
@@ -25,14 +35,22 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
   isFilterOpen,
   setIsFilterOpen,
   isColumnMenuOpen,
-  setIsColumnMenuOpen
+  setIsColumnMenuOpen,
+  isImportOpen,
+  setIsImportOpen,
+  onQrDownload,
+  onExport,
+  onExportSet,
+  onQrSet // ✅ Add this
 }) => {
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   const buildings = getItemInLocalStorage('Building') || [];
   const [floors, setFloors] = useState<any[]>([]);
@@ -74,7 +92,130 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
     }
   }, [pagination.page, pagination.perPage, searchValue, filters]);
 
+   // ✅ Add this useEffect to expose QR function
+  useEffect(() => {
+    if (onExportSet) {
+      onExportSet(() => handleExportToExcel);
+    }
+    if (onQrSet) {
+      onQrSet(() => handleQrDownload); // ✅ Expose QR function to parent
+    }
+  }, [onExportSet, onQrSet, selectedRows, assets]);
+
   useEffect(() => { fetchAssets(); }, [fetchAssets]);
+
+  // Import Functionality
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!importFile) {
+      toast.error('Please select a file to upload.');
+      return;
+    }
+
+    const token = getItemInLocalStorage('TOKEN');
+    const formData = new FormData();
+    formData.append('file', importFile);
+
+    try {
+      toast.loading('Uploading file...');
+      const response = await fetch(`https://admin.vibecopilot.ai/site_assets/import/?token=${token}`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      toast.dismiss();
+      if (response.ok) {
+        toast.success('File uploaded successfully.');
+        setIsImportOpen(false);
+        setImportFile(null);
+        fetchAssets(); // Refresh the list
+      } else {
+        toast.error('File upload failed.');
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error uploading file:', error);
+      toast.error('An error occurred while uploading the file.');
+    }
+  };
+
+
+// QR Code Download Functionality - COPIED FROM OLD COMPONENT
+const handleQrDownload = async () => {
+  if (selectedRows.length === 0) {
+    return toast.error("Please select at least one asset.");
+  }
+
+  console.log('Selected rows for QR:', selectedRows);
+  toast.loading("QR code downloading, please wait!");
+
+  try {
+    const response = await downloadQrCode(selectedRows);
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "qr_codes.pdf");
+    document.body.appendChild(link);
+    link.click();
+    window.URL.revokeObjectURL(url);
+    link.parentNode.removeChild(link);
+    console.log(response);
+    toast.dismiss();
+    toast.success("QR code downloaded successfully");
+  } catch (error) {
+    toast.dismiss();
+    console.error("Error downloading QR code:", error);
+    toast.error("Something went wrong, please try again");
+  }
+};
+
+const handleExportToExcel = useCallback(() => {
+  const dateFormat = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const mappedData = assets.map((asset) => ({
+    "Asset Name": asset.name,
+    "Asset Type": asset.asset_type || '-',
+    "Serial No.": asset.serial_number || '-',
+    "Model No.": asset.model_number || '-',
+    "Description": asset.description || '-',
+    "Building": asset.building_name || '-',
+    "Floor": asset.floor_name || '-',
+    "Unit": asset.unit_name || '-',
+    "Vendor": asset.vendor_name || '-',
+    "Asset Group": asset.group_name || '-',
+    "Asset Sub Group": asset.sub_group_name || '-',
+    "Purchased On": asset.purchased_on || '-',
+    "Purchased Cost": asset.purchase_cost || '-',
+    "Critical": asset.critical ? "Yes" : "No",
+    "Breakdown": asset.breakdown ? "Yes" : "No",
+    "Meter Configured": asset.is_meter ? "Yes" : "No",
+    "Created On": dateFormat(asset.created_at),
+    "Updated On": asset.updated_at ? dateFormat(asset.updated_at) : '-',
+    "Comment": asset.remarks || '-',
+    "Installation": asset.installation || '-',
+    "Warranty Start": asset.warranty_start || '-',
+    "Warranty Expiry": asset.warranty_expiry || '-',
+  }));
+
+  const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+  const fileName = "asset_data.xlsx";
+  const ws = XLSX.utils.json_to_sheet(mappedData);
+  const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
+  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const data = new Blob([excelBuffer], { type: fileType });
+  const url = URL.createObjectURL(data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  
+  toast.success('Excel file exported successfully');
+}, [assets]);
+
 
   const handleBuildingChange = async (buildingId: string) => {
     setFilters(prev => ({ ...prev, building_id: buildingId, floor_id: '', unit_id: '' }));
@@ -123,14 +264,29 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
   };
 
   const getAssetStatus = (asset: Asset): StatusType => {
-    // Check breakdown field first
     if (asset.breakdown) return 'breakdown';
-    
-    // If not breakdown, show as in-use
     return 'in-use';
   };
 
   const allColumns: Array<TableColumn<Asset> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/asset/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/asset/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
     { id: 'asset_number', label: 'Asset Number', key: 'asset_number', header: 'Asset Number', render: (v) => v || '-' },
     { id: 'name', label: 'Asset Name', key: 'name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
@@ -154,6 +310,7 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
     { id: 'installation', label: 'Installation Date', key: 'installation', header: 'Installation Date', render: (v) => v || '-' },
     { id: 'warranty_expiry', label: 'W Expiry', key: 'warranty_expiry', header: 'W Expiry', render: (v) => v || '-' },
     { id: 'is_meter', label: 'Meter Configured', key: 'is_meter', header: 'Meter Configured', render: (v) => v ? 'Yes' : 'No' },
+    { id: 'warranty', label: 'Warranty', key: 'warranty', header: 'Warranty', render: (_, row) => (row.warranty_start === null || row.warranty_start === '') ? 'No' : 'Yes' },
     { id: 'vendor_name', label: 'Supplier', key: 'vendor_name', header: 'Supplier', render: (v) => v || '-' },
   ];
 
@@ -206,6 +363,54 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
 
   return (
     <>
+      {/* Import Modal */}
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-card shadow-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Bulk Upload
+              </h2>
+              <button className="text-xl leading-none" onClick={() => setIsImportOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleImportSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Drag & Drop or Select File
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  required
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <a
+                  download="assets_import.xlsx"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                  href="https://admin.vibecopilot.ai/assets/assets_import.xlsx"
+                >
+                  Download Sample
+                </a>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
+                >
+                  Import
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Filter Modal */}
       {isFilterOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
@@ -217,7 +422,6 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
 
             <div className="px-6 py-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Building Name */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Building Name</label>
                   <select
@@ -232,7 +436,6 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
                   </select>
                 </div>
 
-                {/* Floor Name */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Floor Name</label>
                   <select 
@@ -248,7 +451,6 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
                   </select>
                 </div>
 
-                {/* Unit Name */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Unit Name</label>
                   <select 
@@ -307,6 +509,8 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
         </>
       )}
 
+      
+
       {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
       
       {viewMode === 'grid' ? (
@@ -329,7 +533,28 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
           ))}
         </div>
       ) : (
-        <DataTable columns={visibleColumns} data={assets} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === assets.length ? [] : assets.map(a => String(a.id)))} viewPath={(row) => `/asset/${row.id}`} />
+        <DataTable 
+          columns={visibleColumns} 
+          data={assets} 
+          selectable 
+          selectedRows={selectedRows} 
+          onSelectRow={(id) => {
+    console.log('Row clicked:', id); // 🔍 Debug
+    setSelectedRows(prev => {
+      const newSelection = prev.includes(id) 
+        ? prev.filter(r => r !== id) 
+        : [...prev, id];
+      console.log('Updated selection:', newSelection); // 🔍 Debug
+      return newSelection;
+    });
+  }} 
+  onSelectAll={() => {
+    const allIds = assets.map(a => String(a.id));
+    console.log('Select All clicked:', allIds); // 🔍 Debug
+    setSelectedRows(selectedRows.length === assets.length ? [] : allIds);
+  }} 
+  viewPath={(row) => `/asset/${row.id}`} 
+        />
       )}
 
       {assets.length > 0 && (

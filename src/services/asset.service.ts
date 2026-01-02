@@ -23,6 +23,17 @@ export interface Asset {
   updated_at?: string;
   asset_group?: { name?: string };
   sub_group?: { name?: string };
+  breakdown?: boolean;
+  critical?: boolean;
+  capacity?: string;
+  installation?: string;
+  is_meter?: boolean;
+  vendor_name?: string;
+  group_name?: string;
+  sub_group_name?: string;
+  purchased_on?: string;
+  equipemnt_id?: string;
+  remarks?: string;
 }
 
 export interface AssetFilters {

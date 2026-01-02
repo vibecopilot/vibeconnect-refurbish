@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { Loader2, Gauge, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Gauge, AlertCircle, RefreshCw, Eye, EyeOff, Edit } from 'lucide-react';
 import { getMeteredSiteAsset, getFloors, getUnits } from '../../../api';
 import { getItemInLocalStorage } from '../../../utils/localStorage';
 
@@ -178,6 +178,24 @@ const MeterList: React.FC<MeterListProps> = ({
   const paginatedMeters = filteredMeters.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<Meter> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/asset/meter/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/asset/meter/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { id: 'building_name', label: 'Building', key: 'building_name', header: 'Building', render: (v) => v || '-' },
     { id: 'floor_name', label: 'Floor', key: 'floor_name', header: 'Floor', render: (v) => v || '-' },

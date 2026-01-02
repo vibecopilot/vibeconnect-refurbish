@@ -143,9 +143,9 @@ setChecklists(filtered);
   );
 
   const columns: TableColumn<Checklist>[] = [
-    { 
-      key: 'actions', 
-      header: 'ACTION', 
+    {
+      key: 'actions',
+      header: 'ACTION',
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-2">
@@ -161,7 +161,7 @@ setChecklists(filtered);
     { key: 'name', header: 'NAME', sortable: true },
     { key: 'start_date', header: 'START DATE', render: (v) => formatDate(v) },
     { key: 'end_date', header: 'END DATE', render: (v) => formatDate(v) },
-    { key: 'priority', header: 'PRIORITY LEVEL', render: (v) => v ? <StatusBadge status={getPriorityStatus(v)} label={v} /> : '-' },
+    { key: 'priority', header: 'PRIORITY LEVEL', render: (v) => v ? <StatusBadge status={getPriorityStatus(v)} /> : '-' },
     { key: 'frequency', header: 'FREQUENCY', render: (v) => v || '-' },
     {
   key: 'group_count',

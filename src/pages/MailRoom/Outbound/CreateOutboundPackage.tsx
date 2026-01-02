@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../../components/layout/PageHeader';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
 import { getVendors, createOutbound, getOutboundDetail, editOutbound } from '../../../api';
 import { stateCityModal } from '../../../utils/stateCityModal';
 
@@ -29,7 +29,12 @@ const CreateOutboundPackage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader title={isEditMode ? 'Edit Outbound Package' : 'Create Outbound Package'} breadcrumbs={[{ label: 'FM Module', path: '/mail-room' }, { label: 'Mail Room', path: '/mail-room' }, { label: 'Outbound', path: '/mail-room/outbound' }, { label: isEditMode ? 'Edit' : 'Create' }]} />
+      <Breadcrumb items={[
+        { label: 'FM Module', path: '/mail-room' },
+        { label: 'Mail Room', path: '/mail-room' },
+        { label: 'Outbound', path: '/mail-room/outbound' },
+        { label: isEditMode ? 'Edit Package' : 'Create Package' },
+      ]} />
       <form onSubmit={handleSubmit}>
         <div className="bg-card border border-border rounded-lg p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
