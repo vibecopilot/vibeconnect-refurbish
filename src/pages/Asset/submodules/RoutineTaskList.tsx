@@ -4,7 +4,7 @@ import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
 import { routineTaskService, RoutineTask } from '../../../services/assetSubModules.service';
-import { Loader2, ListTodo, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, ListTodo, AlertCircle, RefreshCw, Eye } from 'lucide-react';
 
 interface RoutineTaskListProps {
   viewMode: 'grid' | 'table';
@@ -62,6 +62,16 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
   );
 
   const columns: TableColumn<RoutineTask>[] = [
+    {
+      key: 'action',
+      header: 'Action',
+      width: '80px',
+      render: (_, row) => (
+        <Link to={`/asset/routine-task/${row.asset_id || 0}/${row.id}`} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors inline-flex">
+          <Eye className="w-4 h-4" />
+        </Link>
+      ),
+    },
     { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
     { key: 'checklist_name', header: 'Checklist', sortable: true, render: (v) => v || '-' },
     { key: 'asset_name', header: 'Asset', render: (v) => v || '-' },

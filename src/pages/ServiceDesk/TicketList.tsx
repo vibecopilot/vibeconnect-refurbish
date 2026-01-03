@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
+  Edit,
 } from "lucide-react";
 
 const TicketList: React.FC = () => {
@@ -324,6 +325,24 @@ const TicketList: React.FC = () => {
 
   // Define all columns
   const allColumns: Array<TableColumn<Ticket> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/service-desk/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/service-desk/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     {
       id: "ticket_number",
       label: "Ticket Number",

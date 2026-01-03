@@ -113,6 +113,33 @@ const DeliveryVendorList: React.FC = () => {
   };
 
   const columns: Array<TableColumn<Vendor> & { width?: string }> = [
+    {
+      key: 'action',
+      header: 'Action',
+      width: '120px',
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/mail-room/delivery-vendor/${row.id}`)}
+            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Eye size={16} />
+          </button>
+          <button
+            onClick={() => navigate(`/mail-room/delivery-vendor/${row.id}/edit`)}
+            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button
+            onClick={() => handleRemoveVendor(row.id)}
+            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
     { key: 'id', header: 'ID', sortable: true, width: '80px', render: (value, row) => row.id },
     { key: 'vendor_name', header: 'NAME', sortable: true, render: (value, row) => row.vendor_name || '-' },
     { key: 'website_url', header: 'WEBSITE URL', sortable: true, render: (value, row) => row.website_url || '-' },

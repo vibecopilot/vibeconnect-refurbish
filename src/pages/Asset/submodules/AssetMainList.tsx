@@ -43,8 +43,8 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
   onExportSet,
   onQrSet // ✅ Add this
 }) => {
-
-  const [assets, setAssets] = useState<Asset[]>([]);
+const [allAssets, setAllAssets] = useState<Asset[]>([]);
+const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -66,31 +66,30 @@ const AssetMainList: React.FC<AssetMainListProps> = ({
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
-  const fetchAssets = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await assetService.getAssets(pagination.page, pagination.perPage, { 
-        search: searchValue,
-        building_id: filters.building_id,
-        floor_id: filters.floor_id,
-        unit_id: filters.unit_id,
-      });
-      const data = response.data;
-      const assetList = Array.isArray(data) ? data : data?.site_assets || data?.data || [];
-      setAssets(assetList);
+const fetchAssets = useCallback(async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const response = await assetService.getAssets(pagination.page, pagination.perPage, { 
+      search: searchValue,
+    });
+    const data = response.data;
+    const assetList = Array.isArray(data) ? data : data?.site_assets || data?.data || [];
+    setAllAssets(assetList);
+    setAssets(assetList);
       setPagination(prev => ({
         ...prev,
         total: data.total || data.total_count || assetList.length,
         totalPages: data.total_pages || Math.ceil((data.total || data.total_count || assetList.length) / prev.perPage),
       }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch assets');
-      setAssets([]);
+} catch (err) {
+  setError(err instanceof Error ? err.message : 'Failed to fetch assets');
+  setAllAssets([]);
+  setAssets([]);
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage, searchValue, filters]);
+}, [pagination.page, pagination.perPage, searchValue]);
 
    // ✅ Add this useEffect to expose QR function
   useEffect(() => {
@@ -246,22 +245,54 @@ const handleExportToExcel = useCallback(() => {
     }
   };
 
-  const handleFilterApply = () => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-    setIsFilterOpen(false);
-  };
+const handleFilterApply = () => {
+  let filteredResults = [...allAssets];
 
-  const handleFilterReset = () => {
-    setFilters({
-      building_id: '',
-      floor_id: '',
-      unit_id: '',
-    });
-    setFloors([]);
-    setUnits([]);
-    setPagination(prev => ({ ...prev, page: 1 }));
-    setIsFilterOpen(false);
-  };
+  if (filters.building_id) {
+    filteredResults = filteredResults.filter(
+      (item) => item.building_id === parseInt(filters.building_id, 10)
+    );
+  }
+
+  if (filters.floor_id) {
+    filteredResults = filteredResults.filter(
+      (item) => item.floor_id === parseInt(filters.floor_id, 10)
+    );
+  }
+
+  if (filters.unit_id) {
+    filteredResults = filteredResults.filter(
+      (item) => item.unit_id === parseInt(filters.unit_id, 10)
+    );
+  }
+
+  setAssets(filteredResults);
+  setPagination(prev => ({ 
+    ...prev, 
+    page: 1,
+    total: filteredResults.length,
+    totalPages: Math.ceil(filteredResults.length / prev.perPage)
+  }));
+  setIsFilterOpen(false);
+};
+
+const handleFilterReset = () => {
+  setFilters({
+    building_id: '',
+    floor_id: '',
+    unit_id: '',
+  });
+  setFloors([]);
+  setUnits([]);
+  setAssets(allAssets);
+  setPagination(prev => ({ 
+    ...prev, 
+    page: 1,
+    total: allAssets.length,
+    totalPages: Math.ceil(allAssets.length / prev.perPage)
+  }));
+  setIsFilterOpen(false);
+};
 
   const getAssetStatus = (asset: Asset): StatusType => {
     if (asset.breakdown) return 'breakdown';

@@ -133,9 +133,14 @@ const VMSGoodsInOut: React.FC = () => {
       header: 'ACTION',
       width: '80px',
       render: (_, row) => (
-        <Link to={`/vms/goods-in-out/${row.id}`} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors inline-flex">
-          <Eye className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to={`/vms/goods-in-out/${row.id}`} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/vms/goods-in-out/${row.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors">
+            <Edit2 className="w-4 h-4" />
+          </Link>
+        </div>
       ),
     },
     {
