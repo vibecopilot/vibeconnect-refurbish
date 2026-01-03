@@ -73,6 +73,9 @@ import { CommunicationsLayout, EventsList, CreateEvent, ViewEvent, BroadcastList
 import { CAMLayout, CamBillingList, AddCamBilling, ViewCamBilling, ReceiptInvoiceList, AddReceiptInvoice, ViewReceiptInvoice } from "./pages/CAM";
 import { OtherBillsList, CreateOtherBill, ViewOtherBill } from "./pages/OtherBills";
 import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, CreateGRN, ViewGRN, GDNList, CreateGDN, ViewGDN } from "./pages/Inventory";
+import Compliance from "./pages/Compliance/Compliance";
+import AddCompliance from "./pages/Compliance/AddCompliance";
+import ComplianceDetails from "./pages/Compliance/ComplianceDetails";
 // Placeholder pages for other modules
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   <div className="p-6">
@@ -306,6 +309,11 @@ function App() {
         <Route path="/audit/operational/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/vendor/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
+
+        {/* Compliance - FM Module */}
+        <Route path="/compliance" element={<AuthenticatedLayout><Compliance /></AuthenticatedLayout>} />
+        <Route path="/compliance/add-compliance" element={<AuthenticatedLayout><AddCompliance /></AuthenticatedLayout>} />
+        <Route path="/compliance/compliance-details/:id" element={<AuthenticatedLayout><ComplianceDetails /></AuthenticatedLayout>} />
 
         {/* Safety Module - Under Development Pages */}
         <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />
