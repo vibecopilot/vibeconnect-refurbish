@@ -832,12 +832,17 @@ export const editAssetparamsDetails = async (id, data) =>
 //   });
 
 // amc
-export const getAMC = async () =>
-  axiosInstance.get("/asset_amcs.json", {
-    params: {
-      token: token,
-    },
-  });
+export const getAMC = async (page = 1, perPage = 10, search = '') => {
+  const params = {
+    token: token,
+    page,
+    per_page: perPage,
+  };
+  if (search) {
+    params['q[vendor_vendor_name_or_site_asset_name_cont]'] = search;
+  }
+  return axiosInstance.get("/asset_amcs.json", { params });
+};
 export const postAMC = async (data) =>
   axiosInstance.post("/asset_amcs.json", data, {
     params: {

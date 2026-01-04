@@ -19,7 +19,9 @@ const themeColor = useSelector((state)=> state.theme.color)
   useEffect(() => {
     const fetchAmc = async () => {
       const AMCResponse = await getAMC();
-      const sortedAmc = AMCResponse.data.sort((a,b)=> new Date(b.created_at)- new Date(a.created_at))
+      // Handle new API format: response.data.asset_amcs or fallback to response.data
+      const amcData = AMCResponse.data?.asset_amcs || AMCResponse.data || [];
+      const sortedAmc = amcData.sort((a,b)=> new Date(b.created_at)- new Date(a.created_at))
       setFilteredData(sortedAmc);
       setAmc(sortedAmc);
       console.log(AMCResponse);

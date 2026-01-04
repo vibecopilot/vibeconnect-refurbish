@@ -60,15 +60,24 @@ const AMCList: React.FC<AMCListProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const response = await getAMC();
-      const sortedAmc = response.data.sort((a: AMC, b: AMC) => 
+      // Server-side pagination and search
+      const response = await getAMC(pagination.page, pagination.perPage, searchValue);
+      // Handle new API response format: { asset_amcs: [...], total_entries, current_page, total_pages }
+      const amcData = Array.isArray(response.data?.asset_amcs) 
+        ? response.data.asset_amcs 
+        : Array.isArray(response.data) 
+        ? response.data 
+        : [];
+      
+      // Server already handles sorting, but we'll sort client-side for consistency
+      const sortedAmc = [...amcData].sort((a: AMC, b: AMC) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setAmcList(sortedAmc);
       setPagination(prev => ({
         ...prev,
-        total: sortedAmc.length,
-        totalPages: Math.ceil(sortedAmc.length / prev.perPage),
+        total: response.data?.total_entries || sortedAmc.length,
+        totalPages: response.data?.total_pages || Math.ceil(sortedAmc.length / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch AMC data');
@@ -76,31 +85,31 @@ const AMCList: React.FC<AMCListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, searchValue]);
 
   useEffect(() => { fetchAMC(); }, [fetchAMC]);
+
+  // Debounced search effect - reset to page 1 when search changes
+  useEffect(() => {
+    if (pagination.page !== 1) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue]);
 
   const dateFormat = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
-  // Client-side search filtering
-  const filteredAMC = amcList.filter(amc => 
-    !searchValue || 
-    amc.asset_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    amc.vendor_name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  // Client-side pagination
-  const startIndex = (pagination.page - 1) * pagination.perPage;
-  const endIndex = startIndex + pagination.perPage;
-  const paginatedAMC = filteredAMC.slice(startIndex, endIndex);
+  // No need for client-side search filtering - handled by server
+  // No need for client-side pagination - handled by server
+  // Use amcList directly from API
 
   // Export to Excel functionality
-  const handleExportToExcel = () => {
+  const handleExportToExcel = useCallback(() => {
     const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
     const fileName = "AMC_data.xlsx";
-    const ws = XLSX.utils.json_to_sheet(filteredAMC);
+    const ws = XLSX.utils.json_to_sheet(amcList);
     const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const data = new Blob([excelBuffer], { type: fileType });
@@ -111,14 +120,15 @@ const AMCList: React.FC<AMCListProps> = ({
     link.click();
     
     toast.success('Excel file exported successfully');
-  };
+  }, [amcList]);
 
-  // Expose export function to parent
+  // Expose export function to parent (only once)
   useEffect(() => {
     if (onExportSet) {
-      onExportSet(() => handleExportToExcel);
+      onExportSet(handleExportToExcel);
     }
-  }, [onExportSet, filteredAMC]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onExportSet]);
 
   const allColumns: Array<TableColumn<AMC> & { id: string; label: string }> = [
     // Action column
@@ -139,7 +149,7 @@ const AMCList: React.FC<AMCListProps> = ({
         </div>
       )
     },
-    { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
+    { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => ((pagination.page - 1) * pagination.perPage) + idx + 1 },
     { id: 'asset_name', label: 'Asset Name', key: 'asset_name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
     { id: 'vendor_name', label: 'Vendor', key: 'vendor_name', header: 'Vendor', render: (v) => v || '-' },
     { id: 'start_date', label: 'Start Date', key: 'start_date', header: 'Start Date', render: (v) => v || '-' },
@@ -186,7 +196,7 @@ const AMCList: React.FC<AMCListProps> = ({
     );
   }
 
-  if (paginatedAMC.length === 0) {
+  if (amcList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <Package className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -225,12 +235,12 @@ const AMCList: React.FC<AMCListProps> = ({
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedAMC.map((amc) => (
+          {amcList.map((amc) => (
             <DataCard
               key={amc.id}
               title={amc.asset_name || `AMC #${amc.id}`}
               subtitle={`Vendor: ${amc.vendor_name || 'N/A'}`}
-              status="available"
+              status="in-store"
               fields={[
                 { label: 'Start Date', value: amc.start_date || '-' },
                 { label: 'End Date', value: amc.end_date || '-' },
@@ -245,26 +255,26 @@ const AMCList: React.FC<AMCListProps> = ({
       ) : (
         <DataTable 
           columns={visibleColumns} 
-          data={paginatedAMC} 
+          data={amcList} 
           selectable 
           selectedRows={selectedRows} 
           onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} 
-          onSelectAll={() => setSelectedRows(selectedRows.length === paginatedAMC.length ? [] : paginatedAMC.map(a => String(a.id)))} 
+          onSelectAll={() => setSelectedRows(selectedRows.length === amcList.length ? [] : amcList.map(a => String(a.id)))} 
           viewPath={(row) => `/asset/amc/${row.id}`} 
         />
       )}
 
-      {paginatedAMC.length > 0 && (
+      {amcList.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredAMC.length)} of {filteredAMC.length} records
+            Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
             <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredAMC.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredAMC.length / prev.perPage) }))} disabled={endIndex >= filteredAMC.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>

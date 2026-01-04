@@ -36,6 +36,9 @@ const TicketList: React.FC = () => {
   // Quick filter state
   const [quickFilter, setQuickFilter] = useState<"All" | "Open" | "Closed" | "Pending" | "Completed">("All");
   
+  // Dashboard card filter state (for server-side filtering)
+  const [selectedDashboardStatus, setSelectedDashboardStatus] = useState<string | null>(null);
+  
   const [filters, setFilters] = useState<{
     building_name?: string;
     floor_name?: string;
@@ -46,6 +49,7 @@ const TicketList: React.FC = () => {
     assigned_to?: string;
     date_start?: string;
     date_end?: string;
+    search?: string; // Add search to filters for server-side search
   }>({});
 
   const [lookups, setLookups] = useState<{
@@ -92,10 +96,16 @@ const TicketList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // Merge dashboard status filter with other filters
+      const apiFilters = { ...filters };
+      if (selectedDashboardStatus) {
+        apiFilters.status = selectedDashboardStatus;
+      }
+      
       const response = await serviceDeskService.getTickets(
         pagination.page,
         pagination.perPage,
-        filters
+        apiFilters
       );
       const data = response.data;
       const ticketList = Array.isArray(data)
@@ -115,7 +125,7 @@ const TicketList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage, filters]);
+  }, [pagination.page, pagination.perPage, filters, selectedDashboardStatus]);
 
   // Fetch ALL tickets for client-side search (like existing project)
   const fetchAllTickets = useCallback(async () => {
@@ -131,6 +141,19 @@ const TicketList: React.FC = () => {
     }
   }, []);
 
+  // Debounced search effect - update filters.search after user stops typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilters((prev) => ({
+        ...prev,
+        search: searchValue.trim() || undefined,
+      }));
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchValue]);
+
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
@@ -139,9 +162,17 @@ const TicketList: React.FC = () => {
     fetchAllTickets();
   }, [fetchAllTickets]);
 
-  // CLIENT-SIDE SEARCH AND FILTERING (like existing project)
+  // CLIENT-SIDE FILTERING (excluding search - now handled server-side)
   useEffect(() => {
     let filtered = [...allTickets];
+
+    // Apply dashboard status filter first
+    if (selectedDashboardStatus) {
+      filtered = filtered.filter((item) => {
+        const status = (item.status || (item as any).issue_status || "").toLowerCase();
+        return status === selectedDashboardStatus.toLowerCase();
+      });
+    }
 
     // Apply quick filter
     if (quickFilter !== "All") {
@@ -161,27 +192,7 @@ const TicketList: React.FC = () => {
       });
     }
 
-    // Apply search filter (client-side like existing project)
-    if (searchValue.trim() !== "") {
-      const searchLower = searchValue.toLowerCase().trim();
-      filtered = filtered.filter((item) => {
-        const ticketNumber = (item.ticket_number || "").toLowerCase();
-        const categoryType = ((item as any).category_type || item.category || "").toLowerCase();
-        const issueType = ((item as any).issue_type || "").toLowerCase();
-        const heading = ((item as any).heading || item.title || "").toLowerCase();
-        const priority = (item.priority || "").toLowerCase();
-        const unit = ((item as any).unit || item.unit_name || "").toLowerCase();
-        
-        return (
-          ticketNumber.includes(searchLower) ||
-          categoryType.includes(searchLower) ||
-          issueType.includes(searchLower) ||
-          heading.includes(searchLower) ||
-          priority.includes(searchLower) ||
-          unit.includes(searchLower)
-        );
-      });
-    }
+    // Note: Search is now handled server-side, removed from client-side filtering
 
     // Apply advanced filters
     if (filters.building_name) {
@@ -241,7 +252,7 @@ const TicketList: React.FC = () => {
       total: filtered.length,
       totalPages: Math.ceil(filtered.length / prev.perPage),
     }));
-  }, [searchValue, quickFilter, filters, allTickets, pagination.page, pagination.perPage]);
+  }, [quickFilter, filters, allTickets, pagination.page, pagination.perPage, selectedDashboardStatus]);
 
   const getTicketStatus = (ticket: Ticket): StatusType => {
     const status =
@@ -596,6 +607,7 @@ const TicketList: React.FC = () => {
       {/* Dashboard Statistics */}
       {dashboard && (
         <div className="mb-6">
+          <h3 className="text-base font-semibold mb-3 text-foreground">Dashboard Statistics</h3>
           <div className="flex flex-wrap gap-4">
             {/* Status stats */}
             {[
@@ -607,35 +619,39 @@ const TicketList: React.FC = () => {
               "Approved",
               "Work In Process",
               "Approval Pending",
-              "Plumbing",
-            ].map((label) => (
-              <div
-                key={label}
-                onClick={() => {
-                  // Map status labels to quickFilter values
-                  const quickFilterMap: { [key: string]: typeof quickFilter } = {
-                    "Pending": "Pending",
-                    "Closed": "Closed",
-                    "Complete": "Completed",
-                    "Work Completed": "Completed",
-                    "Reopened": "Open",
-                    "Approved": "Open",
-                    "Work In Process": "Open",
-                    "Approval Pending": "Pending",
-                    "Plumbing": "All", // Default to All for unmapped
-                  };
-                  const filterValue = quickFilterMap[label] || "All";
-                  setQuickFilter(filterValue);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-                className="flex flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-4 py-3 text-sm shadow-sm cursor-pointer hover:bg-purple-100 hover:border-purple-400 transition-colors min-w-[140px]"
-              >
-                <span className="font-medium text-gray-700">{label}</span>
-                <span className="mt-1 text-lg font-semibold text-purple-700">
-                  {getStatusCount(label)}
-                </span>
-              </div>
-            ))}
+            ].map((label) => {
+              const isActive = selectedDashboardStatus === label;
+              return (
+                <div
+                  key={label}
+                  onClick={() => {
+                    // Toggle: if same card clicked, deselect it
+                    if (selectedDashboardStatus === label) {
+                      setSelectedDashboardStatus(null);
+                    } else {
+                      setSelectedDashboardStatus(label);
+                      // Clear quick filter when using dashboard cards
+                      setQuickFilter("All");
+                    }
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  className={`flex flex-col items-center justify-center rounded-full border-2 px-4 py-3 text-sm shadow-sm cursor-pointer transition-all min-w-[140px] ${
+                    isActive
+                      ? "border-primary bg-primary/10"
+                      : "border-purple-300 bg-purple-50 hover:bg-purple-100 hover:border-purple-400"
+                  }`}
+                >
+                  <span className={`font-medium ${
+                    isActive ? "text-primary" : "text-gray-700"
+                  }`}>{label}</span>
+                  <span className={`mt-1 text-lg font-semibold ${
+                    isActive ? "text-primary" : "text-purple-700"
+                  }`}>
+                    {getStatusCount(label)}
+                  </span>
+                </div>
+              );
+            })}
 
             {/* Type stats */}
             {["Complaint", "Request", "Suggestion", "Req"].map((label) => (
@@ -674,6 +690,8 @@ const TicketList: React.FC = () => {
                 checked={quickFilter === filter}
                 onChange={(e) => {
                   setQuickFilter(e.target.value as typeof quickFilter);
+                  // Clear dashboard filter when using quick filters
+                  setSelectedDashboardStatus(null);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 className="w-4 h-4 text-primary"
@@ -687,10 +705,7 @@ const TicketList: React.FC = () => {
         <ListToolbar
           searchPlaceholder="Search by Title, Ticket number, Category, Ticket type, Priority or Unit"
           searchValue={searchValue}
-          onSearchChange={(val) => {
-            setSearchValue(val);
-            setPagination((prev) => ({ ...prev, page: 1 }));
-          }}
+          onSearchChange={setSearchValue}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onFilter={() => setIsFilterOpen(true)}
