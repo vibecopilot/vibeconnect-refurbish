@@ -608,7 +608,7 @@ const TicketList: React.FC = () => {
       {dashboard && (
         <div className="mb-6">
           <h3 className="text-base font-semibold mb-3 text-foreground">Dashboard Statistics</h3>
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {/* Status stats */}
             {[
               "Pending",
@@ -635,26 +635,23 @@ const TicketList: React.FC = () => {
                     }
                     setPagination((prev) => ({ ...prev, page: 1 }));
                   }}
-                  className={`flex flex-col items-center justify-center rounded-full border-2 px-4 py-3 text-sm shadow-sm cursor-pointer transition-all min-w-[140px] ${
+                  className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
                     isActive
-                      ? "border-primary bg-primary/10"
-                      : "border-purple-300 bg-purple-50 hover:bg-purple-100 hover:border-purple-400"
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-card text-blue-500 border-blue-500 hover:bg-blue-50'
                   }`}
                 >
-                  <span className={`font-medium ${
-                    isActive ? "text-primary" : "text-gray-700"
-                  }`}>{label}</span>
-                  <span className={`mt-1 text-lg font-semibold ${
-                    isActive ? "text-primary" : "text-purple-700"
-                  }`}>
+                  <TicketIcon className="w-8 h-8 mb-2" />
+                  <span className="text-sm font-medium">{label}</span>
+                  <span className={`text-2xl font-bold mt-1 ${isActive ? 'text-white' : 'text-foreground'}`}>
                     {getStatusCount(label)}
                   </span>
                 </div>
               );
             })}
-
+          
             {/* Type stats */}
-            {["Complaint", "Request", "Suggestion", "Req"].map((label) => (
+            {['Complaint', 'Request', 'Suggestion', 'Req'].map((label) => (
               <div
                 key={label}
                 onClick={() => {
@@ -665,10 +662,13 @@ const TicketList: React.FC = () => {
                   }));
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                className="flex flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-4 py-3 text-sm shadow-sm cursor-pointer hover:bg-purple-100 hover:border-purple-400 transition-colors min-w-[140px]"
+                className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                  'bg-card text-purple-500 border-purple-500 hover:bg-purple-50'
+                }`}
               >
-                <span className="font-medium text-gray-700">{label}</span>
-                <span className="mt-1 text-lg font-semibold text-purple-700">
+                <TicketIcon className="w-8 h-8 mb-2" />
+                <span className="text-sm font-medium">{label}</span>
+                <span className="text-2xl font-bold mt-1 text-foreground">
                   {getTypeCount(label)}
                 </span>
               </div>
