@@ -144,7 +144,7 @@ const ViewChecklist: React.FC = () => {
       </div>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <FormSection title="Checklist Details" icon={<ClipboardList className="w-5 h-5" />}>
+        <FormSection title="Checklist Details" icon={ClipboardList}>
           <FormGrid columns={3}>
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Name</label>
@@ -173,7 +173,7 @@ const ViewChecklist: React.FC = () => {
           </FormGrid>
         </FormSection>
 
-        <FormSection title="Schedule Settings" icon={<ClipboardList className="w-5 h-5" />}>
+        <FormSection title="Schedule Settings" icon={ClipboardList}>
           <FormGrid columns={3}>
             <div>
               <label className="block text-sm text-muted-foreground mb-1">Allowed Submit Time</label>
@@ -193,7 +193,7 @@ const ViewChecklist: React.FC = () => {
         </FormSection>
 
         {Object.keys(groupedQuestions).length > 0 && (
-          <FormSection title="Questions" icon={<ClipboardList className="w-5 h-5" />}>
+          <FormSection title="Questions" icon={ClipboardList}>
             <div className="space-y-6">
               {Object.entries(groupedQuestions).map(([group, questions]) => (
                 <div key={group} className="space-y-3">
@@ -218,7 +218,7 @@ const ViewChecklist: React.FC = () => {
         )}
 
         {(checklist.supervisors?.length || checklist.supplier) && (
-          <FormSection title="Assignments" icon={<ClipboardList className="w-5 h-5" />}>
+          <FormSection title="Assignments" icon={ClipboardList}>
             <FormGrid columns={2}>
               {checklist.supervisors && checklist.supervisors.length > 0 && (
                 <div>

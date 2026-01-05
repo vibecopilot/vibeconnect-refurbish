@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Package, FileText, Plus, Trash2, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
+
 import { 
   postGRN, 
   getGRNById, 
@@ -331,15 +332,8 @@ const CreateGRN: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title={isEditMode ? 'Edit GRN' : 'Add GRN'}
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/grn' },
-          { label: 'Inventory', path: '/inventory/grn' },
-          { label: 'GRN', path: '/inventory/grn' },
-          { label: isEditMode ? 'Edit' : 'Add' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/grn' }, { label: 'GRN', path: '/inventory/grn' }, { label: isEditMode ? 'Edit' : 'Add' }]} />
+
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info Section */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Building2, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../../components/layout/PageHeader';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
 import { getVendorsDetails, postVendors, EditVendors } from '../../../api';
 
 interface VendorFormData {
@@ -115,15 +115,12 @@ const CreateVendor: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title={isEditMode ? 'Edit Vendor' : 'Add Vendor'}
-        breadcrumbs={[
-          { label: 'FM Module', path: '/mail-room' },
-          { label: 'Mail Room', path: '/mail-room' },
-          { label: 'Delivery Vendor', path: '/mail-room/delivery-vendor' },
-          { label: isEditMode ? 'Edit Vendor' : 'Add Vendor' },
-        ]}
-      />
+      <Breadcrumb items={[
+  { label: 'FM Module', path: '/mail-room' },
+  { label: 'Mail Room', path: '/mail-room' },
+  { label: 'Delivery Vendor', path: '/mail-room/delivery-vendor' },
+  { label: isEditMode ? 'Edit Vendor' : 'Add Vendor' },
+]} />
 
       <form onSubmit={handleSubmit}>
         {/* Vendor Details Section */}

@@ -77,9 +77,9 @@ export const serviceDeskService = {
     if (filters.date_end)
       params['q[created_at_lteq]'] = filters.date_end;
 
-    // Optional: text search from searchValue if you want
+    // Text search
     if (filters.search)
-      params['q[search_text_cont]'] = filters.search;
+      params['q[search_cont]'] = filters.search;
 
     return axiosInstance.get('/pms/admin/complaints.json', { params });
   },

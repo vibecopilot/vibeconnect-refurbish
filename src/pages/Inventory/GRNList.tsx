@@ -4,7 +4,7 @@ import { Eye, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../components/list/ListToolbar';
 import DataTable from '../../components/table/DataTable';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getGRN, getVendorById } from '../../api';
 import { useViewMode } from '../../hooks/useViewMode';
 
@@ -183,14 +183,8 @@ const GRNList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title=""
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/grn' },
-          { label: 'Inventory', path: '/inventory/grn' },
-          { label: 'GRN' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/grn' }, { label: 'GRN' }]} />
+
 
       <ListToolbar
         searchPlaceholder="Search by Invoice Number, Vendor..."

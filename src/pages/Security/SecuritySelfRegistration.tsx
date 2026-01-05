@@ -117,7 +117,7 @@ const SecuritySelfRegistration: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title="SELF REGISTRATION"
         breadcrumbs={[
@@ -129,13 +129,6 @@ const SecuritySelfRegistration: React.FC = () => {
 
       {/* Form Card with Gradient Header */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {/* Gradient Header */}
-        <div className="bg-primary p-4">
-          <h2 className="text-lg font-semibold text-primary-foreground uppercase tracking-wide">
-            Self Registration
-          </h2>
-        </div>
-
         <div className="p-6">
           {/* Photo Upload */}
           <div className="flex justify-center mb-8">
@@ -254,7 +247,7 @@ const SecuritySelfRegistration: React.FC = () => {
               type="button"
               onClick={handleSubmit}
               disabled={saving}
-              className="px-8 py-3 bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+              className="px-8 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Submit

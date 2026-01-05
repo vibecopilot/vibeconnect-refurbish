@@ -276,7 +276,7 @@ const VehicleCreate: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <PageTitle
           title={isEditMode ? 'Edit Vehicle' : 'Add Vehicle'}
           breadcrumbs={[
@@ -295,7 +295,7 @@ const VehicleCreate: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <PageTitle
           title={isEditMode ? 'Edit Vehicle' : 'Add Vehicle'}
           breadcrumbs={[
@@ -319,7 +319,7 @@ const VehicleCreate: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title={isEditMode ? 'EDIT VEHICLE' : 'ADD VEHICLE'}
         breadcrumbs={[

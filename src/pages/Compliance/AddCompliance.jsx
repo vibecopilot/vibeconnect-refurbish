@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
-import { useSelector } from "react-redux";
 import { MdClose } from "react-icons/md";
 import { FaCheck, FaTrash } from "react-icons/fa";
 import FileInputBox from "../../containers/Inputs/FileInputBox";
@@ -15,6 +13,7 @@ import {
 import Select from "react-select";
 import { getItemInLocalStorage } from "../../utils/localStorage";
 import toast from "react-hot-toast";
+import PageTitle from "../../components/ui/PageTitle";
 const AddCompliance = () => {
   const [complianceFor, setComplianceFor] = useState([
     {
@@ -34,8 +33,6 @@ const AddCompliance = () => {
     description: "",
     attachments: [],
   });
-
-  const themeColor = useSelector((state) => state.theme.color);
 
   const handleAddComplianceFor = () => {
     setComplianceFor([
@@ -163,265 +160,238 @@ const AddCompliance = () => {
   const [selectedAuditor, setSelectedAuditor] = useState({});
   const [selectedVendor, setSelectedVendor] = useState({});
   const handleAuditorChange = (option) => {
-    console.log(option)
+    console.log(option);
     setSelectedAuditor(option);
   };
   const handleVendorChange = (option) => {
     setSelectedVendor(option);
   };
   return (
-    <section className="flex">
-      <Navbar />
-      <div className="w-full flex mx-3 flex-col overflow-hidden">
-        <div className="p-6">
-          <h1
-            style={{ background: themeColor }}
-            className="text-white text-center font-medium p-2 rounded-md"
-          >
-            Compliance Configuration
-          </h1>
-          <form onSubmit={handleCreateCompliance} className="space-y-4 my-4">
-            <div className="grid md:grid-cols-3 gap-2">
-              <div>
-                <label className="block text-gray-700 font-medium">
-                  Compliance Name
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-lg p-2"
-                  placeholder="Enter name"
-                  required
-                  value={formData.complianceName}
-                  onChange={handleChange}
-                  name="complianceName"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="startDate"
-                  className="block text-gray-700 font-medium"
-                >
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  id="startDate"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="border border-gray-300 p-2 rounded-md w-full"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="endDate"
-                  className="block text-gray-700 font-medium"
-                >
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="border border-gray-300 p-2 rounded-md w-full"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="targetDates"
-                  className="block text-gray-700 font-medium"
-                >
-                  Target Days{" "}
-                  <span className="text-sm font-normal text-gray-400">
-                    (no. of days)
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  id="targetDates"
-                  name="targetDays"
-                  placeholder="1 day"
-                  value={formData.targetDays}
-                  onChange={handleChange}
-                  className="border border-gray-300 p-2 rounded-md w-full"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="" className="font-medium text-sm">
-                  Select Frequency
-                </label>
-                <select
-                  name="frequency"
-                  id=""
-                  value={formData.frequency}
-                  onChange={handleChange}
-                  className="border p-2 border-gray-500 rounded-md w-full"
-                >
-                  <option value="">Select Frequency</option>
-                  {/* <option value="Daily">Daily</option>
-                  <option value="Weekly">Weekly</option> */}
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="half_yearly">Half Yearly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              </div>
-              {/* <div>
-                <label
-                  htmlFor="riskLevel"
-                  className="block text-gray-700 font-medium"
-                >
-                  Risk Level
-                </label>
-                <select
-                  id="riskLevel"
-                  name="riskLevel"
-                  value={formData.riskLevel}
-                  onChange={handleChange}
-                  className="border border-gray-300 p-2 rounded-md w-full"
-                >
-                  <option value="">Select risk level</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div> */}
-              <div>
-                <label className="block text-gray-700 font-medium">
-                  Assigned To Auditor
-                </label>
-                <Select
-                  options={auditors}
-                  onChange={handleAuditorChange}
-                  noOptionsMessage={() => "No Auditors available"}
-                  placeholder="Select Auditors"
-                  maxMenuHeight={300}
-                  className="z-50 w-full text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium">
-                  Assigned To Vendor
-                </label>
-                <Select
-                  options={vendors}
-                  onChange={handleVendorChange}
-                  noOptionsMessage={() => "No vendor available"}
-                  placeholder="Select Vendor"
-                  maxMenuHeight={200}
-                  className="z-20 w-full text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium">
-                  Priority
-                </label>
-                <select
-                  className="w-full border border-gray-300 rounded-lg p-2"
-                  value={formData.priority}
-                  onChange={handleChange}
-                  name="priority"
-                >
-                  <option value="">Select Priority</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
-            </div>
-            <h2 className="border-b font-medium border-black">
-              Compliance For
-            </h2>
-            <div className="border rounded-md p-2">
-              {complianceFor.map((compliance, index) => (
-                <div
-                  className="grid grid-cols-3 gap-2 border-b border-black my-1 p-2"
-                  key={index}
-                >
-                  <div className="col-span-2 z-10">
-                    <Select
-                      options={categories}
-                      onChange={(option) => handleCategoryChange(option, index)}
-                      // value={
-                      //   categories.find(
-                      //     (cat) => cat.value === compliance.category
-                      //   ) || null
-                      // }
-                      noOptionsMessage={() => "No Categories available"}
-                      placeholder="Select Category"
-                      maxMenuHeight={300}
-                      className="z-10 w-full text-black"
-                    />
-                  </div>
-
-                  <div className="flex items-end justify-end text-red-500">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteComplianceFor(index)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div>
-                <button
-                  type="button"
-                  className="bg-green-400 p-2 rounded-md text-white flex items-center gap-2"
-                  onClick={handleAddComplianceFor}
-                >
-                  <PiPlusCircle /> Add More
-                </button>
-              </div>
-            </div>
+    <div className="p-6">
+      <PageTitle
+        title="Add Compliance"
+        breadcrumbs={[
+          { label: "Compliance", path: "/compliance" },
+          { label: "Add Compliance" },
+        ]}
+      />
+      <div className="bg-card border border-border rounded-xl p-6">
+        <form onSubmit={handleCreateCompliance} className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-gray-700 font-medium">
-                Description
+              <label className="block text-sm font-medium text-foreground">
+                Compliance Name
               </label>
-              <textarea
-                className="w-full border border-gray-300 rounded-lg p-2"
-                placeholder="Description"
-                rows="3"
-                value={formData.description}
+              <input
+                type="text"
+                className="mt-1 w-full border border-border rounded-lg p-2 text-sm bg-background"
+                placeholder="Enter name"
+                required
+                value={formData.complianceName}
                 onChange={handleChange}
-                name="description"
-              ></textarea>
+                name="complianceName"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="startDate"
+                className="block text-sm font-medium text-foreground"
+              >
+                Start Date
+              </label>
+              <input
+                type="date"
+                id="startDate"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className="mt-1 border border-border p-2 rounded-md w-full text-sm bg-background"
+              />
             </div>
             <div>
               <label
-                htmlFor="documents"
-                className="block text-sm font-medium text-gray-700"
+                htmlFor="endDate"
+                className="block text-sm font-medium text-foreground"
               >
-                Upload Documents
+                End Date
               </label>
-              <FileInputBox
-                handleChange={(files) => handleFileChange(files, "attachments")}
-                fieldName={"attachments"}
-                isMulti={true}
+              <input
+                type="date"
+                id="endDate"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className="mt-1 border border-border p-2 rounded-md w-full text-sm bg-background"
               />
             </div>
-            <div className="flex justify-center my-2 gap-2">
-              <Link
-                to={"/compliance"}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            <div>
+              <label
+                htmlFor="targetDates"
+                className="block text-sm font-medium text-foreground"
               >
-                <MdClose /> Cancel
-              </Link>
+                Target Days{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (no. of days)
+                </span>
+              </label>
+              <input
+                type="text"
+                id="targetDates"
+                name="targetDays"
+                placeholder="1 day"
+                value={formData.targetDays}
+                onChange={handleChange}
+                className="mt-1 border border-border p-2 rounded-md w-full text-sm bg-background"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="block text-sm font-medium text-foreground">
+                Select Frequency
+              </label>
+              <select
+                name="frequency"
+                value={formData.frequency}
+                onChange={handleChange}
+                className="mt-1 border p-2 border-border rounded-md w-full text-sm bg-background"
+              >
+                <option value="">Select Frequency</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="half_yearly">Half Yearly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Assigned To Auditor
+              </label>
+              <Select
+                options={auditors}
+                onChange={handleAuditorChange}
+                noOptionsMessage={() => "No Auditors available"}
+                placeholder="Select Auditors"
+                maxMenuHeight={300}
+                className="z-50 w-full text-black mt-1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Assigned To Vendor
+              </label>
+              <Select
+                options={vendors}
+                onChange={handleVendorChange}
+                noOptionsMessage={() => "No vendor available"}
+                placeholder="Select Vendor"
+                maxMenuHeight={200}
+                className="z-20 w-full text-black mt-1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Priority
+              </label>
+              <select
+                className="mt-1 w-full border border-border rounded-lg p-2 text-sm bg-background"
+                value={formData.priority}
+                onChange={handleChange}
+                name="priority"
+              >
+                <option value="">Select Priority</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+
+          <h2 className="mt-4 text-sm font-semibold text-foreground border-b border-border pb-2">
+            Compliance For
+          </h2>
+          <div className="border border-border rounded-md p-3 bg-card/40">
+            {complianceFor.map((compliance, index) => (
+              <div
+                className="grid grid-cols-3 gap-2 border-b border-border my-1 p-2"
+                key={index}
+              >
+                <div className="col-span-2 z-10">
+                  <Select
+                    options={categories}
+                    onChange={(option) => handleCategoryChange(option, index)}
+                    noOptionsMessage={() => "No Categories available"}
+                    placeholder="Select Category"
+                    maxMenuHeight={300}
+                    className="z-10 w-full text-black"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end text-destructive">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteComplianceFor(index)}
+                    className="p-2 rounded-md hover:bg-destructive/10"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="mt-2">
               <button
-                type="submit"
-                className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                type="button"
+                className="bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm flex items-center gap-2"
+                onClick={handleAddComplianceFor}
               >
-                <FaCheck /> Save Compliance
+                <PiPlusCircle /> Add More
               </button>
             </div>
-          </form>
-        </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground">
+              Description
+            </label>
+            <textarea
+              className="mt-1 w-full border border-border rounded-lg p-2 text-sm bg-background"
+              placeholder="Description"
+              rows="3"
+              value={formData.description}
+              onChange={handleChange}
+              name="description"
+            ></textarea>
+          </div>
+          <div>
+            <label
+              htmlFor="documents"
+              className="block text-sm font-medium text-foreground"
+            >
+              Upload Documents
+            </label>
+            <FileInputBox
+              handleChange={(files) => handleFileChange(files, "attachments")}
+              fieldName={"attachments"}
+              isMulti={true}
+            />
+          </div>
+          <div className="flex justify-end mt-4 gap-2">
+            <Link
+              to={"/compliance"}
+              className="bg-destructive text-destructive-foreground px-4 py-2 rounded-lg flex items-center gap-2 text-sm"
+            >
+              <MdClose /> Cancel
+            </Link>
+            <button
+              type="submit"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2 text-sm"
+            >
+              <FaCheck /> Save Compliance
+            </button>
+          </div>
+        </form>
       </div>
-    </section>
+    </div>
   );
 };
 

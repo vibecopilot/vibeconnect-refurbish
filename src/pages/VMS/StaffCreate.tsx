@@ -318,7 +318,7 @@ const StaffCreate: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <PageTitle
           title={isEditMode ? 'Edit Staff' : 'New Staff'}
           breadcrumbs={[
@@ -337,7 +337,7 @@ const StaffCreate: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <PageTitle
           title={isEditMode ? 'Edit Staff' : 'New Staff'}
           breadcrumbs={[
@@ -361,7 +361,7 @@ const StaffCreate: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title={isEditMode ? 'EDIT STAFF' : 'NEW STAFF'}
         breadcrumbs={[

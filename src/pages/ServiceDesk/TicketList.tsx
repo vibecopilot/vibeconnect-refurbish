@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
 import * as XLSX from 'xlsx'; 
+import React, { useState, useEffect, useCallback } from "react";
 import toast from 'react-hot-toast'; // Add this import
 import { useNavigate, Link } from "react-router-dom";
 import Breadcrumb from "../../components/ui/Breadcrumb";
+
 import ListToolbar from "../../components/ui/ListToolbar";
 import DataCard from "../../components/ui/DataCard";
 import DataTable, { TableColumn } from "../../components/ui/DataTable";
@@ -16,6 +17,7 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
+  Edit,
 } from "lucide-react";
 
 const TicketList: React.FC = () => {
@@ -34,6 +36,9 @@ const TicketList: React.FC = () => {
   // Quick filter state
   const [quickFilter, setQuickFilter] = useState<"All" | "Open" | "Closed" | "Pending" | "Completed">("All");
   
+  // Dashboard card filter state (for server-side filtering)
+  const [selectedDashboardStatus, setSelectedDashboardStatus] = useState<string | null>(null);
+  
   const [filters, setFilters] = useState<{
     building_name?: string;
     floor_name?: string;
@@ -44,6 +49,7 @@ const TicketList: React.FC = () => {
     assigned_to?: string;
     date_start?: string;
     date_end?: string;
+    search?: string; // Add search to filters for server-side search
   }>({});
 
   const [lookups, setLookups] = useState<{
@@ -90,10 +96,16 @@ const TicketList: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // Merge dashboard status filter with other filters
+      const apiFilters = { ...filters };
+      if (selectedDashboardStatus) {
+        apiFilters.status = selectedDashboardStatus;
+      }
+      
       const response = await serviceDeskService.getTickets(
         pagination.page,
         pagination.perPage,
-        filters
+        apiFilters
       );
       const data = response.data;
       const ticketList = Array.isArray(data)
@@ -113,7 +125,7 @@ const TicketList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage, filters]);
+  }, [pagination.page, pagination.perPage, filters, selectedDashboardStatus]);
 
   // Fetch ALL tickets for client-side search (like existing project)
   const fetchAllTickets = useCallback(async () => {
@@ -129,6 +141,19 @@ const TicketList: React.FC = () => {
     }
   }, []);
 
+  // Debounced search effect - update filters.search after user stops typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilters((prev) => ({
+        ...prev,
+        search: searchValue.trim() || undefined,
+      }));
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchValue]);
+
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
@@ -137,9 +162,17 @@ const TicketList: React.FC = () => {
     fetchAllTickets();
   }, [fetchAllTickets]);
 
-  // CLIENT-SIDE SEARCH AND FILTERING (like existing project)
+  // CLIENT-SIDE FILTERING (excluding search - now handled server-side)
   useEffect(() => {
     let filtered = [...allTickets];
+
+    // Apply dashboard status filter first
+    if (selectedDashboardStatus) {
+      filtered = filtered.filter((item) => {
+        const status = (item.status || (item as any).issue_status || "").toLowerCase();
+        return status === selectedDashboardStatus.toLowerCase();
+      });
+    }
 
     // Apply quick filter
     if (quickFilter !== "All") {
@@ -159,27 +192,7 @@ const TicketList: React.FC = () => {
       });
     }
 
-    // Apply search filter (client-side like existing project)
-    if (searchValue.trim() !== "") {
-      const searchLower = searchValue.toLowerCase().trim();
-      filtered = filtered.filter((item) => {
-        const ticketNumber = (item.ticket_number || "").toLowerCase();
-        const categoryType = ((item as any).category_type || item.category || "").toLowerCase();
-        const issueType = ((item as any).issue_type || "").toLowerCase();
-        const heading = ((item as any).heading || item.title || "").toLowerCase();
-        const priority = (item.priority || "").toLowerCase();
-        const unit = ((item as any).unit || item.unit_name || "").toLowerCase();
-        
-        return (
-          ticketNumber.includes(searchLower) ||
-          categoryType.includes(searchLower) ||
-          issueType.includes(searchLower) ||
-          heading.includes(searchLower) ||
-          priority.includes(searchLower) ||
-          unit.includes(searchLower)
-        );
-      });
-    }
+    // Note: Search is now handled server-side, removed from client-side filtering
 
     // Apply advanced filters
     if (filters.building_name) {
@@ -239,7 +252,7 @@ const TicketList: React.FC = () => {
       total: filtered.length,
       totalPages: Math.ceil(filtered.length / prev.perPage),
     }));
-  }, [searchValue, quickFilter, filters, allTickets, pagination.page, pagination.perPage]);
+  }, [quickFilter, filters, allTickets, pagination.page, pagination.perPage, selectedDashboardStatus]);
 
   const getTicketStatus = (ticket: Ticket): StatusType => {
     const status =
@@ -323,6 +336,24 @@ const TicketList: React.FC = () => {
 
   // Define all columns
   const allColumns: Array<TableColumn<Ticket> & { id: string; label: string }> = [
+    // Action column
+    {
+      id: 'action',
+      label: 'Action',
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/service-desk/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/service-desk/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     {
       id: "ticket_number",
       label: "Ticket Number",
@@ -570,18 +601,15 @@ const TicketList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Breadcrumb
-        items={[
-          { label: "Service Desk", path: "/service-desk" },
-          { label: "Tickets" },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Service Desk', path: '/service-desk' }, { label: 'Service' }]} />
+
 
       {/* Dashboard Statistics */}
       {dashboard && (
-        <div className="mb-6 space-y-4">
-          {/* Status row */}
-          <div className="flex flex-wrap gap-3">
+        <div className="mb-6">
+          <h3 className="text-base font-semibold mb-3 text-foreground">Dashboard Statistics</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* Status stats */}
             {[
               "Pending",
               "Closed",
@@ -591,29 +619,56 @@ const TicketList: React.FC = () => {
               "Approved",
               "Work In Process",
               "Approval Pending",
-              "Plumbing",
-            ].map((label) => (
+            ].map((label) => {
+              const isActive = selectedDashboardStatus === label;
+              return (
+                <div
+                  key={label}
+                  onClick={() => {
+                    // Toggle: if same card clicked, deselect it
+                    if (selectedDashboardStatus === label) {
+                      setSelectedDashboardStatus(null);
+                    } else {
+                      setSelectedDashboardStatus(label);
+                      // Clear quick filter when using dashboard cards
+                      setQuickFilter("All");
+                    }
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                    isActive
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-card text-blue-500 border-blue-500 hover:bg-blue-50'
+                  }`}
+                >
+                  <TicketIcon className="w-8 h-8 mb-2" />
+                  <span className="text-sm font-medium">{label}</span>
+                  <span className={`text-2xl font-bold mt-1 ${isActive ? 'text-white' : 'text-foreground'}`}>
+                    {getStatusCount(label)}
+                  </span>
+                </div>
+              );
+            })}
+          
+            {/* Type stats */}
+            {['Complaint', 'Request', 'Suggestion', 'Req'].map((label) => (
               <div
                 key={label}
-                className="flex min-w-[140px] flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-5 py-2 text-xs shadow-sm"
+                onClick={() => {
+                  // Set filter for issue type
+                  setFilters((prev) => ({
+                    ...prev,
+                    category: label === "Req" ? "Request" : label, // Map "Req" to "Request"
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                  'bg-card text-purple-500 border-purple-500 hover:bg-purple-50'
+                }`}
               >
-                <span className="font-medium text-gray-700">{label}</span>
-                <span className="mt-1 text-base font-semibold text-purple-700">
-                  {getStatusCount(label)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Type row */}
-          <div className="flex flex-wrap gap-3">
-            {["Complaint", "Request", "Suggestion", "Req"].map((label) => (
-              <div
-                key={label}
-                className="flex min-w-[140px] flex-col items-center justify-center rounded-full border border-purple-300 bg-purple-50 px-5 py-2 text-xs shadow-sm"
-              >
-                <span className="font-medium text-gray-700">{label}</span>
-                <span className="mt-1 text-base font-semibold text-purple-700">
+                <TicketIcon className="w-8 h-8 mb-2" />
+                <span className="text-sm font-medium">{label}</span>
+                <span className="text-2xl font-bold mt-1 text-foreground">
                   {getTypeCount(label)}
                 </span>
               </div>
@@ -622,93 +677,91 @@ const TicketList: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Filters Radio Buttons */}
-      <div className="mb-4 flex items-center gap-4 flex-wrap">
-        {["All", "Open", "Closed", "Pending", "Completed"].map((filter) => (
-          <label key={filter} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="quickFilter"
-              value={filter}
-              checked={quickFilter === filter}
-              onChange={(e) => {
-                setQuickFilter(e.target.value as typeof quickFilter);
-                setPagination((prev) => ({ ...prev, page: 1 }));
-              }}
-              className="w-4 h-4 text-primary"
-            />
-            <span className="text-sm font-medium">{filter}</span>
-          </label>
-        ))}
-      </div>
+      {/* Combined Filters and Toolbar */}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        {/* Left side - Quick Filters Radio Buttons */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {["All", "Open", "Closed", "Pending", "Completed"].map((filter) => (
+            <label key={filter} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="quickFilter"
+                value={filter}
+                checked={quickFilter === filter}
+                onChange={(e) => {
+                  setQuickFilter(e.target.value as typeof quickFilter);
+                  // Clear dashboard filter when using quick filters
+                  setSelectedDashboardStatus(null);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="w-4 h-4 text-primary"
+              />
+              <span className="text-sm font-medium">{filter}</span>
+            </label>
+          ))}
+        </div>
 
-      {/* Toolbar */}
-      <div className="mb-4">
+        {/* Right side - Toolbar */}
         <ListToolbar
           searchPlaceholder="Search by Title, Ticket number, Category, Ticket type, Priority or Unit"
           searchValue={searchValue}
-          onSearchChange={(val) => {
-            setSearchValue(val);
-            setPagination((prev) => ({ ...prev, page: 1 }));
-          }}
+          onSearchChange={setSearchValue}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onFilter={() => setIsFilterOpen(true)}
-          onExport={exportToExcel} 
+          onExport={exportToExcel}
           onAdd={() => navigate("/service-desk/create")}
           addLabel="Create Ticket"
-        />
-        
-        {/* Hide Columns Button */}
-        <div className="mt-2 flex justify-end">
-          <div className="relative">
-            <button
-              onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
-              className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
-            >
-              Hide Columns
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            
-            {isColumnMenuOpen && (
-              <>
-                <div 
-                  className="fixed inset-0 z-30" 
-                  onClick={() => setIsColumnMenuOpen(false)}
-                />
-                
-                <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-40 max-h-96 overflow-y-auto">
-                  <div className="p-2">
-                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
-                      Toggle Column Visibility
+          additionalButtons={
+            <div className="relative">
+              <button
+                onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+              >
+                Hide Columns
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {isColumnMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsColumnMenuOpen(false)}
+                  />
+
+                  <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-40 max-h-96 overflow-y-auto">
+                    <div className="p-2">
+                      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                        Toggle Column Visibility
+                      </div>
+                      {allColumns.map((col) => (
+                        <label
+                          key={col.id}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!hiddenColumns.has(col.id)}
+                            onChange={() => toggleColumnVisibility(col.id)}
+                            className="w-4 h-4"
+                          />
+                          <span className="flex items-center gap-2 text-sm">
+                            {hiddenColumns.has(col.id) ? (
+                              <EyeOff className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="w-4 h-4 text-primary" />
+                            )}
+                            {col.label}
+                          </span>
+                        </label>
+                      ))}
                     </div>
-                    {allColumns.map((col) => (
-                      <label
-                        key={col.id}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!hiddenColumns.has(col.id)}
-                          onChange={() => toggleColumnVisibility(col.id)}
-                          className="w-4 h-4"
-                        />
-                        <span className="flex items-center gap-2 text-sm">
-                          {hiddenColumns.has(col.id) ? (
-                            <EyeOff className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <Eye className="w-4 h-4 text-primary" />
-                          )}
-                          {col.label}
-                        </span>
-                      </label>
-                    ))}
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+                </>
+              )}
+            </div>
+          }
+        />
       </div>
 
       {/* Filter Modal */}

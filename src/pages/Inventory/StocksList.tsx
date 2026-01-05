@@ -4,7 +4,7 @@ import { Eye, Edit2, Boxes, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../components/list/ListToolbar';
 import DataTable from '../../components/table/DataTable';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getInventory, postInventory, editInventory, getStockGroupsList, getAssetSubGroups } from '../../api';
 import { useViewMode } from '../../hooks/useViewMode';
 
@@ -269,14 +269,8 @@ const StocksList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title=""
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/stocks' },
-          { label: 'Inventory', path: '/inventory/stocks' },
-          { label: 'Stocks' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/stocks' }, { label: 'Stocks' }]} />
+
 
       <ListToolbar
         searchPlaceholder="Search by Stock name"

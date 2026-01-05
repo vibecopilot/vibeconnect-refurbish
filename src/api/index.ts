@@ -832,12 +832,17 @@ export const editAssetparamsDetails = async (id, data) =>
 //   });
 
 // amc
-export const getAMC = async () =>
-  axiosInstance.get("/asset_amcs.json", {
-    params: {
-      token: token,
-    },
-  });
+export const getAMC = async (page = 1, perPage = 10, search = '') => {
+  const params = {
+    token: token,
+    page,
+    per_page: perPage,
+  };
+  if (search) {
+    params['q[vendor_vendor_name_or_site_asset_name_cont]'] = search;
+  }
+  return axiosInstance.get("/asset_amcs.json", { params });
+};
 export const postAMC = async (data) =>
   axiosInstance.post("/asset_amcs.json", data, {
     params: {
@@ -1999,12 +2004,19 @@ export const postServiceAssociation = async (data) =>
     },
   });
 
-export const getSoftServices = async () =>
-  axiosInstance.get("/soft_services.json", {
-    params: {
+export const getSoftServices = () => {
+  return axiosInstance.get('/soft_services.json', {
+    params: { 
       token: token,
+      _t: Date.now() // Cache buster
     },
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
   });
+};
+
 export const getServicesChecklist = async () =>
   axiosInstance.get("/checklists.json?q[ctype_eq]=soft_service", {
     params: {
@@ -10129,7 +10141,7 @@ export const getCamBillingDownload = async (ids) =>
     },
   });
 
-export const gatCamBillFilter = async (
+export const getCamBillFilter = async (
   block,
   floor_name,
   flat,
@@ -10362,3 +10374,4 @@ export const postReceiptNumber = async (data) =>
 
 // Default export for backward compatibility
 export default axiosInstance;
+

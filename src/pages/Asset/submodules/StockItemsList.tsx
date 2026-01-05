@@ -4,7 +4,7 @@ import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
 import { stockItemService, StockItem } from '../../../services/assetSubModules.service';
-import { Loader2, Package, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, Package, AlertCircle, RefreshCw, Eye, Edit } from 'lucide-react';
 
 interface StockItemsListProps {
   viewMode: 'grid' | 'table';
@@ -64,6 +64,21 @@ const StockItemsList: React.FC<StockItemsListProps> = ({ viewMode, searchValue, 
   );
 
   const columns: TableColumn<StockItem>[] = [
+    {
+      key: 'action',
+      header: 'Action',
+      width: '100px',
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <Link to={`/asset/stock-items/${row.id}`} className="text-primary hover:text-primary/80">
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link to={`/asset/stock-items/${row.id}/edit`} className="text-primary hover:text-primary/80">
+            <Edit className="w-4 h-4" />
+          </Link>
+        </div>
+      )
+    },
     { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
     { key: 'item_code', header: 'Item Code', render: (v) => v || '-' },
     { key: 'name', header: 'Item Name', sortable: true },

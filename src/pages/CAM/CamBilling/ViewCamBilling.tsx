@@ -118,7 +118,7 @@ const ViewCamBilling: React.FC = () => {
     } else if (totalAmountPaid < totalAmount) {
       return <button className="bg-yellow-500 text-white p-2 px-5 w-fit rounded-md">Partial Paid</button>;
     } else if (totalAmountPaid > totalAmount) {
-      return <button className="bg-blue-500 text-white p-2 px-5 w-fit rounded-md">Paid Extra</button>;
+      return <button className="text-white p-2 px-5 w-fit rounded-md" style={{ background: themeColor }}>Paid Extra</button>;
     }
     return <button className="bg-green-500 text-white p-2 px-5 w-fit rounded-md">Paid</button>;
   };
@@ -181,12 +181,7 @@ const ViewCamBilling: React.FC = () => {
         />
       </div>
 
-      <h2
-        style={{ background: themeColor }}
-        className="text-center text-xl font-bold my-5 p-2 rounded-full text-white mx-10"
-      >
-        CAM Billing Details
-      </h2>
+      
 
       <div className="flex justify-end mx-5">
         <div className="md:flex grid grid-cols-2 sm:flex-row flex-col gap-2">

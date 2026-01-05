@@ -93,7 +93,7 @@ const ViewIncident: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <Breadcrumb items={[
         { label: 'Safety', path: '/incident' },
         { label: 'Incident Management', path: '/incident' },

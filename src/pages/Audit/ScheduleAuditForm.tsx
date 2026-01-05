@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
+
 import { getAssignedTo, getVendors, getVendorCategory } from '../../api';
 
 const scheduleTypes = ['Asset', 'Services', 'Vendor', 'Training', 'Compliance'];
@@ -128,14 +129,11 @@ const ScheduleAuditForm: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Schedule Audit"
-        breadcrumbs={[
-          { label: 'FM Module', path: '/audit' },
-          { label: 'Audit', path: '/audit' },
-          { label: 'Schedule Audit' },
-        ]}
-      />
+      <Breadcrumb items={[
+  { label: 'FM Module', path: '/audit' },
+  { label: 'Audit', path: '/audit' },
+  { label: 'Schedule Audit' },
+]} />
 
       <form onSubmit={handleSubmit}>
         {/* Toggle Section */}

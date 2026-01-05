@@ -4,7 +4,7 @@ import { Eye, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../components/list/ListToolbar';
 import DataTable from '../../components/table/DataTable';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getGDN } from '../../api';
 import { useViewMode } from '../../hooks/useViewMode';
 
@@ -141,7 +141,8 @@ const GDNList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader title="" breadcrumbs={[{ label: 'FM Module' }, { label: 'Inventory' }, { label: 'GDN' }]} />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/gdn' }, { label: 'GDN' }]} />
+
       
       {/* Sub-tabs */}
       <div className="flex gap-4 mb-4 border-b border-border">

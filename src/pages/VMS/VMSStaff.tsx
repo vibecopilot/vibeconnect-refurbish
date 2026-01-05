@@ -111,6 +111,9 @@ const VMSStaff: React.FC = () => {
           <Link to={`/vms/staff/${row.id}`} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors">
             <Eye className="w-4 h-4" />
           </Link>
+          <Link to={`/vms/staff/${row.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors">
+            <Edit2 className="w-4 h-4" />
+          </Link>
         </div>
       ),
     },

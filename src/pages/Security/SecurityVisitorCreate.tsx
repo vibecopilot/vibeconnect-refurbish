@@ -227,7 +227,7 @@ const SecurityVisitorCreate: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading...</p>
@@ -238,7 +238,7 @@ const SecurityVisitorCreate: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-6">
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-12 h-12 text-destructive mb-4" />
           <p className="text-muted-foreground mb-4">{error}</p>
@@ -254,7 +254,7 @@ const SecurityVisitorCreate: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title={isEditMode ? 'EDIT VISITOR' : 'NEW VISITOR'}
         breadcrumbs={[
@@ -266,13 +266,6 @@ const SecurityVisitorCreate: React.FC = () => {
 
       {/* Form Card with Gradient Header */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {/* Gradient Header */}
-        <div className="bg-primary p-4">
-          <h2 className="text-lg font-semibold text-primary-foreground uppercase tracking-wide">
-            {isEditMode ? 'Edit Visitor' : 'New Visitor'}
-          </h2>
-        </div>
-
         <div className="p-6">
           {/* Photo Upload */}
           <div className="flex justify-center mb-8">
@@ -549,7 +542,7 @@ const SecurityVisitorCreate: React.FC = () => {
                   addAdditionalVisitor();
                   setShowAdditionalVisitors(true);
                 }}
-                className="px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded-lg hover:opacity-90 transition-opacity"
+                className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
               >
                 + Add Visitor
               </button>
@@ -616,7 +609,7 @@ const SecurityVisitorCreate: React.FC = () => {
               type="button"
               onClick={handleSubmit}
               disabled={saving}
-              className="px-8 py-3 bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+              className="px-8 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Submit

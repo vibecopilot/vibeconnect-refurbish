@@ -53,7 +53,7 @@ import EditAsset from "./pages/Asset/EditAsset";
 import EditStockItem from "./pages/Asset/EditStockItem";
 import { ViewAMC, ViewMeter, ViewChecklist as ViewAssetChecklist, ViewRoutineTask, ViewPPMChecklist, ViewPPMActivity, ViewStockItem } from "./pages/Asset/submodules";
 import { TicketList, TicketCreate, TicketView, TicketEdit } from "./pages/ServiceDesk";
-import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList } from "./pages/SoftService";
+import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList, SoftServicesOverview } from "./pages/SoftService";
 import {
   AmenitiesList,
   HotelBookingsList,
@@ -73,6 +73,9 @@ import { CommunicationsLayout, EventsList, CreateEvent, ViewEvent, BroadcastList
 import { CAMLayout, CamBillingList, AddCamBilling, ViewCamBilling, ReceiptInvoiceList, AddReceiptInvoice, ViewReceiptInvoice } from "./pages/CAM";
 import { OtherBillsList, CreateOtherBill, ViewOtherBill } from "./pages/OtherBills";
 import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, CreateGRN, ViewGRN, GDNList, CreateGDN, ViewGDN } from "./pages/Inventory";
+import Compliance from "./pages/Compliance/Compliance";
+import AddCompliance from "./pages/Compliance/AddCompliance";
+import ComplianceDetails from "./pages/Compliance/ComplianceDetails";
 // Placeholder pages for other modules
 // Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -195,6 +198,8 @@ function App() {
         <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><ViewStockItem /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><EditStockItem /></AuthenticatedLayout>} />
+
+        <Route path="/asset/overview" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         
         {/* QR Code */}
         <Route path="/asset/qr-code" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
@@ -214,7 +219,10 @@ function App() {
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
         <Route path="/soft-services/task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Task Details" /></AuthenticatedLayout>} />
-        
+
+        {/* Soft Services - Overview Tab */}
+        <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} isColumnMenuOpen={false} setIsColumnMenuOpen={() => {}} /></AuthenticatedLayout>} />
+
         <Route path="/soft-service" element={<Navigate to="/soft-services" replace />} />
 
         {/* Service Desk */}
@@ -308,6 +316,11 @@ function App() {
         <Route path="/audit/operational/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/vendor/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
+
+        {/* Compliance - FM Module */}
+        <Route path="/compliance" element={<AuthenticatedLayout><Compliance /></AuthenticatedLayout>} />
+        <Route path="/compliance/add-compliance" element={<AuthenticatedLayout><AddCompliance /></AuthenticatedLayout>} />
+        <Route path="/compliance/compliance-details/:id" element={<AuthenticatedLayout><ComplianceDetails /></AuthenticatedLayout>} />
 
         {/* Safety Module - Under Development Pages */}
         <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />

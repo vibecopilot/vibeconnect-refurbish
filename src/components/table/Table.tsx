@@ -56,8 +56,8 @@ const Table: React.FC<TableProps> = ({
   const customStyle = {
     headRow: {
       style: {
-        background: themeColor,
-        color: "white",
+        background: 'hsl(var(--muted))',
+        color: 'hsl(var(--foreground))',
         fontSize: "12px",
         fontWeight: "600",
         textTransform: "uppercase" as const,
@@ -69,7 +69,7 @@ const Table: React.FC<TableProps> = ({
       style: {
         paddingLeft: "16px",
         paddingRight: "16px",
-        color: "white",
+        color: "hsl(var(--muted-foreground))",
       },
     },
     rows: {

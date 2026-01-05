@@ -246,28 +246,19 @@ const HotelBookingsList: React.FC = () => {
       />
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <button
-          onClick={() => navigate('/amenities/hotel/book')}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          + Book
-        </button>
-
-        <div className="flex-1">
-          <ListToolbar
-            searchPlaceholder="Search by Facility"
-            searchValue={searchValue}
-            onSearchChange={setSearchValue}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            onFilter={() => {}}
-            onExport={handleExport}
-            showViewToggle={true}
-          />
-        </div>
-      </div>
-
+      <ListToolbar
+        searchPlaceholder="Search by Facility"
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        onFilter={() => {}}
+        onExport={handleExport}
+        showViewToggle={true}
+        onAdd={() => navigate('/amenities/hotel/book')}
+        addLabel="Book"
+      />
+      
       {loading && bookings.length > 0 && (
         <div className="flex items-center gap-2 mb-4 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />

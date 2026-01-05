@@ -85,15 +85,10 @@ const AddReceiptInvoice: React.FC = () => {
         />
       </div>
 
-      <h2
-        style={{ background: themeColor }}
-        className="text-center text-xl font-bold my-5 p-2 rounded-full text-white mx-10"
-      >
-        Create Invoice Receipt
-      </h2>
+      
 
-      <div className="flex justify-center">
-        <div className="sm:border border-gray-400 p-1 md:px-10 rounded-lg w-4/5 mb-14">
+      <div className="px-6">
+        <div className="sm:border border-gray-400 p-1 md:px-10 rounded-lg mb-14">
           <div className="md:grid grid-cols-3 gap-5 my-3">
             <div className="flex flex-col">
               <label className="font-semibold my-2">Receipt Number</label>

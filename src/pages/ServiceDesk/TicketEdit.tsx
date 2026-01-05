@@ -284,7 +284,7 @@ const TicketEdit: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <Breadcrumb items={[
         { label: 'Service Desk', path: '/service-desk' },
         { label: `Ticket #${ticketInfo?.ticket_number || id}`, path: `/service-desk/${id}` },

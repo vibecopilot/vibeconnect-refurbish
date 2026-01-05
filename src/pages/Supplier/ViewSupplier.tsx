@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Building2, MapPin, Landmark, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getVendorsDetails } from '../../api';
 
 interface SupplierData {
@@ -79,14 +79,13 @@ const ViewSupplier: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Supplier Details"
-        breadcrumbs={[
-          { label: 'FM Module', path: '/supplier' },
-          { label: 'Supplier/Vendor', path: '/supplier' },
-          { label: 'View Supplier' },
-        ]}
-      />
+
+<Breadcrumb items={[
+  { label: 'FM Module', path: '/supplier' },
+  { label: 'Supplier/Vendor', path: '/supplier' },
+  { label: 'View Supplier' },
+]} />
+
 
       {/* Company Details Section */}
       <div className="bg-card border border-border rounded-lg p-6 mb-6">

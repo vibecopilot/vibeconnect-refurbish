@@ -142,7 +142,7 @@ const TicketView: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <Breadcrumb items={[
         { label: 'Service Desk', path: '/service-desk' },
         { label: `Ticket #${ticket.ticket_number || id}` }

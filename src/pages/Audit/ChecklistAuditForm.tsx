@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
+
 
 const forTypes = ['Asset', 'Services', 'Vendor', 'Training'];
 const inputTypes = ['Text', 'Number', 'Dropdown', 'Checkbox', 'Date', 'File Upload', 'Rating'];
@@ -102,14 +103,12 @@ const ChecklistAuditForm: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Checklist Audit"
-        breadcrumbs={[
-          { label: 'FM Module', path: '/audit' },
-          { label: 'Audit', path: '/audit' },
-          { label: 'Checklist Audit' },
-        ]}
-      />
+    
+<Breadcrumb items={[
+  { label: 'FM Module', path: '/audit' },
+  { label: 'Audit', path: '/audit' },
+  { label: 'Checklist Audit' },
+]} />
 
       <form onSubmit={handleSubmit}>
         {/* Basic Info Section */}

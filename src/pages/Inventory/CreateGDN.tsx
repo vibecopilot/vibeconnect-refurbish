@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Truck, FileText, Plus, Trash2, Upload, User } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
+
 import { 
   postGDN, 
   getGDN,
@@ -234,15 +235,8 @@ const CreateGDN: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title={isEditMode ? 'Edit GDN' : 'Add GDN'}
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/gdn' },
-          { label: 'Inventory', path: '/inventory/gdn' },
-          { label: 'GDN', path: '/inventory/gdn' },
-          { label: isEditMode ? 'Edit' : 'Add' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/gdn' }, { label: 'GDN', path: '/inventory/gdn' }, { label: isEditMode ? 'Edit' : 'Add' }]} />
+
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info Section */}

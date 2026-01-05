@@ -511,15 +511,6 @@ const Ticket = () => {
               onChange={handleSearch}
             />
 
-            <Link
-              to={"/tickets/create-ticket"}
-              style={{ background: themeColor }}
-              className=" font-semibold  text-white duration-300 transition-all  p-2 rounded-md  cursor-pointer text-center flex items-center gap-2 justify-center"
-              // onClick={() => setShowCountry(!showCountry)}
-            >
-              <PiPlusCircle size={20} />
-              Add
-            </Link>
              <button
               className=" font-semibold text-white px-4 p-1 flex gap-2 items-center justify-center rounded-md"
               style={{ background: themeColor }}
@@ -527,7 +518,7 @@ const Ticket = () => {
             >
               <BiFilterAlt />
               Filter
-            </button> 
+            </button>
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setHideColumn(!hideColumn)}
@@ -561,6 +552,15 @@ const Ticket = () => {
             >
               Export
             </button>
+            <Link
+              to={"/tickets/create-ticket"}
+              style={{ background: themeColor }}
+              className=" font-semibold  text-white duration-300 transition-all  p-2 rounded-md  cursor-pointer text-center flex items-center gap-2 justify-center"
+              // onClick={() => setShowCountry(!showCountry)}
+            >
+              <PiPlusCircle size={20} />
+              Add
+            </Link>
           </div>
         </div>
 

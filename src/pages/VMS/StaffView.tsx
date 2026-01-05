@@ -142,7 +142,7 @@ const StaffView: React.FC = () => {
   const fullName = [staff.firstname, staff.lastname].filter(Boolean).join(' ') || 'N/A';
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <PageTitle
         title={fullName}
         breadcrumbs={[

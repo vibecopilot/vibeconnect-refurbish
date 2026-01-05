@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Package, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { 
   postInventory, 
   editInventory, 
@@ -196,15 +196,8 @@ const CreateMaster: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title={isEditMode ? 'Edit Masters' : 'Add Masters'}
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/masters' },
-          { label: 'Inventory', path: '/inventory/masters' },
-          { label: 'Masters', path: '/inventory/masters' },
-          { label: isEditMode ? 'Edit' : 'Add' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Inventory', path: '/inventory/masters' }, { label: 'Masters', path: '/inventory/masters' }, { label: isEditMode ? 'Edit' : 'Add' }]} />
+
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info Section */}
