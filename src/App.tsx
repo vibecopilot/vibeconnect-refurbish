@@ -77,19 +77,23 @@ import Compliance from "./pages/Compliance/Compliance";
 import AddCompliance from "./pages/Compliance/AddCompliance";
 import ComplianceDetails from "./pages/Compliance/ComplianceDetails";
 // Placeholder pages for other modules
+// Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
-  <div className="p-6">
+  <div className="flex flex-col items-center justify-center min-h-[400px] p-6">
     <h1 className="text-2xl font-bold text-foreground mb-4">{title}</h1>
-    <p className="text-muted-foreground">This module is under development.</p>
+    <p className="text-lg text-muted-foreground">Coming Soon</p>
   </div>
 );
 
-// Layout wrapper for authenticated pages
+// Import ProtectedRoute
+import { ProtectedRoute } from './routes';
+
+// Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <>
+  <ProtectedRoute>
     <AppHeader />
     <main>{children}</main>
-  </>
+  </ProtectedRoute>
 );
 
 function App() {
@@ -196,6 +200,9 @@ function App() {
         <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><EditStockItem /></AuthenticatedLayout>} />
 
         <Route path="/asset/overview" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        
+        {/* QR Code */}
+        <Route path="/asset/qr-code" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         
         {/* Soft Services - Service Tab */}
         <Route path="/soft-services" element={<AuthenticatedLayout><ServiceList /></AuthenticatedLayout>} />
