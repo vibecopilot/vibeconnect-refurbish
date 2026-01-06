@@ -10,8 +10,13 @@ import {
 } from "../../api";
 import { useSelector } from "react-redux";
 import { getItemInLocalStorage } from "../../utils/localStorage";
-import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import Breadcrumb from "../../components/ui/Breadcrumb";
+import FormSection from "../../components/ui/FormSection";
+import FormInput from "../../components/ui/FormInput";
+import FormGrid from "../../components/ui/FormGrid";
+import { Car, Save, X, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const AddParking = () => {
   const navigate  = useNavigate()
@@ -139,7 +144,7 @@ const AddParking = () => {
 
     try {
       const resp = await postParking(sendData);
-      navigate("/admin/parking");
+      navigate("/parking");
       toast.success("Parking Created Successfully");
       console.log(resp);
     } catch (error) {
@@ -147,254 +152,178 @@ const AddParking = () => {
     }
   };
   const themeColor = useSelector((state) => state.theme.color);
+  
+  const [loading, setLoading] = useState(false);
+  
+  const handleReset = () => {
+    setFormData({
+      on_behalf: "",
+      booking_date: "",
+      booking_start_time: "",
+      booking_end_time: "",
+      slot_id: "",
+      parking_id: "",
+      building_id: "",
+      floor_id: "",
+      user_id: "",
+      status: "",
+    });
+    setBehalf("self");
+  };
+
   return (
-    <section className="flex ">
-      <Navbar />
-      <div className="flex flex-col md:items-center mb-10 p-4 w-full">
-        <div
-          style={{ background: themeColor }}
-          className="flex justify-center bg-black mx-5 my-2 w-full p-2 rounded-md"
-        >
-          <h2
-            className="text-xl font-semibold text-center mx-10 text-white w-full"
-            style={{ background: themeColor }}
-          >
-            Book Parking
-          </h2>
-        </div>
-        <div className="md:border border-gray-400 rounded-md md:mx-10 w-full p-4">
-          <div className="md:grid flex flex-col grid-cols-3 items-center my-2">
-            <p className="font-semibold">For :</p>
-            <div className="flex gap-5">
-              <p
-                className={`border-2 p-1 px-6 border-black font-medium rounded-full cursor-pointer ${
-                  behalf === "self" && "bg-black text-white"
-                }`}
-                onClick={() => setBehalf("self")}
-              >
-                Self
-              </p>
-              <p
-                className={`border-2 p-1 px-6 border-black font-medium rounded-full cursor-pointer ${
-                  behalf === "others" && "bg-black text-white"
-                }`}
-                onClick={() => setBehalf("others")}
-              >
-                Others
-              </p>
-            </div>
-          </div>
-          <div className="flex md:grid  grid-cols-2 justify-between gap-4  flex-col">
-            {behalf === "others" && (
-              // <Select
-              //   options={users}
-              //   placeholder="Select User"
-              //   value={formData.on_behalf}
-              //   onChange={(selectedOption) =>
-              //     setFormData({ ...formData, on_behalf: selectedOption })
-              //   }
-              //   className="w-full my-2"
-              //   isMulti
-              // />
-              <div className="flex flex-col">
-                <label className="font-semibold" htmlFor="">
-                  Select User
-                </label>
-                <select
-                  name="user_id"
-                  value={formData.user_id}
+    <div className="p-6">
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: 'Book Parking' }]} />
+      
+      <div className="bg-card border border-border rounded-xl shadow-sm mt-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+          {/* Basic Information Section */}
+          <FormSection title="Basic Information" icon={Car}>
+            <div className="space-y-6">
+              {/* Self/Others Toggle */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground mb-2">For</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border font-medium transition-colors ${
+                      behalf === "self" 
+                        ? 'bg-primary text-primary-foreground border-primary' 
+                        : 'bg-transparent text-foreground border-border hover:bg-accent'
+                    }`}
+                    onClick={() => setBehalf("self")}
+                  >
+                    Self
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-lg border font-medium transition-colors ${
+                      behalf === "others" 
+                        ? 'bg-primary text-primary-foreground border-primary' 
+                        : 'bg-transparent text-foreground border-border hover:bg-accent'
+                    }`}
+                    onClick={() => setBehalf("others")}
+                  >
+                    Others
+                  </button>
+                </div>
+              </div>
+              
+              {/* Conditional User Selection */}
+              {behalf === "others" && (
+                <FormGrid columns={3}>
+                  <FormInput
+                    label="Select User"
+                    name="user_id"
+                    type="select"
+                    value={formData.user_id}
+                    onChange={handleChange}
+                    options={users.map(u => ({ value: String(u.value), label: u.label }))}
+                    placeholder="Select User"
+                  />
+                </FormGrid>
+              )}
+              
+              <FormGrid columns={3}>
+                <FormInput
+                  label="Booking Date"
+                  name="booking_date"
+                  type="date"
+                  value={formData.booking_date}
                   onChange={handleChange}
-                  className="border p-1 px-4 border-gray-500 rounded-md"
-                >
-                  <option value="">Select User</option>
-                  {users?.map((building) => (
-                    <option value={building.value} key={building.value}>
-                      {building.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex flex-col">
-              {/* <div className="grid grid-cols-2 items-center"> */}
-              <p className="font-semibold">Select Date :</p>
-              <input
-                type="date"
-                name="booking_date"
-                id="booking_date"
-                className="border p-1 px-4 border-gray-500 rounded-md"
-                value={formData.booking_date}
-                onChange={handleChange}
-              />
-            </div>
-            {/* <div className="flex flex-col ">
-              <label htmlFor="" className="font-semibold">
-                Select Building:
-              </label>
-              <select
-                className="border p-1 px-4 border-gray-500 rounded-md"
-                value={formData.building_id}
-                onChange={handleChange}
-                name="building_id"
-              >
-                <option value="">Select Building</option>
-                {buildings?.map((building) => (
-                  <option value={building.id} key={building.id}>
-                    {building.name}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-            {/* <div className="grid grid-cols-2 items-center "> */}
-            {/* <div className="flex flex-col">
-              <p className="font-semibold ">Select Floor :</p>
-              <select 
-              className="border p-1 px-4 border-gray-500 rounded-md"
-              name="floor_id"
-              value={formData.floor_id}
-              onChange={handleChange}
-              >
-                <option value="">Select Floor</option>
-              {floors?.map((floor) => (
-                  <option value={floor.id} key={floor.id}>
-                    {floor.name}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-            {/* <div className="grid grid-cols-2 items-center "> */}
-
-            {/* <div className="flex justify-center mt-5">
-              <button className="p-1 px-4 border-2 border-black rounded-md font-semibold hover:bg-black hover:text-white transition-all duration-300">
-                Submit
-              </button>
-            </div> */}
-            {/* </div> */}
-
-            {/* <div className="my-5">
-            <div className="flex md:grid grid-cols-3 flex-col gap-4 justify-between my-2 md:gap-2"> */}
-            {/* <div className="grid  items-center">
-                <label className="font-semibold">Vehicle Type :</label>
-                <select
-                // value={formData.booking_date}
-                // onChange={handleChange}
-                className="border p-1 px-4 border-gray-500 rounded-md">
-                  <option value="">Select Vehicle Type</option>
-                  <option value="4 wheeler">4 Wheeler</option>
-                  <option value="2 wheeler">2 Wheeler</option>
-                </select>
-              </div> */}
-            {/* <div className="flex flex-col">
-                <p className="font-semibold ">Employee Name :</p>
-                <select className="border p-1 px-4 border-gray-500 rounded-md">
-                  <option value="">Select Employee</option>
-                  <option value="all">Employee A</option>
-                  <option value="EV">Employee B</option>
-                  <option value="visitor">Employee C</option>
-                </select>
-              </div> */}
-            {/* <div>
-                <div className="grid grid-cols-2 items-center ">
-                  <p className="font-semibold ">Free Slot :</p>
-                  <p>10</p>
-                </div>
-                <div className="grid grid-cols-2 items-center ">
-                  <p className="font-semibold ">Paid Slot :</p>
-                  <p>10</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 items-center ">
-                <p className="font-semibold ">Available Slot :</p>
-                <p>10</p>
-              </div> */}
-
-            <div className="flex flex-col">
-              <p className="font-semibold ">Select Parking Slot :</p>
-              <select
-                className="border p-1 px-4 border-gray-500 rounded-md"
-                name="slot_id"
-                value={formData.slot_id}
-                onChange={handleChange}
-              >
-                <option value="">Select Parking Slot</option>
-                {filteredData?.map((building) => (
-                  <option value={building.id} key={building.id}>
-                    {formatTime(building.start_hr, building.start_min)} to{" "}
-                    {formatTime(building.end_hr, building.end_min)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* <div className="grid  items-center">
-                <p className="font-semibold">From :</p>
-                <input
-                  type="time"
+                  required
+                />
+                
+                <FormInput
+                  label="Start Time"
                   name="booking_start_time"
-                  id=""
-                  value={formData.booking_start_time}
-                onChange={handleChange}
-                  className="border p-1 px-4 border-gray-500 rounded-md"
-                />
-              </div>
-              <div className="grid items-center">
-                <p className="font-semibold">To :</p>
-                <input
                   type="time"
-                  name="booking_end_time"
-                  id=""
-                  value={formData.booking_end_time}
-                onChange={handleChange}
-                  className="border p-1 px-4 border-gray-500 rounded-md"
+                  value={formData.booking_start_time}
+                  onChange={handleChange}
+                  required
                 />
-              </div> */}
-            {/* <div className="flex flex-col">
-              <p className="font-semibold ">Status :</p>
-              <select className="border p-1 px-4 border-gray-500 rounded-md"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              >
-                <option value="">Select </option>
-                <option value="pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-            </div> */}
-            <div className="grid  items-center ">
-              <label htmlFor="" className="font-semibold">
-                Parking Number
-              </label>
-              <select
+                
+                <FormInput
+                  label="End Time"
+                  name="booking_end_time"
+                  type="time"
+                  value={formData.booking_end_time}
+                  onChange={handleChange}
+                  required
+                />
+              </FormGrid>
+            </div>
+          </FormSection>
+
+          {/* Parking Details Section */}
+          <FormSection title="Parking Details" icon={Car}>
+            <FormGrid columns={3}>
+              <FormInput
+                label="Parking Number"
                 name="parking_id"
-                id=""
+                type="select"
                 value={formData.parking_id}
                 onChange={handleChange}
-                className="border p-1 px-4 border-gray-500 rounded-md"
+                options={ParkConfigData.map(p => ({ value: String(p.id), label: p.name }))}
+                placeholder="Select Parking Number"
+                required
+              />
+              
+              <FormInput
+                label="Parking Slot"
+                name="slot_id"
+                type="select"
+                value={formData.slot_id}
+                onChange={handleChange}
+                options={filteredData.map(s => ({ 
+                  value: String(s.id), 
+                  label: `${formatTime(s.start_hr, s.start_min)} to ${formatTime(s.end_hr, s.end_min)}` 
+                }))}
+                placeholder="Select Parking Slot"
+                required
+              />
+            </FormGrid>
+          </FormSection>
+
+          {/* Submit Button */}
+          <div className="p-6 border-t border-border">
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50"
               >
-                <option value="">Select Parking Number</option>
-                {ParkConfigData?.map((floor) => (
-                  <option value={floor.id} key={floor.id}>
-                    {floor.name}
-                  </option>
-                ))}
-              </select>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Submit
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Reset
+              </button>
+              <Link
+                to="/parking"
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-primary-foreground bg-destructive hover:bg-destructive/90 rounded-lg transition-colors"
+              >
+                Cancel
+              </Link>
             </div>
           </div>
-          {/*
-          </div> */}
-
-          <div className="flex justify-center my-2">
-            <button
-              onClick={handleSubmit}
-              style={{ background: themeColor }}
-              className="p-1 px-4 bg-black text-white hover:bg-white  rounded-md border-2 border-black font-medium transition-all duration-300"
-            >
-              Submit
-            </button>
-          </div>
-        </div>
+        </form>
       </div>
-    </section>
+    </div>
   );
 };
 

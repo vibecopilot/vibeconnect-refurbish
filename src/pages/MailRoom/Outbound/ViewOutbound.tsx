@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../../components/layout/PageHeader';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
 import { getOutboundDetail } from '../../../api';
 
 const ViewOutbound: React.FC = () => {
@@ -20,7 +20,14 @@ const ViewOutbound: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader title="Outbound Package Details" breadcrumbs={[{ label: 'FM Module', path: '/mail-room' }, { label: 'Mail Room', path: '/mail-room' }, { label: 'Outbound', path: '/mail-room/outbound' }, { label: 'View' }]} />
+      <Breadcrumb
+        items={[
+          { label: 'FM Module' },
+          { label: 'Mail Room', path: '/mail-room' },
+          { label: 'Outbound', path: '/mail-room/outbound' },
+          { label: 'View' },
+        ]}
+      />
       <div className="bg-card border border-border rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-6"><div className="p-2 bg-primary/10 rounded-lg"><Package className="w-5 h-5 text-primary" /></div><h2 className="text-lg font-semibold text-foreground">Package ID: {pkg.id}</h2></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8">

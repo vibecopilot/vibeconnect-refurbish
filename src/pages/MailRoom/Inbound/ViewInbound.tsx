@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Package, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../../components/layout/PageHeader';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
 import { getInboundDetail, editInbound } from '../../../api';
 
 interface InboundData {
@@ -79,10 +79,9 @@ const ViewInbound: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Inbound Package Details"
-        breadcrumbs={[
-          { label: 'FM Module', path: '/mail-room' },
+      <Breadcrumb
+        items={[
+          { label: 'FM Module' },
           { label: 'Mail Room', path: '/mail-room' },
           { label: 'Inbound', path: '/mail-room/inbound' },
           { label: 'View Package' },

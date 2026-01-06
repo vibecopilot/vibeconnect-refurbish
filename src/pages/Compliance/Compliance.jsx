@@ -7,8 +7,10 @@ import { getComplianceConfiguration } from "../../api";
 import { getItemInLocalStorage } from "../../utils/localStorage";
 import Breadcrumb from "../../components/ui/Breadcrumb";
 import ListToolbar from "../../components/ui/ListToolbar";
+import DataCard from "../../components/ui/DataCard";
 
 const Compliance = () => {
+  const [viewMode, setViewMode] = useState("table");
   const [filter, setFilter] = useState(false);
   const [compliances, setCompliances] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -161,7 +163,8 @@ const Compliance = () => {
         searchPlaceholder="Search compliance..."
         searchValue={searchValue}
         onSearchChange={setSearchValue}
-        showViewToggle={false}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         onFilter={() => setFilter((prev) => !prev)}
         onAdd={
           userType === "pms_admin"
@@ -414,76 +417,130 @@ const Compliance = () => {
           </div>
         </div>
       )}
-      <Table
-        columns={columns}
-        data={paginatedCompliances}
-        pagination={false}
-        responsive
-        highlightOnHover
-        pointerOnHover
-      />
-
-      {filteredCompliances.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            Showing {(pagination.page - 1) * pagination.perPage + 1} to{" "}
-            {Math.min(pagination.page * pagination.perPage, pagination.total)}{" "}
-            of {pagination.total} records
+      {viewMode === "grid" && paginatedCompliances.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {paginatedCompliances.map((item) => (
+            <DataCard
+              key={item.id}
+              title={item.name}
+              subtitle={item.site_name || "N/A"}
+              status={
+                item.status === "100% Completed" ? "checked-out" :
+                item.status === "50% Completed" ? "maintenance" :
+                item.status === "25% Completed" ? "in-store" :
+                item.status === "5% Completed" ? "breakdown" : "pending"
+              }
+              fields={[                
+                { label: "Vendor", value: item.assign_to_name || "N/A" },
+                { label: "Auditor", value: item.reviewer_name || "N/A" },
+                { label: "Due Days", value: `${item.due_in_days} days` || "N/A" },
+                { label: "Priority", value: item.priority || "N/A" },
+              ]}
+              viewPath={`/compliance/compliance-details/${item.id}`}
+            />
+          ))}
+        </div>
+      ) : (
+        paginatedCompliances.length > 0 && (
+          <div>
+            <Table
+              columns={columns}
+              data={paginatedCompliances}
+              pagination={false}
+              responsive
+              highlightOnHover
+              pointerOnHover
+            />
+            
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
+              <div className="text-sm text-muted-foreground">
+                Showing {(pagination.page - 1) * pagination.perPage + 1} to{" "}
+                {Math.min(pagination.page * pagination.perPage, pagination.total)}{" "}
+                of {pagination.total} records
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+                >
+                  «
+                </button>
+                <button
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                  }
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+                >
+                  ‹ Prev
+                </button>
+                <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
+                  {pagination.page}
+                </span>
+                <button
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                  }
+                  disabled={pagination.page >= pagination.totalPages}
+                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+                >
+                  Next ›
+                </button>
+                <button
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page: prev.totalPages }))
+                  }
+                  disabled={pagination.page >= pagination.totalPages}
+                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+                >
+                  »
+                </button>
+                <select
+                  value={pagination.perPage}
+                  onChange={(e) =>
+                    setPagination((prev) => ({
+                      ...prev,
+                      perPage: Number(e.target.value),
+                      page: 1,
+                    }))
+                  }
+                  className="px-2 py-1.5 text-sm border border-border rounded-md bg-background"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
-              disabled={pagination.page === 1}
-              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
-            >
-              «
-            </button>
-            <button
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
-              }
-              disabled={pagination.page === 1}
-              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
-            >
-              ‹ Prev
-            </button>
-            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
-              {pagination.page}
-            </span>
-            <button
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
-              }
-              disabled={pagination.page >= pagination.totalPages}
-              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
-            >
-              Next ›
-            </button>
-            <button
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.totalPages }))
-              }
-              disabled={pagination.page >= pagination.totalPages}
-              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
-            >
-              »
-            </button>
-            <select
-              value={pagination.perPage}
-              onChange={(e) =>
-                setPagination((prev) => ({
-                  ...prev,
-                  perPage: Number(e.target.value),
-                  page: 1,
-                }))
-              }
-              className="px-2 py-1.5 text-sm border border-border rounded-md bg-background"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
+        )
+      )}
+      
+      {/* Empty State */}
+      {paginatedCompliances.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
+          <div className="w-16 h-16 text-muted-foreground/50 mb-4 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clipboard-list">
+              <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+              <path d="M16 8H8" />
+              <path d="M16 12H8" />
+              <path d="M16 16H8" />
+            </svg>
           </div>
+          <h3 className="text-lg font-semibold mb-2">No Compliance Records Found</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchValue ? "No compliance records match your search criteria" : "No compliance records have been created yet"}
+          </p>
+          {userType === "pms_admin" && (
+            <button
+              onClick={() => navigate("/compliance/add-compliance")}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
+            >
+              + Add Compliance
+            </button>
+          )}
         </div>
       )}
     </div>

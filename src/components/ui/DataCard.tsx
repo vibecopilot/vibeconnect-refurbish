@@ -17,6 +17,9 @@ interface DataCardProps {
   editPath?: string;
   onView?: () => void;
   onEdit?: () => void;
+  id?: string;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 const DataCard: React.FC<DataCardProps> = ({
@@ -28,9 +31,46 @@ const DataCard: React.FC<DataCardProps> = ({
   editPath,
   onView,
   onEdit,
+  id,
+  isSelected,
+  onToggleSelect,
 }) => {
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Get the target element
+    const target = e.target as HTMLElement;
+
+    // Check if click is on action links/buttons (View, Edit)
+    const isActionElement = target.closest('a, button');
+
+    // Check if click is on the checkbox itself
+    const isCheckbox = target.getAttribute('type') === 'checkbox';
+
+    // Only toggle selection if not clicking on actions or checkbox
+    // (checkbox has its own handler)
+    if (!isActionElement && !isCheckbox && onToggleSelect) {
+      onToggleSelect();
+    }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Get the target element
+    const target = e.target as HTMLElement;
+
+    // Check if click is on action links/buttons
+    const isActionElement = target.closest('a, button');
+
+    // Only toggle selection on double-click if not on action elements
+    if (!isActionElement && onToggleSelect) {
+      onToggleSelect();
+    }
+  };
+
   return (
-    <div className="bg-card border border-border rounded-xl p-5 hover:shadow-card-hover transition-shadow">
+    <div
+      className={`bg-card border rounded-xl p-5 hover:shadow-card-hover transition-shadow cursor-pointer ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}
+      onClick={handleCardClick}
+      onDoubleClick={handleDoubleClick}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -39,7 +79,18 @@ const DataCard: React.FC<DataCardProps> = ({
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
-        {status && <StatusBadge status={status} size="sm" />}
+        <div className="flex items-center gap-2">
+          {status && <StatusBadge status={status} size="sm" />}
+          {onToggleSelect && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onToggleSelect}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2 cursor-pointer"
+            />
+          )}
+        </div>
       </div>
 
       {/* Fields */}

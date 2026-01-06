@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { PiPlusCircle } from "react-icons/pi";
-import { Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import { BsEye } from "react-icons/bs";
+import { useNavigate, Link } from "react-router-dom";
+import Breadcrumb from "../components/ui/Breadcrumb";
+import ListToolbar from "../components/ui/ListToolbar";
+import DataCard from "../components/ui/DataCard";
+import DataTable from "../components/ui/DataTable";
+import { Car as CarIcon, Loader2, Eye, AlertCircle, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
-import Table from "../components/table/Table";
 import { getBookParking } from "../api";
-import { dateFormat, formatTime } from "../utils/dateUtils";
+import { formatTime } from "../utils/dateUtils";
+
+
 
 const Parkings = () => {
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState("table");
   const [bookingdata, setBookingData] = useState([]);
-  const [searchText, setSearchText] = useState("");
+  const [searchValue, setSearchValue] = useState("");
   const [filteredData, setFilteredData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Stats for allotment and vacancy (kept separate)
   const [stats, setStats] = useState({
@@ -25,26 +32,38 @@ const Parkings = () => {
     total_4_wheeler: 0,
   });
 
-  // console.log(siteId)
-
-  const fetchingbookingData = async () => {
+  const fetchData = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const res = await getBookParking();
-      const bookingReqData = res.data.map((item) => ({
-        id: item.id,
-        parking_id: item.parking_id,
-        name: item.user_name,
-        status: item.status,
-        booked_by: item.created_by,
-        booking_date:item.booking_date,
-        parking_name: item.parking_name,
-        vehicle_type: item.vehicle_type,
-        slot_id: item.slot_id,
-        created_at: item.created_at,
+      
+      // Check if response has data
+      if (!res || !res.data) {
+        setBookingData([]);
+        setFilteredData([]);
+        return;
+      }
+      
+      // Ensure res.data is an array
+      const apiData = Array.isArray(res.data) ? res.data : [];
+      
+      const bookingReqData = apiData.map((item, index) => ({
+        unique_id: `${item.id || 'no-id'}-${index}`, // Create unique ID
+        id: item.id || null,
+        parking_id: item.parking_id || item.id || null,
+        name: item.user_name || 'N/A',
+        status: item.status !== undefined ? item.status : '',
+        booked_by: item.created_by || item.booked_by || 'N/A',
+        booking_date: item.booking_date || new Date(item.created_at).toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        parking_name: item.parking_name || 'N/A',
+        vehicle_type: item.vehicle_type || 'N/A',
+        slot_id: item.slot_id || 'N/A',
+        created_at: item.created_at || new Date().toISOString(),
         total_allotted_slots: item.total_allotted_slots || 0,
         total_vacant_slots: item.total_vacant_slots || 0,
       }));
-       console.log(bookingReqData)
+      
       setBookingData(bookingReqData);
       setFilteredData(bookingReqData);
 
@@ -52,8 +71,8 @@ const Parkings = () => {
         // Assume all records have same allotment/vacancy values;
         // take from first record.
         setStats({
-          total_allotted_slots: bookingReqData[0].total_allotted_slots,
-          total_vacant_slots: bookingReqData[0].total_vacant_slots,
+          total_allotted_slots: bookingReqData[0].total_allotted_slots || 0,
+          total_vacant_slots: bookingReqData[0].total_vacant_slots || 0,
         });
 
         // Compute vehicle counts by iterating over bookingReqData
@@ -62,12 +81,14 @@ const Parkings = () => {
         bookingReqData.forEach((item) => {
           if (
             item.vehicle_type &&
-            item.vehicle_type.toLowerCase() === "2-wheeler"
+            typeof item.vehicle_type === 'string' &&
+            item.vehicle_type.toLowerCase().includes("2-wheeler")
           ) {
             count2++;
           } else if (
             item.vehicle_type &&
-            item.vehicle_type.toLowerCase() === "4-wheeler"
+            typeof item.vehicle_type === 'string' &&
+            item.vehicle_type.toLowerCase().includes("4-wheeler") || item.vehicle_type.toLowerCase().includes("car")
           ) {
             count4++;
           }
@@ -79,125 +100,204 @@ const Parkings = () => {
       }
     } catch (error) {
       console.error("Error fetching booking request data:", error);
+      setError(error.message || 'Failed to fetch data');
       toast.error("Failed to fetch data");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchingbookingData();
+    fetchData();
   }, []);
 
-  const handleSearch = (event) => {
-    const searchValue = event.target.value;
-    setSearchText(searchValue);
+  // Handle search with debouncing
+  useEffect(() => {
     const filteredResults = bookingdata.filter(
       (item) =>
         item.parking_name.toLowerCase().includes(searchValue.toLowerCase()) ||
         item.name.toLowerCase().includes(searchValue.toLowerCase())
     );
     setFilteredData(filteredResults);
-  };
+  }, [searchValue, bookingdata]);
 
-  const columns = [
-    {
-      name: "view",
-      cell: (row) => (
-        <div className="flex items-center gap-4">
-          <Link to={`/admin/parking-details/${row.parking_id}`}>
-            <BsEye size={15} />
-          </Link>
+const columns = [
+  {
+    key: "view",
+    header: "View",
+    render: (value, row) => (
+      <Link to={`/parking/${row.parking_id || row.id}`} className="text-primary hover:text-primary/80">
+        <Eye className="w-4 h-4" />
+      </Link>
+    ),
+  },
+  { 
+    key: "name", 
+    header: "Booked For"
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (value, row) => row.status ? "Booked" : "Not Booked",
+  },
+  { 
+    key: "parking_name", 
+    header: "Parking Number"
+  },
+  { 
+    key: "vehicle_type", 
+    header: "Parking Type"
+  },
+  { 
+    key: "slot_id", 
+    header: "Parking Slot"
+  },
+  { 
+    key: "booking_date", 
+    header: "Booking Date"
+  },
+  { 
+    key: "created_at", 
+    header: "Created Time", 
+    render: (value, row) => formatTime(row.created_at)
+  },
+];
+
+
+
+  if (loading && filteredData.length === 0) {
+    return (
+      <div className="p-6">
+        <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: 'Parking List' }]} />
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Loading parking data...</p>
         </div>
-      ),
-    },
-    { name: "Booked For", selector: (row) => row.name, sortable: true },
-    {
-      name: "Status",
-      selector: (row) => (row.status ? "Booked" : "Not Booked"),
-      sortable: true,
-    },
-    {
-      name: "Parking Number",
-      selector: (row) => row.parking_name,
-      sortable: true,
-    },
-    {
-      name: "Parking Type",
-      selector: (row) => row.vehicle_type,
-      sortable: true,
-    },
-    { name: "Parking Slot", selector: (row) => row.slot_id, sortable: true },
-    {
-      name: "Created Date",
-      selector: (row) => row.booking_date,
+      </div>
+    );
+  }
 
-      sortable: true,
-    },
-    {
-      name: "Created Time",
-      selector: (row) => formatTime(row.created_at),
-      sortable: true,
-    },
-  ];
+  if (error && filteredData.length === 0) {
+    return (
+      <div className="p-6">
+        <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: 'Parking List' }]} />
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertCircle className="w-12 h-12 text-error mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Failed to Load Parking Data</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+          >
+            <RefreshCw className="w-4 h-4" /> Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <section className="flex">
-      <Navbar />
-      <div className="w-full flex m-3 flex-col overflow-hidden">
-        {/* Stats Display */}
-        <div className="flex justify-start gap-4 my-2">
-          <div className="shadow-xl rounded-full border-4 border-gray-400 w-52 px-6 flex flex-col items-center">
-            <p className="font-semibold">Total Allotted Slots</p>
-            <p className="text-center font-semibold">
-              {bookingdata.length > 0
-                ? stats.total_allotted_slots
-                : "loading..."}
-            </p>
-          </div>
-          <div className="shadow-xl rounded-full border-4 border-green-400 w-52 px-6 flex flex-col items-center">
-            <p className="font-semibold">Four Wheelers</p>
-            <p className="text-center font-semibold">
-              {bookingdata.length > 0
-                ? vehicleCounts.total_4_wheeler
-                : "loading..."}
-            </p>
-          </div>
-          <div className="shadow-xl rounded-full border-4 border-red-400 w-52 px-6 flex flex-col items-center">
-            <p className="font-semibold">2 Wheelers</p>
-            <p className="text-center font-semibold">
-              {bookingdata.length > 0
-                ? vehicleCounts.total_2_wheeler
-                : "loading..."}
-            </p>
-          </div>
-          <div className="shadow-xl rounded-full border-4 border-orange-400 w-52 px-6 flex flex-col items-center">
-            <p className="font-semibold">Vacant Slot</p>
-            <p className="text-center font-semibold">
-              {bookingdata.length > 0 ? stats.total_vacant_slots : "loading..."}
-            </p>
+    <div className="p-6">
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: 'Parking List' }]} />
+      
+      {/* Dashboard Statistics - Matching Service Desk style */}
+      {bookingdata.length > 0 && (
+        <div className="mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-lg border-2 flex flex-col items-center justify-center bg-card text-blue-500 border-blue-500">
+              <CarIcon className="w-8 h-8 mb-2" />
+              <span className="text-sm font-medium">Total Allotted Slots</span>
+              <span className="text-2xl font-bold mt-1 text-foreground">
+                {stats.total_allotted_slots}
+              </span>
+            </div>
+            <div className="p-4 rounded-lg border-2 flex flex-col items-center justify-center bg-card text-green-600 border-green-500">
+              <CarIcon className="w-8 h-8 mb-2" />
+              <span className="text-sm font-medium">Four Wheelers</span>
+              <span className="text-2xl font-bold mt-1 text-foreground">
+                {vehicleCounts.total_4_wheeler}
+              </span>
+            </div>
+            <div className="p-4 rounded-lg border-2 flex flex-col items-center justify-center bg-card text-red-600 border-red-500">
+              <CarIcon className="w-8 h-8 mb-2" />
+              <span className="text-sm font-medium">Two Wheelers</span>
+              <span className="text-2xl font-bold mt-1 text-foreground">
+                {vehicleCounts.total_2_wheeler}
+              </span>
+            </div>
+            <div className="p-4 rounded-lg border-2 flex flex-col items-center justify-center bg-card text-orange-600 border-orange-500">
+              <CarIcon className="w-8 h-8 mb-2" />
+              <span className="text-sm font-medium">Vacant Slots</span>
+              <span className="text-2xl font-bold mt-1 text-foreground">
+                {stats.total_vacant_slots}
+              </span>
+            </div>
           </div>
         </div>
-
-        {/* Search Input & Book Link */}
-        <div className="flex justify-between my-5">
-          <input
-            type="text"
-            placeholder="Search by parking number"
-            className="border border-gray-400 w-96 placeholder:text-sm rounded-lg p-2"
-            value={searchText}
-            onChange={handleSearch}
-          />
-          <Link
-            to={"/admin/book-parking"}
-            className="border-2 font-semibold hover:bg-black hover:text-white duration-150 transition-all border-black p-2 rounded-md text-black cursor-pointer text-center flex items-center gap-2 justify-center"
+      )}
+      
+      {/* Empty State */}
+      {!loading && filteredData.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
+          <CarIcon className="w-16 h-16 text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Parking Records Found</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchValue ? "No parking records match your search criteria" : "No parking records have been created yet"}
+          </p>
+          <button
+            onClick={() => navigate("/admin/book-parking")}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
           >
-            <PiPlusCircle size={20} />
-            Book
-          </Link>
+            + Book Parking
+          </button>
         </div>
-        <Table columns={columns} data={filteredData} isPagination={true} />
-      </div>
-    </section>
+      )}
+      
+      {/* List Toolbar - Matching Service Desk style */}
+      <ListToolbar
+        searchPlaceholder="Search by parking number, booked name"
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAdd={() => navigate("/admin/book-parking")}
+        addLabel="Book Parking"
+      />
+      
+      {viewMode === "grid" && filteredData.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {filteredData.map((item) => (
+            <DataCard
+              key={item.unique_id}
+              title={item.parking_name}
+              subtitle={`Slot: ${item.slot_id}`}
+              status={item.status ? "checked-out" : "in-store"}
+              fields={[                
+                { label: "Booked For", value: item.name },
+                { label: "Vehicle Type", value: item.vehicle_type },
+                { label: "Status", value: item.status ? "Booked" : "Available" },
+                { label: "Date", value: item.booking_date },
+              ]}
+              viewPath={`/parking/${item.parking_id || item.id}`}
+            />
+          ))}
+        </div>
+      ) : (
+        filteredData.length > 0 && (
+          <div className="mt-6 bg-card border border-border rounded-lg overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={filteredData}
+              loading={loading}
+              getRowId={(row) => row.unique_id}
+            />
+          </div>
+        )
+      )}
+    </div>
   );
 };
+
+
 
 export default Parkings;

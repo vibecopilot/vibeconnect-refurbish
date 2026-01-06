@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { AiFillCar } from "react-icons/ai";
-import Navbar from "../../../components/Navbar";
+import { Car, Loader2, AlertCircle, Eye } from "lucide-react";
 import { fetchParkingDetail } from "../../../api/index";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
 
 const ParkingDetails = () => {
   const [parkingData, setParkingData] = useState(null);
+  const [error, setError] = useState(null);
   const { id } = useParams(); // Get the ID from the URL
 
   useEffect(() => {
@@ -28,66 +29,119 @@ const ParkingDetails = () => {
         };
         console.log(bookingReqData)
         setParkingData(bookingReqData);
-      } catch (error) {
-        console.log("Error fetching booking request data:", error);
+      } catch (err) {
+        console.log("Error fetching booking request data:", err);
+        setError(err.message || 'Failed to load parking details');
       }
     };
     fetchParkingDetails();
   }, []);
 
   if (!parkingData) {
-    return <div>Loading...</div>;
+    return (
+      <div className="p-6">
+        <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: 'Parking Details' }]} />
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Loading parking details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: 'Parking Details' }]} />
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertCircle className="w-12 h-12 text-error mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Failed to Load Parking Details</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Link
+            to="/parking"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+          >
+            <Eye className="w-4 h-4" /> Back to List
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <section className=" min-h-screen flex items-center justify-center bg-gray-100">
-      <Navbar />
-      <div className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-white border border-gray-300 shadow-lg rounded-lg p-6 sm:p-10">
-          <h3 className="border-b text-center text-2xl font-bold pb-4 mb-6">
-            PARKING DETAILS
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 bg-gray-50 rounded-lg shadow-md">
-              <p className="text-gray-600 font-semibold">Parking Name:</p>
-              <p className="text-lg font-bold text-gray-900">
+    <div className="p-6">
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Parking', path: '/parking' }, { label: `Parking #${parkingData.id}` }]} />
+      
+      <div className="bg-card border border-border rounded-xl shadow-sm mt-6">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+              <Car className="w-5 h-5" />
+              Parking Details
+            </h2>
+            <Link
+              to="/parking"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Back to List
+            </Link>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Parking Name</p>
+              <p className="text-lg font-medium text-foreground">
                 {parkingData.parking_name}
               </p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg shadow-md">
-              <p className="text-gray-600 font-semibold">Site Id:</p>
-              <p className="text-lg font-bold text-gray-900">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Site ID</p>
+              <p className="text-lg font-medium text-foreground">
                 {parkingData.site_id}
               </p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg shadow-md">
-              <p className="text-gray-600 font-semibold">Site Name:</p>
-              <p className="text-lg font-bold text-gray-900">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Site Name</p>
+              <p className="text-lg font-medium text-foreground">
                 {parkingData.site_name}
               </p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg shadow-md">
-              <p className="text-gray-600 font-semibold">Building Name:</p>
-              <p className="text-lg font-bold text-gray-900">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Building Name</p>
+              <p className="text-lg font-medium text-foreground">
                 {parkingData.building_name}
               </p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg shadow-md">
-              <p className="text-gray-600 font-semibold">Floor Name:</p>
-              <p className="text-lg font-bold text-gray-900">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Floor Name</p>
+              <p className="text-lg font-medium text-foreground">
                 {parkingData.floor_name}
               </p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg shadow-md">
-              <p className="text-gray-600 font-semibold">Parking Type:</p>
-              <p className="text-lg font-bold text-gray-900">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Vehicle Type</p>
+              <p className="text-lg font-medium text-foreground">
                 {parkingData.vehicle_type}
+              </p>
+            </div>
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Booking Date</p>
+              <p className="text-lg font-medium text-foreground">
+                {parkingData.booking_date}
+              </p>
+            </div>
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Booked By</p>
+              <p className="text-lg font-medium text-foreground">
+                {parkingData.booked_by}
               </p>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

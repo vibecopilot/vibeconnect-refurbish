@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../../components/layout/PageHeader';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
 import { getVendorsDetails } from '../../../api';
 
 interface VendorData {
@@ -59,10 +59,9 @@ const ViewVendor: React.FC = () => {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Vendor Details"
-        breadcrumbs={[
-          { label: 'FM Module', path: '/mail-room' },
+      <Breadcrumb
+        items={[
+          { label: 'FM Module' },
           { label: 'Mail Room', path: '/mail-room' },
           { label: 'Delivery Vendor', path: '/mail-room/delivery-vendor' },
           { label: 'View Vendor' },

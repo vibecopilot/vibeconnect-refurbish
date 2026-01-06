@@ -76,6 +76,12 @@ import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, 
 import Compliance from "./pages/Compliance/Compliance";
 import AddCompliance from "./pages/Compliance/AddCompliance";
 import ComplianceDetails from "./pages/Compliance/ComplianceDetails";
+import Parkings from "./pages/Parkings";
+import AddParking from "./pages/SubPages/AddParking";
+import ParkingDetails from "./pages/SubPages/details/ParkingDetails";
+import Survey from "./pages/SubPages/survey/Survey";
+import AddSurvey from "./pages/SubPages/survey/AddSurvey";
+import SurveyDetails from "./pages/SubPages/survey/SurveyDetails";
 // Placeholder pages for other modules
 // Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -321,6 +327,16 @@ function App() {
         <Route path="/compliance" element={<AuthenticatedLayout><Compliance /></AuthenticatedLayout>} />
         <Route path="/compliance/add-compliance" element={<AuthenticatedLayout><AddCompliance /></AuthenticatedLayout>} />
         <Route path="/compliance/compliance-details/:id" element={<AuthenticatedLayout><ComplianceDetails /></AuthenticatedLayout>} />
+        
+        {/* Parking - FM Module */}
+        <Route path="/parking" element={<AuthenticatedLayout><Parkings /></AuthenticatedLayout>} />
+        <Route path="/admin/book-parking" element={<AuthenticatedLayout><AddParking /></AuthenticatedLayout>} />
+        <Route path="/parking/:id" element={<AuthenticatedLayout><ParkingDetails /></AuthenticatedLayout>} />
+        
+        {/* Survey - FM Module */}
+        <Route path="/survey" element={<AuthenticatedLayout><Survey /></AuthenticatedLayout>} />
+        <Route path="/admin/add-survey" element={<AuthenticatedLayout><AddSurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/survey-details/:id" element={<AuthenticatedLayout><SurveyDetails /></AuthenticatedLayout>} />
 
         {/* Safety Module - Under Development Pages */}
         <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />
