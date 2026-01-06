@@ -54,6 +54,7 @@ const navItems = [
     name: 'FM Module',
     children: [
       { name: 'Service Desk', path: '/tickets' },
+      { name: 'contact book', path: '/contact-book'},
       { name: 'Asset', path: '/assets' },
       { name: 'Soft Services', path: '/services' },
       { name: 'Inventory', path: '/materials' },
