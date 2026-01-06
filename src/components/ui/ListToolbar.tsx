@@ -14,6 +14,7 @@ interface ListToolbarProps {
   addLabel?: string;
   showViewToggle?: boolean;
   showQrCode?: boolean;
+  qrCodeDisabled?: boolean;
   additionalButtons?: React.ReactNode;
 }
 
@@ -30,6 +31,7 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
   addLabel = 'Add',
   showViewToggle = true,
   showQrCode = false,
+  qrCodeDisabled = false,
   additionalButtons,
 }) => {
   return (
@@ -52,7 +54,8 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
         {showQrCode && onQrCode && (
           <button
             onClick={onQrCode}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
+            disabled={qrCodeDisabled}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg transition-colors ${qrCodeDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent'}`}
           >
             <QrCode className="w-4 h-4" />
             QR Code

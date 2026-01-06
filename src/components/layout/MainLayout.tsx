@@ -35,6 +35,8 @@ const navItems: NavItem[] = [
       { name: 'Supplier/Vendor', path: '/supplier' },
       { name: 'Audit', path: '/audit' },
       { name: 'Mail Room', path: '/mail-room' },
+      { name: 'Parking', path: '/parking' },
+      { name: 'Survey', path: '/survey' },
     ]
   },
   {
@@ -121,12 +123,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [user, setUser] = useState('');
   
-  const firstName = getItemInLocalStorage('Name') || '';
-  const lastName = getItemInLocalStorage('LASTNAME') || '';
+  const firstName = getItemInLocalStorage<string>('Name') || '';
+  const lastName = getItemInLocalStorage<string>('LASTNAME') || '';
   const userInitials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 'U';
 
   useEffect(() => {
-    const userType = getItemInLocalStorage('USERTYPE');
+    const userType = getItemInLocalStorage<string>('USERTYPE');
     setUser(userType || '');
   }, []);
 

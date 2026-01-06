@@ -34,6 +34,7 @@ const featureToModuleMap: Record<string, string[]> = {
   'space': ['fitout'],
   'calendar': ['calendar'],
   'compliance': ['compliance'],
+  'survey': ['survey'],
 };
 
 // Module configuration with sub-modules
@@ -89,6 +90,8 @@ const modules = [
       },
       { id: 'mail-room', name: 'Mail Room', path: '/mail-room' },
       { id: 'compliance', name: 'Compliance', path: '/compliance' },
+      { id: 'parking', name: 'Parking', path: '/parking' },
+      { id: 'survey', name: 'Survey', path: '/survey' },
     ]
   },
   {

@@ -4,11 +4,14 @@ import { Link } from "react-router-dom";
 import { IoAddCircleOutline } from "react-icons/io5";
 import { useSelector } from "react-redux";
 import { HiChevronDown } from "react-icons/hi";
-import Navbar from "../../../components/Navbar";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
 import Table from "../../../components/table/Table";
+import ListToolbar from "../../../components/ui/ListToolbar";
+import DataCard from "../../../components/ui/DataCard";
 
 function Survey() {
   const themeColor = useSelector((state) => state.theme.color);
+  const [viewMode, setViewMode] = useState("table");
   const [isStatus, setIsStatus] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
 
@@ -135,30 +138,34 @@ function Survey() {
     },
   ];
   return (
-    <section className="flex">
-      <Navbar />
-      <div className="w-full flex mx-3 flex-col overflow-hidden">
-        <div className="flex md:flex-row flex-col justify-between md:items-center my-2 gap-2  ">
-          <input
-            type="text"
-            placeholder="Search By Survey Name"
-            className=" p-2 md:w-96 border-gray-300 rounded-md placeholder:text-sm outline-none border "
-          />
-          <div className="md:flex grid grid-cols-2 sm:flex-row my-2 flex-col gap-2">
-            <div className="flex gap-4">
+    <div className="p-6">
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Survey', path: '/survey' }, { label: 'Survey List' }]} />
+      
+      <div className="mt-6 bg-card border border-border rounded-lg shadow-sm">
+        <ListToolbar
+        searchPlaceholder="Search By Survey Name"
+        searchValue={""}
+        onSearchChange={() => {}}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAdd={() => {}}
+        addLabel="Add"
+        additionalButtons={
+          <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2">
               <div className="relative inline-block" ref={statusRef}>
                 <button
                   onClick={() => setIsStatus(!isStatus)}
-                  className="flex items-center px-4 py-2 border rounded-md bg-white hover:bg-gray-200"
+                  className="flex items-center px-3 py-2 border border-border rounded-md bg-background text-foreground hover:bg-accent transition-colors"
                 >
                   Status <HiChevronDown className="w-4 h-4 ml-2" />
                 </button>
                 {isStatus && (
-                  <div className="absolute left-0 mt-2 w-52 bg-white shadow-md rounded-md border border-gray-200 z-10">
+                  <div className="absolute left-0 mt-1 w-52 bg-card shadow-lg rounded-md border border-border z-10">
                     {Object.keys(statusOptions).map((key) => (
                       <label
                         key={key}
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -174,19 +181,20 @@ function Survey() {
                   </div>
                 )}
               </div>
+              
               <div className="relative inline-block" ref={ownerRef}>
                 <button
                   onClick={() => setIsOwner(!isOwner)}
-                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-200"
+                  className="flex items-center px-3 py-2 border border-border rounded-md bg-background text-foreground hover:bg-accent transition-colors"
                 >
                   Owner <HiChevronDown size={16} />
                 </button>
                 {isOwner && (
-                  <div className="absolute left-0 mt-2 w-52 bg-white shadow-md rounded-md border border-gray-200 z-10">
+                  <div className="absolute left-0 mt-1 w-52 bg-card shadow-lg rounded-md border border-border z-10">
                     {Object.keys(ownerOptions).map((key) => (
                       <label
                         key={key}
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -203,19 +211,43 @@ function Survey() {
                 )}
               </div>
             </div>
+            
             <Link
               to={`/admin/add-survey`}
-              style={{ background: themeColor }}
-              className="px-4 py-2  font-medium text-white rounded-md flex gap-2 items-center justify-center"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md flex gap-2 items-center justify-center hover:bg-primary/90 transition-colors"
             >
               <IoAddCircleOutline />
               Add
             </Link>
           </div>
+        }
+      />
+        
+        <div className="p-4">
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.map((item) => (
+                <DataCard
+                  key={item.Id}
+                  title={item.survey_name}
+                  subtitle={`Status: ${item.status}`}
+                  status={item.status === "Close" ? "breakdown" : "in-store"}
+                  fields={[                
+                    { label: "Start Date", value: item.start_date },
+                    { label: "End Date", value: item.end_date },
+                    { label: "Responses", value: item.response },
+                    { label: "Frequency", value: item.frequency },
+                  ]}
+                  viewPath={`/admin/survey-details/${item.id}`}
+                />
+              ))}
+            </div>
+          ) : (
+            <Table columns={columns} data={data} selectableRow={true} />
+          )}
         </div>
-        <Table columns={columns} data={data} selectableRow={true} />
       </div>
-    </section>
+    </div>
   );
 }
 

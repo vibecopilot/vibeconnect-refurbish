@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { Link, useParams } from "react-router-dom";
 import ComplianceAudit from "./ComplianceAudit";
 import { GrCertificate } from "react-icons/gr";
+import Breadcrumb from "../../components/ui/Breadcrumb";
 import {
   domainPrefix,
   getComplianceConfigurationDetails,
@@ -68,138 +69,142 @@ const ComplianceDetails = () => {
   };
 
   return (
-    <section className="mb-10">
-      <div
-        style={{ background: themeColor }}
-        className="fixed w-full top-0 p-2 text-white font-medium text-lg grid grid-cols-3 items-center "
-      >
-        <p className="">{details.name}</p>
-        <p className="text-center">{details.site_name}</p>
-        <div className="flex justify-end">
-          <div className="text-right  p-2 rounded-md text-green-500">
-            <span className="bg-white p-2 rounded-md">100% Completed</span>
-          </div>
-          <button className="flex items-center gap-2 bg-violet-400 text-white p-2 rounded-md">
-            <GrCertificate /> Generate Certificate
-          </button>
-        </div>
-      </div>
-      <div className="border rounded-xl p-2 m-2 bg-gray-50 mt-20">
-        <h2 className="font-medium text-lg border-b border-black mb-2">
-          Basic Details
-        </h2>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">Auditor :</p>
-            <p>{details?.reviewer_name}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">Vendor :</p>
-            <p>{details?.assign_to_name}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">Frequency :</p>
-            <p>{details?.frequency}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">Start Date :</p>
-            <p>{dateFormatSTD(details?.start_date)}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">End Date :</p>
-            <p>{dateFormatSTD(details?.end_date)}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">Target Days :</p>
-            <p>{details?.due_in_days} days</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1">
-            <p className="font-medium">Priority :</p>
-            <p>{details?.priority}</p>
-          </div>
-        </div>
-        <h2 className="font-medium text-lg border-b border-black my-2">
-          Compliance for
-        </h2>
-        <div className="grid grid-cols-3 gap-4">
-          {details?.compliance_config_tags?.map((category) => (
-            <div className="grid grid-cols-2 gap-2">
-              <p className="font-medium">Category :</p>
-              <p>{category.compliance_tag_name}</p>
+    <div className="p-6">
+      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Compliance', path: '/compliance' }, { label: 'Compliance Details' }]} />
+      
+      <div className="mt-6 bg-card border border-border rounded-lg overflow-hidden">
+        <div className="border-b border-border px-6 py-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-foreground">{details.name}</h1>
+              <p className="text-muted-foreground">{details.site_name}</p>
             </div>
-          ))}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-green-100 text-green-800">
+                <span className="text-sm font-medium">100% Completed</span>
+              </div>
+              <button className="flex items-center gap-2 bg-violet-500 text-white px-4 py-2 rounded-md hover:bg-violet-600 transition-colors">
+                <GrCertificate /> Generate Certificate
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Basic Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">Auditor</span>
+                <span className="text-foreground">{details?.reviewer_name || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">Vendor</span>
+                <span className="text-foreground">{details?.assign_to_name || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">Frequency</span>
+                <span className="text-foreground">{details?.frequency || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">Start Date</span>
+                <span className="text-foreground">{dateFormatSTD(details?.start_date) || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">End Date</span>
+                <span className="text-foreground">{dateFormatSTD(details?.end_date) || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">Target Days</span>
+                <span className="text-foreground">{details?.due_in_days} days</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground mb-1">Priority</span>
+                <span className="text-foreground">{details?.priority || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Compliance for</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {details?.compliance_config_tags?.map((category, index) => (
+                <div key={index} className="border border-border rounded-lg p-3 bg-muted">
+                  <span className="text-sm font-medium text-muted-foreground">Category</span>
+                  <p className="text-foreground mt-1">{category.compliance_tag_name}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div>
-        <h2 className="border-b border-black px-2 font-medium text-lg ">
-          Tasks
-        </h2>
-      </div>
-      <div className="border p-2 rounded-xl m-2 flex flex-col gap-2">
-        {assignments?.map((assignment) =>
-          assignment?.compliance_tracker_tags_by_category?.map((category) =>
-            category?.compliance_tracker_tags?.map((tags) => (
-              <div
-                className="bg-gray-50 rounded-xl p-2"
-                key={category?.id || category?.name}
-              >
-                <div className="grid grid-cols-4 border-b">
-                  <h2 className="font-medium text-green-500">
-                    {category?.name}
-                  </h2>
-                  <p className="text-center font-medium">
-                    Weightage : {tags?.task?.weightage}%
-                  </p>
-                  <p className="text-right font-medium">
-                    Mandatory : {tags?.task?.mandatory ? "Yes" : "No"}
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <p
-                      className={`flex justify-end font-medium gap-2 items-center text-right ${
-                        assignment?.status === "pending"
-                          ? "text-red-500"
-                          : "text-green-500"
-                      }`}
-                    >
-                      {assignment?.status === "pending" ? (
-                        <MdOutlinePendingActions />
-                      ) : (
-                        <FaCheck />
-                      )}
-                      {assignment?.status &&
-                        assignment?.status.charAt(0).toUpperCase() +
-                          assignment?.status.slice(1)}
+      <div className="mt-6 bg-card border border-border rounded-lg overflow-hidden">
+        <div className="border-b border-border px-6 py-4">
+          <h2 className="text-lg font-semibold text-foreground">Tasks</h2>
+        </div>
+        <div className="p-6 flex flex-col gap-4">
+          {assignments?.map((assignment) =>
+            assignment?.compliance_tracker_tags_by_category?.map((category) =>
+              category?.compliance_tracker_tags?.map((tags) => (
+                <div
+                  className="border border-border rounded-lg p-4 bg-background"
+                  key={category?.id || category?.name}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 border-b border-border pb-3">
+                    <h3 className="font-semibold text-green-600">
+                      {category?.name}
+                    </h3>
+                    <p className="text-foreground">
+                      Weightage : {tags?.task?.weightage}%
                     </p>
-                    <button
-                      className="bg-white shadow-custom-all-sides hover:bg-gray-50 rounded-full text-green-400 flex items-center gap-2 font-medium px-4 "
-                      onClick={() =>
-                        handleComplianceAuditModal(
-                          tags.compliance_tracker_id,
-                          tags.compliance_tag_id,
-                          tags.compliance_tag_task_id
-                        )
-                      }
-                    >
-                      <LuStamp /> Verify
-                    </button>
+                    <p className="text-foreground">
+                      Mandatory : {tags?.task?.mandatory ? "Yes" : "No"}
+                    </p>
+                    <div className="flex items-center justify-end gap-3">
+                      <span
+                        className={`flex items-center gap-2 font-medium ${
+                          assignment?.status === "pending"
+                            ? "text-red-500"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {assignment?.status === "pending" ? (
+                          <MdOutlinePendingActions />
+                        ) : (
+                          <FaCheck />
+                        )}
+                        {assignment?.status &&
+                          assignment?.status.charAt(0).toUpperCase() +
+                            assignment?.status.slice(1)}
+                      </span>
+                      <button
+                        className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2"
+                        onClick={() =>
+                          handleComplianceAuditModal(
+                            tags.compliance_tracker_id,
+                            tags.compliance_tag_id,
+                            tags.compliance_tag_task_id
+                          )
+                        }
+                      >
+                        <LuStamp /> Verify
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="p-2 bg-blue-50 m-1">
-                  <h2 className="font-medium border-b mb-1">Answer</h2>
-                  <p className="bg-violet-100 p-2 rounded-md text-black">
-                    Remark: {tags?.comment}
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex  gap-4 flex-wrap my-4 items-center  text-center">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2 text-foreground">Answer</h4>
+                    <p className="bg-violet-100 p-3 rounded-md text-foreground mb-4">
+                      Remark: {tags?.comment || 'No remarks provided'}
+                    </p>
+                    <div className="flex flex-wrap gap-4 mb-4">
                       {tags?.attachments?.map((other, index) => (
-                        <div key={other.id} className="">
+                        <div key={other.id} className="flex flex-col items-center">
                           {isImage(domainPrefix + other.image_url) ? (
                             <img
                               src={domainPrefix + other.image_url}
                               alt={`Attachment ${index + 1}`}
-                              className="w-40 h-28 object-cover rounded-md"
+                              className="w-40 h-28 object-cover rounded-md border border-border cursor-pointer"
                               onClick={() =>
                                 window.open(
                                   domainPrefix + other.image_url,
@@ -212,34 +217,34 @@ const ComplianceDetails = () => {
                               href={domainPrefix + other.image_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="attachment-link hover:text-blue-400 transition-all duration-300  text-center flex flex-col items-center  "
+                              className="hover:text-primary transition-colors text-center flex flex-col items-center"
                             >
                               <IoDocumentAttach
                                 size={40}
-                                className="text-yellow-400"
+                                className="text-yellow-500"
                               />
-                              {getFileName(other.image_url)}
+                              <span className="text-sm mt-1">{getFileName(other.image_url)}</span>
                             </a>
                           )}
                         </div>
                       ))}
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">Submitted by : </p>
-                      <p>{tags?.submitted_by_name}</p>
-                    </div>
-                    <div className="flex items-center">
-                      <p className="font-medium">Submitted on : </p>
-                      <p>{dateTimeFormat(tags?.submitted_on)}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-border">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Submitted by:</span>
+                        <span className="text-foreground">{tags?.submitted_by_name || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Submitted on:</span>
+                        <span className="text-foreground">{dateTimeFormat(tags?.submitted_on) || 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )
-        )}
+              ))
+            )
+          )}
+        </div>
       </div>
 
       {modal && (
@@ -250,7 +255,7 @@ const ComplianceDetails = () => {
           trackerId={complianceTrackerId}
         />
       )}
-    </section>
+    </div>
   );
 };
 

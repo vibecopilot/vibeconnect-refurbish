@@ -139,18 +139,47 @@ useEffect(() => {
       toast.error('Please select at least one service');
       return;
     }
+
+    const loadingToast = toast.loading('QR code downloading, please wait!');
+
     try {
       const response = await softServiceDownloadQrCode(selectedRows);
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+
+      // Ensure we have blob data
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+
+      // Create blob from response data
+      const blob = response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], { type: 'application/pdf' });
+
+      // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'qr_codes.pdf';
+      link.download = 'service_qr_codes.pdf';
+
+      // Trigger download
+      document.body.appendChild(link);
       link.click();
-      window.URL.revokeObjectURL(url);
-      toast.success('QR Codes downloaded');
+
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      toast.dismiss(loadingToast);
+      toast.success('QR Codes downloaded successfully');
+
+      // Clear selection after successful download
+      setSelectedRows([]);
     } catch (error) {
-      toast.error('Failed to download QR codes');
+      toast.dismiss(loadingToast);
+      console.error('Error downloading QR codes:', error);
+      toast.error('Failed to download QR codes. Please try again.');
     }
   };
 
@@ -275,6 +304,7 @@ useEffect(() => {
         onAdd={() => navigate('/soft-services/create')}
         addLabel="Add"
         showQrCode
+        qrCodeDisabled={selectedRows.length === 0}
         onQrCode={handleQrCode}
       />
 
@@ -297,18 +327,27 @@ useEffect(() => {
               : service.unit_name || '-';
 
             return (
-              <DataCard 
-                key={service.id} 
-                title={service.name} 
+              <DataCard
+                key={service.id}
+                id={String(service.id)}
+                title={service.name}
                 subtitle={`Building: ${service.building_name || '-'}`}
                 fields={[
                   { label: 'Floor', value: service.floor_name || '-' },
                   { label: 'Unit', value: unitDisplay },
                   { label: 'Created By', value: service.user_name || service.created_by || '-' },
                   { label: 'Created On', value: formatDate(service.created_at) },
-                ]} 
-                viewPath={`/soft-services/${service.id}`} 
-                editPath={`/soft-services/${service.id}/edit`} 
+                ]}
+                viewPath={`/soft-services/${service.id}`}
+                editPath={`/soft-services/${service.id}/edit`}
+                isSelected={selectedRows.includes(String(service.id))}
+                onToggleSelect={() => {
+                  setSelectedRows(prev =>
+                    prev.includes(String(service.id))
+                      ? prev.filter(r => r !== String(service.id))
+                      : [...prev, String(service.id)]
+                  );
+                }}
               />
             );
           })}

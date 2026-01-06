@@ -46,6 +46,7 @@ const featureToModuleMap = {
   'project_task': ['Project Management', 'Task Management'],
   'space': ['Fit Out'],
   'hrms': ['Employee WorkSpace'],
+  'survey': ['Survey'],
 };
 
 const navItems = [
@@ -59,6 +60,8 @@ const navItems = [
       { name: 'Supplier/Vendor', path: '/suppliers' },
       { name: 'Audit', path: '/audit' },
       { name: 'Mail Room', path: '/mail-room' },
+      { name: 'Parking', path: '/parking' },
+      { name: 'Survey', path: '/survey' },
     ]
   },
   {
@@ -174,9 +177,12 @@ const Navbar = () => {
     
     for (const [feature, modules] of Object.entries(featureToModuleMap)) {
       if (modules.includes(moduleName)) {
-        return enabledFeatures.includes(feature);
+        const isEnabled = enabledFeatures.includes(feature);
+        console.log(`Module: ${moduleName}, Feature: ${feature}, Enabled: ${isEnabled}, EnabledFeatures:`, enabledFeatures);
+        return isEnabled;
       }
     }
+    console.log(`Module: ${moduleName}, Not in feature map, showing by default`);
     return true; // Show modules not in the map by default
   };
 

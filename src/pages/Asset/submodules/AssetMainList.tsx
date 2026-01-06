@@ -140,33 +140,53 @@ const fetchAssets = useCallback(async () => {
   };
 
 
-// QR Code Download Functionality - COPIED FROM OLD COMPONENT
+// QR Code Download Functionality
 const handleQrDownload = async () => {
   if (selectedRows.length === 0) {
     return toast.error("Please select at least one asset.");
   }
 
   console.log('Selected rows for QR:', selectedRows);
-  toast.loading("QR code downloading, please wait!");
+  const loadingToast = toast.loading("QR code downloading, please wait!");
 
   try {
     const response = await downloadQrCode(selectedRows);
-    const blob = new Blob([response.data], { type: "application/pdf" });
+
+    // Ensure we have blob data
+    if (!response.data) {
+      throw new Error('No data received from server');
+    }
+
+    // Create blob from response data
+    const blob = response.data instanceof Blob
+      ? response.data
+      : new Blob([response.data], { type: "application/pdf" });
+
+    // Create download link
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "qr_codes.pdf");
+    link.download = "asset_qr_codes.pdf";
+
+    // Trigger download
     document.body.appendChild(link);
     link.click();
-    window.URL.revokeObjectURL(url);
-    link.parentNode.removeChild(link);
-    console.log(response);
-    toast.dismiss();
+
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+
+    toast.dismiss(loadingToast);
     toast.success("QR code downloaded successfully");
+
+    // Clear selection after successful download
+    setSelectedRows([]);
   } catch (error) {
-    toast.dismiss();
+    toast.dismiss(loadingToast);
     console.error("Error downloading QR code:", error);
-    toast.error("Something went wrong, please try again");
+    toast.error("Failed to download QR codes. Please try again.");
   }
 };
 
@@ -549,6 +569,7 @@ const handleFilterReset = () => {
           {assets.map((asset) => (
             <DataCard
               key={asset.id}
+              id={String(asset.id)}
               title={asset.name || `Asset #${asset.id}`}
               subtitle={asset.asset_number || '-'}
               status={getAssetStatus(asset)}
@@ -560,6 +581,14 @@ const handleFilterReset = () => {
               ]}
               viewPath={`/asset/${asset.id}`}
               editPath={`/asset/${asset.id}/edit`}
+              isSelected={selectedRows.includes(String(asset.id))}
+              onToggleSelect={() => {
+                setSelectedRows(prev =>
+                  prev.includes(String(asset.id))
+                    ? prev.filter(r => r !== String(asset.id))
+                    : [...prev, String(asset.id)]
+                );
+              }}
             />
           ))}
         </div>

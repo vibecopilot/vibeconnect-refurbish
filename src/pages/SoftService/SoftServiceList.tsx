@@ -104,7 +104,17 @@ const SoftServiceList: React.FC = () => {
         onAdd={() => navigate('/soft-services/create')}
         addLabel="Add Service"
         showQrCode
-        onQrCode={() => {}}
+        qrCodeDisabled={selectedRows.length === 0}
+        onQrCode={() => {
+          if (selectedRows.length > 0) {
+            // Here you would implement the actual QR code generation logic
+            // For now, showing an alert to demonstrate functionality
+            alert(`Generating QR code for ${selectedRows.length} selected service(s)`);
+            console.log('Selected services for QR code:', selectedRows);
+          } else {
+            alert('Please select at least one service to generate QR code');
+          }
+        }}
       />
 
       {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
@@ -120,14 +130,31 @@ const SoftServiceList: React.FC = () => {
       {viewMode === 'grid' && services.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {services.map((service) => (
-            <DataCard key={service.id} title={service.name} subtitle={service.service_type || '-'} status={getServiceStatus(service)} fields={[
-              { label: 'Building', value: service.building_name || '-' },
-              { label: 'Frequency', value: service.frequency || '-' },
-            ]} viewPath={`/soft-services/${service.id}`} editPath={`/soft-services/${service.id}/edit`} />
+            <DataCard 
+              key={service.id} 
+              id={String(service.id)}
+              title={service.name} 
+              subtitle={service.service_type || '-'} 
+              status={getServiceStatus(service)} 
+              fields={[
+                { label: 'Building', value: service.building_name || '-' },
+                { label: 'Frequency', value: service.frequency || '-' },
+              ]} 
+              viewPath={`/soft-services/${service.id}`} 
+              editPath={`/soft-services/${service.id}/edit`} 
+              isSelected={selectedRows.includes(String(service.id))}
+              onToggleSelect={() => {
+                setSelectedRows(prev => 
+                  prev.includes(String(service.id)) 
+                    ? prev.filter(r => r !== String(service.id)) 
+                    : [...prev, String(service.id)]
+                );
+              }}
+            />
           ))}
         </div>
       ) : services.length > 0 && (
-        <DataTable columns={columns} data={services} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === services.length ? [] : services.map(s => String(s.id)))} viewPath={(row) => `/soft-services/${row.id}`} editPath={(row) => `/soft-services/${row.id}/edit`} />
+        <DataTable columns={columns} data={services} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === services.length ? [] : services.map(s => String(s.id)))} viewPath={(row) => `/soft-services/${row.id}`} />
       )}
 
       {services.length > 0 && (
