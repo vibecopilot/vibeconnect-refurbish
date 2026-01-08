@@ -118,11 +118,6 @@ setChecklists(filtered);
     }
   };
 
-  const handleCopy = (id: number | string) => {
-    toast.success('Checklist copied');
-    // Implement copy functionality if API supports it
-  };
-
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -152,9 +147,9 @@ setChecklists(filtered);
           <Link to={`/soft-services/checklist/${row.id}`} className="p-1.5 rounded-md hover:bg-accent text-primary">
             <Eye className="w-4 h-4" />
           </Link>
-          <button onClick={() => handleCopy(row.id)} className="p-1.5 rounded-md hover:bg-accent text-primary">
+          <Link to={`/admin/copy-checklist/service/${row.id}`} className="p-1.5 rounded-md hover:bg-accent text-primary">
             <Copy className="w-4 h-4" />
-          </button>
+          </Link>
         </div>
       )
     },

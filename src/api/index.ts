@@ -2004,12 +2004,20 @@ export const postServiceAssociation = async (data) =>
     },
   });
 
-export const getSoftServices = () => {
+export const getSoftServices = (page = 1, perPage = 10, searchValue = "") => {
+  const params: any = {
+    token: token,
+    page: page,
+    per_page: perPage,
+    _t: Date.now() // Cache buster
+  };
+
+  if (searchValue) {
+    params['q[name_cont]'] = searchValue;
+  }
+
   return axiosInstance.get('/soft_services.json', {
-    params: { 
-      token: token,
-      _t: Date.now() // Cache buster
-    },
+    params,
     headers: {
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache'
@@ -2405,12 +2413,19 @@ export const getParkingSlots = async () =>
     },
   });
 
-export const getBookParking = async () =>
-  axiosInstance.get(`/booking_parkings.json`, {
-    params: {
-      token: token,
-    },
-  });
+export const getBookParking = async (page = 1, perPage = 10, searchValue = "") => {
+  const params = {
+    token: token,
+    page: page,
+    per_page: perPage,
+  };
+
+  if (searchValue) {
+    params['q[search_cont]'] = searchValue;
+  }
+
+  return axiosInstance.get(`/booking_parkings.json`, { params });
+};
 
 export const fetchParkingDetail = async (id) =>
   axiosInstance.get(`/parking_configurations/${id}.json`, {

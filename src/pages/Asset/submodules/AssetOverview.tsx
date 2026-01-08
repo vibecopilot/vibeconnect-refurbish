@@ -327,29 +327,25 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
 
       {/* View Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-        <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          <button
-            onClick={() => setViewMode('table')}
-            className={`flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg ${
-              viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            Table View
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg ${
-              viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-            }`}
-          >
-            <Grid className="w-4 h-4" />
-            Grid View
-          </button>
-        </div>
+        <div />
 
         <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+            >
+              <Grid className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Hide Columns */}
           <div className="relative">
             <button

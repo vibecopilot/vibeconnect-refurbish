@@ -6,8 +6,7 @@ import { BsEye } from "react-icons/bs";
 import { dateTimeFormat } from "../../../../utils/dateUtils";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaRegFileAlt } from "react-icons/fa";
-import { HiArrowLeft, HiArrowRight } from 'react-icons/hi';
+import { HiArrowLeft, HiArrowRight } from "react-icons/hi";
 import toast from "react-hot-toast";
 
 const PPM = () => {
@@ -22,12 +21,14 @@ const PPM = () => {
   const [filteredPPMData, setFilteredPPMData] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [searchText, setSearchText] = useState("");
+
   const fetchPPMData = async () => {
     toast.loading("Please wait");
     try {
       const ppmRes = await getAssetPPMs(id);
-      toast.dismiss()
-      toast.success("PPM Schedule  fetched successfully");
+      toast.dismiss();
+      toast.success("PPM Schedule fetched successfully");
       setFilteredPPMData(ppmRes.data.activities);
       setPPMData(ppmRes.data.activities);
       console.log(ppmRes.data.activities);
@@ -37,28 +38,26 @@ const PPM = () => {
   };
 
   const fetchPPMDetails = async () => {
-    // toast.loading("Please wait");
     const PPMDetailsResp = await getAssetPPMs(id);
-    // toast.dismiss()
-    //   toast.success("Logs fetched successfully");
     const filteredData = PPMDetailsResp.data.activities.filter((activity) => {
-      const activityDate = formatDate(activity.start_time); // Extract date from start_time
-
+      const activityDate = formatDate(activity.start_time);
       console.log("show date", activityDate);
       return (
         activityDate === selectedDate &&
         activity.status !== "pending" &&
         activity.status !== "overdue"
-      ); // Match with the selected date and 'complete' status
+      );
     });
 
     console.log("logs data", filteredData);
-    setPPMDetails(filteredData); // Set filtered data
+    setPPMDetails(filteredData);
   };
+
   useEffect(() => {
     fetchPPMData();
     fetchPPMDetails();
   }, [id]);
+
   useEffect(() => {
     fetchPPMDetails();
   }, [selectedDate]);
@@ -66,24 +65,21 @@ const PPM = () => {
   const handleDateChange = (e) => {
     setSelectedDate(e.target.value);
   };
-  // Decrease date by 1 day
+
   const handlePrevDate = () => {
     const prevDate = new Date(selectedDate);
-    prevDate.setDate(prevDate.getDate() - 1); // Decrease by 1 day
-    setSelectedDate(prevDate.toISOString().split("T")[0]); // Update selectedDate
+    prevDate.setDate(prevDate.getDate() - 1);
+    setSelectedDate(prevDate.toISOString().split("T")[0]);
   };
 
-  // Increase date by 1 day
   const handleNextDate = () => {
     const nextDate = new Date(selectedDate);
-    nextDate.setDate(nextDate.getDate() + 1); // Increase by 1 day
-    setSelectedDate(nextDate.toISOString().split("T")[0]); // Update selectedDate
+    nextDate.setDate(nextDate.getDate() + 1);
+    setSelectedDate(nextDate.toISOString().split("T")[0]);
   };
 
-  // Function to format the date from start_time
-  // Function to format the date from start_time
   const formatDate = (isoString) => {
-    return isoString.split("T")[0]; // Extract YYYY-MM-DD part directly from ISO string
+    return isoString.split("T")[0];
   };
 
   const dateFormat = (dateString) => {
@@ -94,6 +90,7 @@ const PPM = () => {
       year: "numeric",
     });
   };
+
   const filterByDateRange = (data) => {
     if (startDate && endDate) {
       console.log(data);
@@ -141,7 +138,7 @@ const PPM = () => {
       sortable: true,
     },
   ];
-  const [searchText, setSearchText] = useState("");
+
   const handleSearch = (e) => {
     const searchValue = e.target.value;
     setSearchText(searchValue);
@@ -155,33 +152,26 @@ const PPM = () => {
     }
   };
 
-  const isImage = (filePath) => {
-    const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "svg"];
-    const extension = filePath.split(".").pop().split("?")[0].toLowerCase();
-    return imageExtensions.includes(extension);
-  };
-  const getFileName = (filePath) => {
-    return filePath.split("/").pop().split("?")[0];
-  };
   return (
-    <div className="flex justify-center items-center my-10 md:p-0 p-2">
-      <div className="w-full my-2">
-        <div className="flex items-center gap-4 border-b border-gray-200">
+    <div className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="flex gap-4 border-b border-border px-6">
           <button
-            className={`font-medium ${
+            className={`py-4 px-4 font-medium transition-colors ${
               ppmFor === "schedule"
-                ? "text-black border-b border-black"
-                : "text-gray-400"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setPPMFor("schedule")}
           >
             Schedule
           </button>
           <button
-            className={`font-medium ${
+            className={`py-4 px-4 font-medium transition-colors ${
               ppmFor === "logs"
-                ? "border-b border-black text-black"
-                : "text-gray-400"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setPPMFor("logs")}
           >
@@ -190,16 +180,14 @@ const PPM = () => {
         </div>
 
         {ppmFor === "schedule" && (
-          <div className="flex flex-col w-full">
-            <div className="z-20 w-full flex gap-2 justify-between md:flex-row flex-col">
+          <div className="p-6">
+            <div className="flex gap-2 justify-between md:flex-row flex-col mb-4">
               <input
                 type="text"
-                name=""
                 value={searchText}
                 onChange={handleSearch}
-                id=""
                 placeholder="Search by assigned to"
-                className="p-2 border-gray-300 rounded-md w-full  my-2 outline-none border"
+                className="p-2 border border-border rounded-md flex-1 outline-none bg-card text-foreground"
               />
               <DatePicker
                 selectsRange={true}
@@ -212,7 +200,7 @@ const PPM = () => {
                 }}
                 isClearable={true}
                 placeholderText="Search by Date range"
-                className="p-2 border-gray-300 rounded-md w-64  my-2 outline-none border"
+                className="p-2 border border-border rounded-md w-64 outline-none bg-card text-foreground"
               />
             </div>
             <Table columns={PPMColumn} data={filteredPPMData} />
@@ -220,11 +208,11 @@ const PPM = () => {
         )}
 
         {ppmFor === "logs" && (
-          <div className="">
-            <div className="flex gap-4 justify-end my-2">
+          <div className="p-6">
+            <div className="flex gap-4 justify-end mb-4">
               <button
                 onClick={handlePrevDate}
-                className="bg-gray-200 px-2 rounded-md py-2"
+                className="bg-muted px-3 rounded-md py-2 hover:bg-muted/80 transition-colors"
               >
                 <HiArrowLeft />
               </button>
@@ -232,114 +220,85 @@ const PPM = () => {
                 type="date"
                 value={selectedDate}
                 onChange={handleDateChange}
-                className="p-1 border-gray-300 rounded-md w-64  outline-none border"
+                className="p-2 border border-border rounded-md w-64 outline-none bg-card text-foreground"
               />
-
               <button
                 onClick={handleNextDate}
-                className="bg-gray-200 px-2 rounded-md py-2"
+                className="bg-muted px-3 rounded-md py-2 hover:bg-muted/80 transition-colors"
               >
                 <HiArrowRight />
               </button>
             </div>
-            <div>
-              {ppmDetails.map((task, index) => {
-                // Check if there are any submissions
-                const hasSubmissions =
-                  task.activity_log?.submissions?.length > 0;
 
-                // Only render the entire block if there are submissions
+            <div className="space-y-4">
+              {ppmDetails.map((task, index) => {
+                const hasSubmissions = task.activity_log?.submissions?.length > 0;
+
                 return (
                   hasSubmissions && (
                     <div
                       key={task.id}
-                      className="my-4 flex flex-col bg-gray-50 shadow-custom-all-sides p-4 rounded-md gap-2"
+                      className="bg-muted border border-border p-4 rounded-lg space-y-3"
                     >
-                      <div className="grid grid-cols-12">
-                        <div className="col-span-11 items-center">
-                          <p className="font-medium">Checklist Name :</p>
-                          <p className="w-full">
-                            {task.checklist?.name || "No Checklist Name"}
-                          </p>
-                        </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Checklist Name</p>
+                        <p className="text-foreground">{task.checklist?.name || "No Checklist Name"}</p>
                       </div>
 
                       {task.activity_log.submissions.map(
                         (submission, subIndex) =>
                           submission && (
-                            <div key={submission.id} className="my-2">
-                              <div className="flex gap-4 items-center bg-purple-100 mb-2 p-2 rounded-md">
-                                <p className="font-medium">
-                                  Group Name:
-                                </p>
-                                <p>
-                                  {submission.question?.group_name || "No Group"}
-                                </p>
+                            <div key={submission.id} className="space-y-2">
+                              <div className="bg-purple-100/50 dark:bg-purple-900/20 p-2 rounded-md">
+                                <span className="text-sm font-medium text-foreground">Group Name: </span>
+                                <span className="text-sm text-foreground">{submission.question?.group_name || "No Group"}</span>
                               </div>
-                              <div className="flex gap-4 items-center bg-green-100 mb-2 p-2 rounded-md">
-                                <p className="font-medium">
-                                  Question :
-                                </p>
-                                <p>
-                                  {submission.question?.name || "No Question"}
-                                </p>
+                              <div className="bg-green-100/50 dark:bg-green-900/20 p-2 rounded-md">
+                                <span className="text-sm font-medium text-foreground">Question: </span>
+                                <span className="text-sm text-foreground">{submission.question?.name || "No Question"}</span>
+                              </div>
+                              <div className="bg-blue-100/50 dark:bg-blue-900/20 p-2 rounded-md">
+                                <span className="text-sm font-medium text-foreground">Answer: </span>
+                                <span className="text-sm text-foreground">{submission.value || "No Answer"}</span>
                               </div>
 
-                              <div className="flex gap-4 items-center bg-blue-100 mb-2 p-2 rounded-md">
-                                <p className="font-medium">Answer :</p>
-                                <p>{submission.value || "No Answer"}</p>
-                              </div>
-
-                              <span className="font-medium text-gray-500">
-                                Attachments :
-                              </span>
-                              <div className="flex gap-4 flex-wrap my-4 items-center text-center">
-                                {submission.question_attachments?.length > 0 ? (
-                                  submission.question_attachments.map(
-                                    (attachment, i) => (
+                              <div>
+                                <span className="text-sm font-medium text-muted-foreground">Attachments:</span>
+                                <div className="flex gap-4 flex-wrap mt-2">
+                                  {submission.question_attachments?.length > 0 ? (
+                                    submission.question_attachments.map((attachment, i) => (
                                       <img
                                         key={i}
                                         src={domainPrefix + attachment.document}
                                         alt={`Attachment ${i + 1}`}
-                                        className="w-40 h-28 object-cover rounded-md"
+                                        className="w-40 h-28 object-cover rounded-md cursor-pointer"
                                         onClick={() =>
-                                          window.open(
-                                            domainPrefix + attachment.document,
-                                            "_blank"
-                                          )
+                                          window.open(domainPrefix + attachment.document, "_blank")
                                         }
                                       />
-                                    )
-                                  )
-                                ) : (
-                                  <p>No Attachments</p>
-                                )}
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">No Attachments</p>
+                                  )}
+                                </div>
                               </div>
 
-                              <div className="flex justify-between">
-                                <p>
-                                  <span className="font-medium text-gray-500">
-                                    Performed by:
-                                  </span>
-                                  <span className="font-medium text-gray-500">
-                                    {task.assigned_name || "Unknown"}
-                                  </span>
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {dateTimeFormat(submission.updated_at) ||
-                                    "No timestamp available"}
-                                </p>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  Performed by: <span className="text-foreground font-medium">{task.assigned_name || "Unknown"}</span>
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {dateTimeFormat(submission.updated_at) || "No timestamp available"}
+                                </span>
                               </div>
                             </div>
                           )
                       )}
 
-                      <p>
-                        <span className="font-medium">Comment : </span>
-                        <span className="text-violet-500 font-medium">
-                          {task.comment ? task.comment : "No Comment"}{" "}
-                        </span>
-                      </p>
+                      <div className="pt-2 border-t border-border">
+                        <span className="text-sm font-medium text-muted-foreground">Comment: </span>
+                        <span className="text-sm text-primary">{task.comment ? task.comment : "No Comment"}</span>
+                      </div>
                     </div>
                   )
                 );

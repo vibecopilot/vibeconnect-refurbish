@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Detail from "../../../../containers/Detail";
-import { useSelector } from "react-redux";
 import { getAMCDetails, getVendors, postAMC } from "../../../../api";
 import FileInputBox from "../../../../containers/Inputs/FileInputBox";
 import { Link, useParams } from "react-router-dom";
@@ -8,6 +6,7 @@ import Table from "../../../../components/table/Table";
 import toast from "react-hot-toast";
 import { BsEye } from "react-icons/bs";
 import { BiEdit } from "react-icons/bi";
+import { FileText, Plus } from "lucide-react";
 
 const AMCDetails = () => {
   const today = new Date().toISOString().split("T")[0];
@@ -29,10 +28,6 @@ const AMCDetails = () => {
     terms: [],
   };
   const [formData, setFormData] = useState(initialFormData);
-  // console.log(formData)
-
-  // vendor_id, :asset_id, :start_date, :end_date, :frequency},
-  // terms: [multipart-files]}
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -54,7 +49,6 @@ const AMCDetails = () => {
       toast.error(" Start Date must be before End Date.");
       return;
     }
-   
 
     if (!formData.vendor_id) {
       return toast.error("Please select supplier");
@@ -89,7 +83,6 @@ const AMCDetails = () => {
   };
 
   const handleFileChange = (files, fieldName) => {
-    // Changed to receive 'files' directly
     setFormData({
       ...formData,
       [fieldName]: files,
@@ -133,30 +126,40 @@ const AMCDetails = () => {
   ];
 
   return (
-    <section>
-      <div className="m-2">
-        <div className="border-2 flex flex-col my-5 p-4 gap-4 rounded-md border-gray-400">
-          <h2 className="border-b  text-xl border-black font-semibold">
+    <section className="space-y-6">
+      {/* AMC Details Table */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-primary/5 px-6 py-4 border-b border-border">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
             AMC Details
           </h2>
-
+        </div>
+        <div className="p-6">
           <Table columns={columns} data={amcDetails} />
         </div>
-        <div className="flex flex-col">
-          <h2 className="border-b  text-xl border-black font-semibold">
+      </div>
+
+      {/* Add AMC Form */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-primary/5 px-6 py-4 border-b border-border">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <Plus className="w-5 h-5 text-primary" />
             Add AMC
           </h2>
-          <div className="grid md:grid-cols-3 gap-5 py-2">
+        </div>
+        <div className="p-6">
+          <div className="grid md:grid-cols-3 gap-4">
             <div className="flex flex-col">
-              <label htmlFor="" className="font-medium">
+              <label htmlFor="vendor" className="text-sm font-medium text-foreground mb-1">
                 Vendor <span className="text-red-500">*</span>
               </label>
               <select
                 name="vendor_id"
-                id=""
+                id="vendor"
                 value={formData.vendor_id}
                 onChange={handleChange}
-                className="border p-1 px-4 border-gray-500 rounded-md"
+                className="border border-border p-2 rounded-md bg-card text-foreground"
               >
                 <option value="">Select Vendor</option>
                 {vendors.map((vendor) => (
@@ -167,7 +170,7 @@ const AMCDetails = () => {
               </select>
             </div>
             <div className="flex flex-col">
-              <label htmlFor="" className="font-medium">
+              <label htmlFor="start_date" className="text-sm font-medium text-foreground mb-1">
                 Start Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -175,13 +178,12 @@ const AMCDetails = () => {
                 name="start_date"
                 value={formData.start_date}
                 onChange={handleChange}
-                id=""
-                className="border p-1 px-4 border-gray-500 rounded-md"
-                // min={today}
+                id="start_date"
+                className="border border-border p-2 rounded-md bg-card text-foreground"
               />
             </div>
             <div className="flex flex-col">
-              <label htmlFor="" className="font-medium">
+              <label htmlFor="end_date" className="text-sm font-medium text-foreground mb-1">
                 End Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -189,21 +191,20 @@ const AMCDetails = () => {
                 name="end_date"
                 value={formData.end_date}
                 onChange={handleChange}
-                id=""
-                className="border p-1 px-4 border-gray-500 rounded-md"
-                // min={today}
+                id="end_date"
+                className="border border-border p-2 rounded-md bg-card text-foreground"
               />
             </div>
             <div className="flex flex-col">
-              <label htmlFor="" className="font-medium">
+              <label htmlFor="frequency" className="text-sm font-medium text-foreground mb-1">
                 Frequency
               </label>
               <select
                 name="frequency"
                 value={formData.frequency}
                 onChange={handleChange}
-                id=""
-                className="border p-1 px-4 border-gray-500 rounded-md"
+                id="frequency"
+                className="border border-border p-2 rounded-md bg-card text-foreground"
               >
                 <option value="">Select Frequency</option>
                 <option value="one Time">One Time</option>
@@ -217,17 +218,17 @@ const AMCDetails = () => {
               </select>
             </div>
           </div>
-          <div className="flex flex-col">
-            <h2 className="border-b  text-xl border-black font-semibold my-2">
-              Upload AMC Terms
-            </h2>
+
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-foreground mb-3">Upload AMC Terms</h3>
             <FileInputBox
               handleChange={(event) => handleFileChange(event, "terms")}
             />
           </div>
-          <div className="flex justify-center my-5">
+
+          <div className="flex justify-center mt-6">
             <button
-              className="bg-black p-1 px-4 text-white rounded-md"
+              className="bg-primary text-primary-foreground px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
               onClick={handlePostAMC}
             >
               Submit
@@ -235,7 +236,6 @@ const AMCDetails = () => {
           </div>
         </div>
       </div>
-      {/* </div> */}
     </section>
   );
 };

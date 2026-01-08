@@ -16,7 +16,6 @@ const StockItemsList: React.FC<StockItemsListProps> = ({ viewMode, searchValue, 
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
 
   // Update perPage when prop changes
@@ -146,7 +145,7 @@ const StockItemsList: React.FC<StockItemsListProps> = ({ viewMode, searchValue, 
           ))}
         </div>
       ) : (
-        <DataTable columns={columns} data={filteredItems} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === filteredItems.length ? [] : filteredItems.map(i => String(i.id)))} viewPath={(row) => `/asset/stock-items/${row.id}`} />
+        <DataTable columns={columns} data={filteredItems} viewPath={(row) => `/asset/stock-items/${row.id}`} />
       )}
 
       {filteredItems.length > 0 && (

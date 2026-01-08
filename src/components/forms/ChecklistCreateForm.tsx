@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { Settings, ClipboardList, Calendar, Plus, X, Users } from "lucide-react";
+import { Settings, ClipboardList, Calendar, Plus, X, Clock } from "lucide-react";
 import FormSection from "../ui/FormSection";
 import FormInput from "../ui/FormInput";
 import FormGrid from "../ui/FormGrid";
 import FormToggle from "../ui/FormToggle";
-import Button from "@/components/ui/Button";
+import Button from "../ui/Button";
 import { getItemInLocalStorage } from "../../utils/localStorage";
 import {
   getAssignedTo,
@@ -15,15 +14,21 @@ import {
   getVendors,
   getMasterChecklist,
   postChecklist,
+  editChecklist,
+  getChecklistDetails,
 } from "../../api";
 import Select from "react-select";
+import Cron from "react-js-cron";
+import "react-js-cron/dist/styles.css";
 
 interface Question {
+  id?: number;
   name: string;
   type: string;
   options: string[];
   value_types: string[];
   question_mandatory: boolean;
+  mandatory?: boolean;
   reading: boolean;
   help_text: string;
   showHelpText: boolean;
@@ -37,9 +42,24 @@ interface Section {
   questions: Question[];
 }
 
-const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ checklistType = "routine" }) => {
+interface ChecklistCreateFormProps {
+  checklistType?: "routine" | "ppm";
+  isEditMode?: boolean;
+  existingData?: any;
+  checklistId?: string;
+  prefillData?: any;
+  prefillMode?: "copy";
+}
+
+const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
+  checklistType = "routine",
+  isEditMode = false,
+  existingData = null,
+  checklistId,
+  prefillData = null,
+  prefillMode,
+}) => {
   const navigate = useNavigate();
-  const themeColor = useSelector((state: any) => state.theme.color);
   const siteId = getItemInLocalStorage("SITEID");
   const userId = getItemInLocalStorage("UserId");
   const categories = getItemInLocalStorage("categories") || [];
@@ -73,9 +93,11 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
   const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
   const [sites, setSites] = useState<any[]>([]);
   const [masters, setMasters] = useState<any[]>([]);
+  const [selectedMasterId, setSelectedMasterId] = useState("");
   const [selectedSupervisors, setSelectedSupervisors] = useState<any[]>([]);
   const [supervisorOptions, setSupervisorOptions] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prefillKeyRef = useRef<string | null>(null);
 
   const [sections, setSections] = useState<Section[]>([
     {
@@ -87,6 +109,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
           options: ["", "", "", ""],
           value_types: ["", "", "", ""],
           question_mandatory: false,
+          mandatory: false,
           reading: false,
           help_text: "",
           showHelpText: false,
@@ -130,6 +153,166 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
     fetchData();
   }, []);
 
+  // Populate form from master template
+  useEffect(() => {
+    if (!createNew || !selectedMasterId) {
+      return;
+    }
+
+    const fetchTemplate = async () => {
+      try {
+        const resp = await getChecklistDetails(selectedMasterId);
+        const data = resp.data;
+        setName(data.name || "");
+        setFrequency(data.frequency || "");
+        setStartDate(data.start_date || formattedDate);
+        setEndDate(data.end_date || formattedDate);
+        setWeightage(Boolean(data.weightage_enabled));
+        if (data.groups) {
+          setSections(
+            data.groups.map((group: any) => ({
+              group: group.group_id,
+              questions: group.questions.map((q: any) => ({
+                id: q.id,
+                name: q.name,
+                type: q.qtype,
+                options: [q.option1, q.option2, q.option3, q.option4],
+                value_types: [q.value_type1, q.value_type2, q.value_type3, q.value_type4],
+                question_mandatory: q.question_mandatory,
+                mandatory: q.question_mandatory,
+                reading: q.reading,
+                showHelpText: q.help_text_enbled,
+                help_text: q.help_text,
+                rating: q.rating,
+                weightage: q.weightage,
+                image_for_question: [],
+              })),
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching template checklist:", error);
+        toast.error("Failed to load template checklist");
+      }
+    };
+
+    fetchTemplate();
+  }, [createNew, selectedMasterId, formattedDate]);
+
+  const applyChecklistData = (
+    data: any,
+    options: { includeCategory: boolean; includeAssigned: boolean; includeTicketType: boolean }
+  ) => {
+    setName(data.name || "");
+    setFrequency(data.frequency || "");
+    setStartDate(data.start_date || formattedDate);
+    setEndDate(data.end_date || formattedDate);
+    setSupplierId(data.supplier_id || "");
+    setLockOverdueTask(String(data.lock_overdue));
+    setCreateTicket(Boolean(data.ticket_enabled));
+    setCronExpression(data?.checklist_cron?.expression || "0 0 * * *");
+    setWeightage(Boolean(data.weightage_enabled));
+
+    if (options.includeTicketType) {
+      setTicketType(data.ticket_level_type || "Question");
+    }
+
+    if (options.includeAssigned) {
+      setAssignId(data.assigned_to || "");
+    }
+
+    if (options.includeCategory) {
+      setCatId(data.category_id || "");
+    }
+
+    const totalMinutes = data.grace_period || 0;
+    setSubmitDays(Math.floor(totalMinutes / (24 * 60)));
+    setSubmitHours(Math.floor((totalMinutes % (24 * 60)) / 60));
+    setSubmitMinutes(totalMinutes % 60);
+
+    const totalExtensionMinutes = data.grace_period_unit || 0;
+    setExtensionDays(Math.floor(totalExtensionMinutes / (24 * 60)));
+    setExtensionHours(Math.floor((totalExtensionMinutes % (24 * 60)) / 60));
+    setExtensionMinutes(totalExtensionMinutes % 60);
+
+    if (data.supervisors) {
+      const selected = data.supervisors.map((sup: any) => {
+        const id = typeof sup === "object" ? sup.id ?? sup : sup;
+        const match = supervisorOptions.find(
+          (opt) => String(opt.value) === String(id)
+        );
+        return match || { value: String(id), label: String(id) };
+      });
+      setSelectedSupervisors(selected);
+    }
+
+    if (data.groups) {
+      setSections(
+        data.groups.map((group: any) => ({
+          group: group.group_id,
+          questions: group.questions.map((q: any) => ({
+            id: q.id,
+            name: q.name,
+            type: q.qtype,
+            options: [q.option1, q.option2, q.option3, q.option4],
+            value_types: [q.value_type1, q.value_type2, q.value_type3, q.value_type4],
+            question_mandatory: q.question_mandatory,
+            mandatory: q.question_mandatory,
+            reading: q.reading,
+            showHelpText: q.help_text_enbled,
+            help_text: q.help_text,
+            rating: q.rating,
+            weightage: q.weightage,
+            image_for_question: [],
+          })),
+        }))
+      );
+    }
+  };
+
+  const getPrefillKey = (data: any) => {
+    if (!data) return null;
+    return data.id ? String(data.id) : JSON.stringify(data);
+  };
+
+  // Prefill form in edit mode
+  useEffect(() => {
+    if (!isEditMode || !existingData) {
+      return;
+    }
+
+    const nextKey = getPrefillKey(existingData);
+    if (prefillKeyRef.current === nextKey) {
+      return;
+    }
+    prefillKeyRef.current = nextKey;
+
+    applyChecklistData(existingData, {
+      includeCategory: true,
+      includeAssigned: true,
+      includeTicketType: true,
+    });
+  }, [isEditMode, existingData, formattedDate, supervisorOptions]);
+
+  // Prefill form for copy flow (create new)
+  useEffect(() => {
+    if (isEditMode || !prefillData) {
+      return;
+    }
+
+    const nextKey = getPrefillKey(prefillData);
+    if (prefillKeyRef.current === nextKey) {
+      return;
+    }
+    prefillKeyRef.current = nextKey;
+
+    applyChecklistData(prefillData, {
+      includeCategory: prefillMode !== "copy",
+      includeAssigned: prefillMode !== "copy",
+      includeTicketType: prefillMode !== "copy",
+    });
+  }, [isEditMode, prefillData, prefillMode, formattedDate, supervisorOptions]);
+
   const addSection = () => {
     setSections([
       ...sections,
@@ -142,6 +325,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
             options: ["", "", "", ""],
             value_types: ["", "", "", ""],
             question_mandatory: false,
+            mandatory: false,
             reading: false,
             help_text: "",
             showHelpText: false,
@@ -166,6 +350,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
       options: ["", "", "", ""],
       value_types: ["", "", "", ""],
       question_mandatory: false,
+      mandatory: false,
       reading: false,
       help_text: "",
       showHelpText: false,
@@ -202,6 +387,8 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
       question.options[optionIndex] = value;
     } else if (field === "value_type" && optionIndex !== undefined) {
       question.value_types[optionIndex] = value;
+    } else if (field === "reading") {
+      question.reading = value;
     } else {
       (question as any)[field] = value;
     }
@@ -224,14 +411,14 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      
-      formData.append("checklist[site_id]", siteId);
+
+      formData.append("checklist[site_id]", String(siteId));
       formData.append("checklist[weightage_enabled]", String(weightage));
       formData.append("checklist[occurs]", "");
       formData.append("checklist[name]", name);
       formData.append("checklist[start_date]", startDate);
       formData.append("checklist[end_date]", endDate);
-      formData.append("checklist[user_id]", userId);
+      formData.append("checklist[user_id]", String(userId));
       formData.append("checklist[cron_expression]", cronExpression);
       formData.append("checklist[grace_period]", String(convertedSubmitMinutes));
       formData.append("checklist[grace_period_unit]", String(convertedExtensionMinutes));
@@ -245,7 +432,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
       formData.append("frequency", frequency);
 
       selectedSupervisors.forEach((option) => {
-        formData.append("checklist[supervisior_id][]", option.value);
+        formData.append("checklist[supervisior_id][]", String(option.value));
       });
 
       sections.forEach((section) => {
@@ -254,7 +441,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
           formData.append("groups[][questions][][name]", q.name);
           formData.append("groups[][questions][][type]", q.type);
           formData.append("groups[][questions][][reading]", String(q.reading));
-          formData.append("groups[][questions][][question_mandatory]", String(q.question_mandatory));
+          formData.append("groups[][questions][][question_mandatory]", String(Boolean(q.mandatory)));
           formData.append("groups[][questions][][help_text_enbled]", String(q.showHelpText));
           formData.append("groups[][questions][][help_text]", q.help_text || "");
           formData.append("groups[][questions][][weightage]", q.weightage);
@@ -271,36 +458,42 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
         });
       });
 
-      await postChecklist(formData);
-      toast.success("Checklist Created Successfully");
-      navigate(checklistType === "ppm" ? "/assets/ppm" : "/assets/checklist");
+      if (isEditMode && checklistId) {
+        await editChecklist(formData, checklistId);
+        toast.success("Checklist Updated Successfully");
+      } else {
+        await postChecklist(formData);
+        toast.success("Checklist Created Successfully");
+      }
+
+      navigate(checklistType === "ppm" ? "/asset/ppm-checklist" : "/asset/checklist");
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Failed to create checklist");
+      toast.error(isEditMode ? "Failed to update checklist" : "Failed to create checklist");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const frequencyOptions = [
+    { value: "hourly", label: "Hourly" },
     { value: "daily", label: "Daily" },
     { value: "weekly", label: "Weekly" },
     { value: "monthly", label: "Monthly" },
     { value: "quarterly", label: "Quarterly" },
+    { value: "half yearly", label: "Half Yearly" },
     { value: "yearly", label: "Yearly" },
   ];
 
   const questionTypeOptions = [
-    { value: "text", label: "Text" },
-    { value: "number", label: "Number" },
-    { value: "radio", label: "Radio" },
-    { value: "checkbox", label: "Checkbox" },
-    { value: "date", label: "Date" },
-    { value: "file", label: "File Upload" },
+    { value: "multiple", label: "Multiple Choice Question" },
+    { value: "inbox", label: "Input box" },
+    { value: "description", label: "Description box" },
+    { value: "Numeric", label: "Numeric" },
   ];
 
   const siteOptions = sites.map((s: any) => ({ value: String(s.id), label: s.name }));
-  const supplierOptions = suppliers.map((s: any) => ({ value: String(s.id), label: s.name || s.vendor_name }));
+  const supplierOptions = suppliers.map((s: any) => ({ value: String(s.id), label: s.company_name }));
   const categoryOptions = categories.map((c: any) => ({ value: String(c.id), label: c.name }));
   const assignedOptions = assignedUsers.map((u: any) => ({ value: String(u.id), label: `${u.firstname} ${u.lastname}` }));
 
@@ -319,10 +512,55 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
             <label className="text-sm text-muted-foreground mb-1.5 block">Select Template</label>
             <Select
               options={masters}
+              value={masters.find((m: any) => String(m.value) === String(selectedMasterId)) || null}
+              onChange={(selected: any) => setSelectedMasterId(selected?.value || "")}
               placeholder="Select from existing template"
               className="react-select-container"
               classNamePrefix="react-select"
             />
+          </div>
+        )}
+
+        {createTicket && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">Create Ticket At</label>
+              <div className="flex gap-4">
+                {["Checklist", "Question"].map((type) => (
+                  <label key={type} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="ticket_type"
+                      value={type}
+                      checked={ticketType === type}
+                      onChange={(e) => setTicketType(e.target.value)}
+                      className="accent-primary"
+                    />
+                    <span>{type} Level</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <FormGrid columns={2}>
+              <FormInput
+                label="Select Assigned To"
+                name="assigned_to"
+                type="select"
+                value={assignId}
+                onChange={(e) => setAssignId(e.target.value)}
+                options={assignedOptions}
+                placeholder="Select Assigned To"
+              />
+              <FormInput
+                label="Select Category"
+                name="category"
+                type="select"
+                value={catId}
+                onChange={(e) => setCatId(e.target.value)}
+                options={categoryOptions}
+                placeholder="Select Category"
+              />
+            </FormGrid>
           </div>
         )}
       </FormSection>
@@ -337,24 +575,6 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
             onChange={(e) => setName(e.target.value)}
             required
             placeholder="Enter Checklist Name"
-          />
-          <FormInput
-            label="Category"
-            name="category"
-            type="select"
-            value={catId}
-            onChange={(e) => setCatId(e.target.value)}
-            options={categoryOptions}
-            placeholder="Select Category"
-          />
-          <FormInput
-            label="Supplier"
-            name="supplier"
-            type="select"
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-            options={supplierOptions}
-            placeholder="Select Supplier"
           />
           <FormInput
             label="Frequency"
@@ -383,87 +603,11 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
         </FormGrid>
       </FormSection>
 
-      {/* Assignment */}
-      <FormSection title="Assignment" icon={Users}>
-        <FormGrid columns={2}>
-          <FormInput
-            label="Assigned To"
-            name="assigned_to"
-            type="select"
-            value={assignId}
-            onChange={(e) => setAssignId(e.target.value)}
-            options={assignedOptions}
-            placeholder="Select Assignee"
-          />
-          <div>
-            <label className="text-sm text-muted-foreground mb-1.5 block">Supervisors</label>
-            <Select
-              isMulti
-              options={supervisorOptions}
-              value={selectedSupervisors}
-              onChange={(selected) => setSelectedSupervisors(selected as any[])}
-              placeholder="Select Supervisors"
-              className="react-select-container"
-              classNamePrefix="react-select"
-            />
-          </div>
-        </FormGrid>
-
-        <div className="mt-4">
-          <label className="text-sm text-muted-foreground mb-2 block">Lock Overdue Task</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="lock_overdue"
-                value="true"
-                checked={lockOverdueTask === "true"}
-                onChange={(e) => setLockOverdueTask(e.target.value)}
-                className="accent-primary"
-              />
-              <span>Yes</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="lock_overdue"
-                value="false"
-                checked={lockOverdueTask === "false"}
-                onChange={(e) => setLockOverdueTask(e.target.value)}
-                className="accent-primary"
-              />
-              <span>No</span>
-            </label>
-          </div>
-        </div>
-
-        {createTicket && (
-          <div className="mt-4">
-            <label className="text-sm text-muted-foreground mb-2 block">Create Ticket At</label>
-            <div className="flex gap-4">
-              {["Question", "Checklist", "Section"].map((type) => (
-                <label key={type} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="ticket_type"
-                    value={type}
-                    checked={ticketType === type}
-                    onChange={(e) => setTicketType(e.target.value)}
-                    className="accent-primary"
-                  />
-                  <span>{type} Level</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-      </FormSection>
-
-      {/* Grace Period */}
-      <FormSection title="Grace Period" icon={Calendar}>
+      {/* Schedules */}
+      <FormSection title="Schedules" icon={Calendar}>
         <FormGrid columns={2}>
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Submit Grace Period</label>
+            <label className="text-sm text-muted-foreground mb-2 block">Allowed time to submit</label>
             <div className="flex gap-2">
               <FormInput
                 label=""
@@ -492,7 +636,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
             </div>
           </div>
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Extension Grace Period</label>
+            <label className="text-sm text-muted-foreground mb-2 block">Extension Time</label>
             <div className="flex gap-2">
               <FormInput
                 label=""
@@ -521,14 +665,53 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
             </div>
           </div>
         </FormGrid>
+
+        <FormGrid columns={2} className="mt-4">
+          <FormInput
+            label="Lock Overdue Task"
+            name="lock_overdue"
+            type="select"
+            value={lockOverdueTask}
+            onChange={(e) => setLockOverdueTask(e.target.value)}
+            options={[
+              { value: "true", label: "Yes" },
+              { value: "false", label: "No" },
+            ]}
+            placeholder="Select Lock Status"
+          />
+          <div>
+            <label className="text-sm text-muted-foreground mb-1.5 block">Supervisors</label>
+            <Select
+              isMulti
+              options={supervisorOptions}
+              value={selectedSupervisors}
+              onChange={(selected) => setSelectedSupervisors(selected as any[])}
+              placeholder="Select Supervisors"
+              className="react-select-container"
+              classNamePrefix="react-select"
+            />
+          </div>
+        </FormGrid>
+
+        <div className="mt-4">
+          <FormInput
+            label="Supplier"
+            name="supplier"
+            type="select"
+            value={supplierId}
+            onChange={(e) => setSupplierId(e.target.value)}
+            options={supplierOptions}
+            placeholder="Select Supplier"
+          />
+        </div>
       </FormSection>
 
-      {/* Questions/Sections */}
-      <FormSection title="Sections & Questions" icon={ClipboardList}>
+      {/* Questions/Groups */}
+      <FormSection title="Add New Group" icon={ClipboardList}>
         {sections.map((section, sectionIndex) => (
           <div key={sectionIndex} className="border border-border rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium">Section {sectionIndex + 1}</h4>
+              <h4 className="font-medium">Group {sectionIndex + 1}</h4>
               {sections.length > 1 && (
                 <Button
                   type="button"
@@ -580,43 +763,71 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
                     label="Type"
                     name={`type_${sectionIndex}_${questionIndex}`}
                     type="select"
-                    value={question.type}
+                    value={question.reading ? "Numeric" : question.type}
                     onChange={(e) => handleQuestionChange(sectionIndex, questionIndex, "type", e.target.value)}
                     options={questionTypeOptions}
                     placeholder="Select Type"
+                    disabled={question.reading}
                   />
                 </FormGrid>
 
-                {(question.type === "radio" || question.type === "checkbox") && (
+                {question.type === "multiple" && !question.reading && (
                   <div className="mt-3">
                     <label className="text-sm text-muted-foreground mb-2 block">Options</label>
-                    <FormGrid columns={4}>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       {[0, 1, 2, 3].map((optionIndex) => (
-                        <FormInput
-                          key={optionIndex}
-                          label=""
-                          name={`option_${sectionIndex}_${questionIndex}_${optionIndex}`}
-                          value={question.options[optionIndex]}
-                          onChange={(e) =>
-                            handleQuestionChange(sectionIndex, questionIndex, "option", e.target.value, optionIndex)
-                          }
-                          placeholder={`Option ${optionIndex + 1}`}
-                        />
+                        <div key={optionIndex} className="flex flex-col gap-2">
+                          <FormInput
+                            label=""
+                            name={`option_${sectionIndex}_${questionIndex}_${optionIndex}`}
+                            value={question.options[optionIndex]}
+                            onChange={(e) =>
+                              handleQuestionChange(sectionIndex, questionIndex, "option", e.target.value, optionIndex)
+                            }
+                            placeholder={`Option ${optionIndex + 1}`}
+                          />
+                          <select
+                            name={`value_type_${sectionIndex}_${questionIndex}_${optionIndex}`}
+                            value={question.value_types[optionIndex]}
+                            onChange={(e) =>
+                              handleQuestionChange(
+                                sectionIndex,
+                                questionIndex,
+                                "value_type",
+                                e.target.value,
+                                optionIndex
+                              )
+                            }
+                            className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground
+                              ${question.value_types[optionIndex] === "P" ? "bg-green-100" : ""}
+                              ${question.value_types[optionIndex] === "N" ? "bg-red-100" : ""}
+                              border-border`}
+                          >
+                            <option value="">Select</option>
+                            <option value="P">P</option>
+                            <option value="N">N</option>
+                          </select>
+                        </div>
                       ))}
-                    </FormGrid>
+                    </div>
                   </div>
                 )}
 
                 <div className="flex flex-wrap gap-4 mt-3">
                   <FormToggle
                     label="Mandatory"
-                    checked={question.question_mandatory}
-                    onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "question_mandatory", v)}
+                    checked={Boolean(question.mandatory)}
+                    onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "mandatory", v)}
                   />
                   <FormToggle
                     label="Reading"
                     checked={question.reading}
                     onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "reading", v)}
+                  />
+                  <FormToggle
+                    label="Help Text"
+                    checked={question.showHelpText}
+                    onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "showHelpText", v)}
                   />
                   {weightage && (
                     <>
@@ -637,6 +848,34 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
                     </>
                   )}
                 </div>
+
+                {question.showHelpText && (
+                  <div className="mt-4 space-y-3">
+                    <FormInput
+                      label="Help Text"
+                      name={`help_text_${sectionIndex}_${questionIndex}`}
+                      type="textarea"
+                      value={question.help_text}
+                      onChange={(e) => handleQuestionChange(sectionIndex, questionIndex, "help_text", e.target.value)}
+                      placeholder="Enter help text"
+                    />
+                    <FormInput
+                      label="Attachments"
+                      name={`help_files_${sectionIndex}_${questionIndex}`}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onFileChange={(files) =>
+                        handleQuestionChange(
+                          sectionIndex,
+                          questionIndex,
+                          "image_for_question",
+                          files ? Array.from(files) : []
+                        )
+                      }
+                    />
+                  </div>
+                )}
               </div>
             ))}
 
@@ -647,8 +886,15 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
         ))}
 
         <Button type="button" variant="outline" onClick={addSection}>
-          <Plus className="w-4 h-4 mr-2" /> Add Section
+          <Plus className="w-4 h-4 mr-2" /> Add Group
         </Button>
+      </FormSection>
+
+      {/* Cron Setting */}
+      <FormSection title="Cron Setting" icon={Clock}>
+        <div className="border border-dashed border-border rounded-lg p-3 bg-muted/30">
+          <Cron value={cronExpression} setValue={setCronExpression} />
+        </div>
       </FormSection>
 
       {/* Actions */}
@@ -657,7 +903,7 @@ const ChecklistCreateForm: React.FC<{ checklistType?: "routine" | "ppm" }> = ({ 
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Checklist"}
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </div>
     </div>

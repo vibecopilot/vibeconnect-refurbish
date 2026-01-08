@@ -325,22 +325,16 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   // Derive active module and sub-module from current path
   const getActiveFromPath = () => {
     const pathname = location.pathname;
-    console.log('🔍 getActiveFromPath called with pathname:', pathname);
     
     for (const mod of filteredModules) {
-      console.log('  Checking module:', mod.name, 'id:', mod.id);
       for (const subMod of mod.subModules) {
-        console.log('    Checking submodule:', subMod.name, 'path:', subMod.path);
         
         // Check if submodule has children - PRIORITIZE EXACT MATCHES
         if (subMod.children && subMod.children.length > 0) {
-          console.log('      Submodule has children:', subMod.children.length);
           
           // FIRST: Check all children for exact matches
           for (const child of subMod.children) {
-            console.log('        Checking child (exact):', child.name, 'path:', child.path);
             if (pathname === child.path) {
-              console.log('          ✅ EXACT MATCH: Returning module:', mod.id, 'submodule:', subMod.id);
               return { moduleId: mod.id, subModuleId: subMod.id };
             }
           }
@@ -357,13 +351,10 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
         // Skip this check if submodule has children (handled above)
         if (!subMod.children || subMod.children.length === 0) {
           const exactMatch = pathname === subMod.path;
-          console.log('      Exact match check for', subMod.path, ':', exactMatch);
           if (exactMatch) {
-            console.log('      ✅ EXACT MATCH: Returning module:', mod.id, 'submodule:', subMod.id);
             return { moduleId: mod.id, subModuleId: subMod.id };
           }
         } else {
-          console.log('      Skipping direct path check for submodule with children');
         }
       }
       if (mod.path && (pathname === mod.path || pathname.startsWith(mod.path + '/'))) {
@@ -376,11 +367,9 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   };
 
   const { moduleId: activeModule, subModuleId: activeSubModule } = getActiveFromPath();
-  console.log('🎯 Active module:', activeModule, 'Active submodule:', activeSubModule);
 
   const currentModule = filteredModules.find(m => m.id === activeModule);
   const currentSubModule = currentModule?.subModules.find(s => s.id === activeSubModule);
-  console.log('🎯 Current module:', currentModule?.name, 'Current submodule:', currentSubModule?.name);
 
   // Reorder modules so active one comes first
   const sortedModules = useMemo(() => {
@@ -400,10 +389,8 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
   // Reorder level 3 items so active one comes first
   const sortedLevel3 = useMemo(() => {
-    console.log('🔄 sortedLevel3 called with currentSubModule:', currentSubModule?.name, 'activePath:', location.pathname);
     
     if (!currentSubModule?.children) {
-      console.log('  ❌ No children found');
       return [];
     }
     
@@ -425,7 +412,6 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       console.log('      exact match for', c.path, ':', exactMatch);
       
       if (exactMatch) {
-        console.log('      ✅ EXACT MATCH: Selecting', c.name);
         return true;
       }
       return false;
@@ -731,7 +717,6 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       
       {/* Debug Info */}
       <div className="hidden debug-info p-2 text-xs text-muted-foreground border-t">
-        Debug: Module={activeModule} | SubModule={activeSubModule} | CurrentSubModule={currentSubModule?.name} | Level3Count={sortedLevel3.length}
       </div>
     </header>
   );

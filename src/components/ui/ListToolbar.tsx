@@ -5,6 +5,7 @@ interface ListToolbarProps {
   searchPlaceholder?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
+  showSearch?: boolean;
   viewMode?: 'grid' | 'table';
   onViewModeChange?: (mode: 'grid' | 'table') => void;
   onFilter?: () => void;
@@ -22,6 +23,7 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
   searchPlaceholder = 'Search...',
   searchValue = '',
   onSearchChange,
+  showSearch = true,
   viewMode = 'grid',
   onViewModeChange,
   onFilter,
@@ -39,16 +41,18 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
       {/* Right Side - Search and Actions */}
       <div className="flex items-center gap-3 ml-auto">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="pl-10 pr-4 py-2 w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-        </div>
+        {showSearch && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="pl-10 pr-4 py-2 w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+        )}
 
         {/* QR Code Button */}
         {showQrCode && onQrCode && (

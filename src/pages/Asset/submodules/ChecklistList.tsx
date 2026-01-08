@@ -59,7 +59,6 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [importFiles, setImportFiles] = useState<File[]>([]);
@@ -377,14 +376,10 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
           ))}
         </div>
       ) : (
-        <DataTable 
-          columns={visibleColumns} 
-          data={paginatedChecklists} 
-          selectable 
-          selectedRows={selectedRows} 
-          onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} 
-          onSelectAll={() => setSelectedRows(selectedRows.length === paginatedChecklists.length ? [] : paginatedChecklists.map(c => String(c.id)))} 
-          viewPath={(row) => `/asset/checklist/${row.id}`} 
+        <DataTable
+          columns={visibleColumns}
+          data={paginatedChecklists}
+          viewPath={(row) => `/asset/checklist/${row.id}`}
         />
       )}
 

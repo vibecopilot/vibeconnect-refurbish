@@ -401,13 +401,31 @@ const handleFilterReset = () => {
     );
   }
 
+  const hasActiveFilters = filters.building_id || filters.floor_id || filters.unit_id;
+
   if (assets.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <Package className="w-16 h-16 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Assets Found</h3>
-        <p className="text-muted-foreground mb-4">{searchValue ? `No assets match "${searchValue}"` : 'No assets added yet'}</p>
-        <Link to="/asset/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add Asset</Link>
+        <p className="text-muted-foreground mb-4">
+          {hasActiveFilters
+            ? 'No assets match the selected filters'
+            : searchValue
+              ? `No assets match "${searchValue}"`
+              : 'No assets added yet'
+          }
+        </p>
+        {hasActiveFilters ? (
+          <button
+            onClick={handleFilterReset}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
+          >
+            Clear Filters
+          </button>
+        ) : (
+          <Link to="/asset/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add Asset</Link>
+        )}
       </div>
     );
   }

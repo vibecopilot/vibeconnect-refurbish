@@ -4,7 +4,7 @@ import { Eye, Edit } from 'lucide-react';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import ListToolbar from '../../components/ui/ListToolbar';
 import { getPermits } from '../../api';
-import { dateFormatSTD } from '../../utils/dateUtils';
+import { dateFormatSTD, formatTime } from '../../utils/dateUtils';
 
 interface Permit {
   id: number;
@@ -12,13 +12,16 @@ interface Permit {
   permit_type_name?: string;
   permit_for?: string;
   created_by_name?: string;
+  name?: string;
   status?: string;
+  permit_status?: string;
   building_name?: string;
   floor_name?: string;
   unit_name?: string;
   created_at?: string;
   permit_expiry_date?: string;
   permit_expiry_time?: string;
+  expiry_date_and_time?: string;
 }
 
 interface PermitStats {
@@ -70,36 +73,72 @@ const PermitList: React.FC = () => {
     filterPermits();
   }, [searchValue, permits, activeFilter]);
 
+  const normalizePermit = (permit: Permit) => ({
+    ...permit,
+    permit_type_name: permit.permit_type_name || permit.permit_type,
+    created_by_name: permit.created_by_name || permit.name,
+    status: permit.status || permit.permit_status,
+    permit_expiry_date:
+      permit.permit_expiry_date ||
+      (permit.expiry_date_and_time ? dateFormatSTD(permit.expiry_date_and_time) : ""),
+    permit_expiry_time:
+      permit.permit_expiry_time ||
+      (permit.expiry_date_and_time ? formatTime(permit.expiry_date_and_time) : ""),
+  });
+
+  const setStatsFromTotals = (totals: any) => {
+    if (!totals) return false;
+    setStats({
+      total: totals.total_permits ?? totals.total ?? 0,
+      draft: totals.total_drafts ?? 0,
+      open: totals.total_open ?? 0,
+      approved: totals.total_approved ?? 0,
+      rejected: totals.total_rejected ?? 0,
+      extended: totals.total_extended ?? 0,
+      closed: totals.total_closed ?? 0,
+    });
+    return true;
+  };
+
   const fetchPermits = async () => {
     try {
       setLoading(true);
       const res = await getPermits();
       const data = res.data;
       const permitArray = Array.isArray(data) ? data : (data?.permits || data?.data || []);
-      setPermits(permitArray);
+      const normalizedPermits = permitArray.map((permit: Permit) => normalizePermit(permit));
+      setPermits(normalizedPermits);
       
       // Calculate stats
-      const newStats: PermitStats = {
-        total: permitArray.length,
-        draft: 0,
-        open: 0,
-        approved: 0,
-        rejected: 0,
-        extended: 0,
-        closed: 0,
-      };
-      
-      permitArray.forEach((permit: Permit) => {
-        const status = String(permit.status || '').toLowerCase();
-        if (status.includes('draft')) newStats.draft++;
-        else if (status.includes('open')) newStats.open++;
-        else if (status.includes('approved')) newStats.approved++;
-        else if (status.includes('rejected')) newStats.rejected++;
-        else if (status.includes('extended')) newStats.extended++;
-        else if (status.includes('closed')) newStats.closed++;
-      });
-      
-      setStats(newStats);
+      const totalsFromRoot = data?.stats || data?.permit_stats;
+      const totalsFromList = permitArray?.[0];
+      const statsApplied =
+        setStatsFromTotals(totalsFromRoot) ||
+        setStatsFromTotals(totalsFromList);
+
+      if (!statsApplied) {
+        const newStats: PermitStats = {
+          total: normalizedPermits.length,
+          draft: 0,
+          open: 0,
+          approved: 0,
+          rejected: 0,
+          extended: 0,
+          closed: 0,
+        };
+        
+        normalizedPermits.forEach((permit: Permit) => {
+          const status = String(permit.status || '').toLowerCase();
+          if (status.includes('draft')) newStats.draft++;
+          else if (status.includes('open')) newStats.open++;
+          else if (status.includes('approved')) newStats.approved++;
+          else if (status.includes('rejected')) newStats.rejected++;
+          else if (status.includes('extended')) newStats.extended++;
+          else if (status.includes('closed')) newStats.closed++;
+        });
+        
+        setStats(newStats);
+      }
     } catch (error) {
       console.error('Error fetching permits:', error);
       setPermits([]);
@@ -158,18 +197,21 @@ const PermitList: React.FC = () => {
       ]} />
 
       {/* Status Pills */}
-      <div className="flex flex-wrap gap-3 mb-6 mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 mb-6 mt-4">
         {STATUS_FILTERS.map((filter) => (
           <button
             key={filter.key}
             onClick={() => setActiveFilter(filter.key)}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+            className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
               activeFilter === filter.key
                 ? `${filter.color} ring-2 ring-offset-2 ring-primary`
                 : `${filter.color} hover:opacity-80`
             }`}
           >
-            {filter.label}: {stats[filter.key as keyof PermitStats]}
+            <span className="text-xs font-medium">{filter.label}</span>
+            <span className="text-xl font-bold mt-1">
+              {stats[filter.key as keyof PermitStats]}
+            </span>
           </button>
         ))}
       </div>
@@ -180,8 +222,6 @@ const PermitList: React.FC = () => {
         onSearchChange={setSearchValue}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onFilter={() => {}}
-        onExport={() => {}}
         onAdd={() => navigate('/safety/permit/create')}
         addLabel="Add"
       />
@@ -212,7 +252,7 @@ const PermitList: React.FC = () => {
                 <p><span className="font-medium">Permit For:</span> {permit.permit_for || '-'}</p>
                 <p><span className="font-medium">Building:</span> {permit.building_name || '-'}</p>
                 <p><span className="font-medium">Floor:</span> {permit.floor_name || '-'}</p>
-                <p><span className="font-medium">Expiry:</span> {permit.permit_expiry_date ? dateFormatSTD(permit.permit_expiry_date) : '-'}</p>
+                <p><span className="font-medium">Expiry:</span> {permit.permit_expiry_date || (permit.expiry_date_and_time ? dateFormatSTD(permit.expiry_date_and_time) : '-') || '-'}</p>
               </div>
               
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
@@ -248,6 +288,7 @@ const PermitList: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">Floor</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">Unit</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">Created Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">Created Time</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">Expiry Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">Expiry Time</th>
                 </tr>
@@ -268,7 +309,7 @@ const PermitList: React.FC = () => {
                     <td className="px-4 py-3 text-sm text-foreground">{permit.id}</td>
                     <td className="px-4 py-3 text-sm text-foreground">{permit.permit_type_name || permit.permit_type || '-'}</td>
                     <td className="px-4 py-3 text-sm text-foreground">{permit.permit_for || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-foreground">{permit.created_by_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{permit.created_by_name || permit.name || '-'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(permit.status)}`}>
                         {permit.status || 'Draft'}
@@ -278,8 +319,9 @@ const PermitList: React.FC = () => {
                     <td className="px-4 py-3 text-sm text-foreground">{permit.floor_name || '-'}</td>
                     <td className="px-4 py-3 text-sm text-foreground">{permit.unit_name || '-'}</td>
                     <td className="px-4 py-3 text-sm text-foreground">{permit.created_at ? dateFormatSTD(permit.created_at) : '-'}</td>
-                    <td className="px-4 py-3 text-sm text-foreground">{permit.permit_expiry_date ? dateFormatSTD(permit.permit_expiry_date) : '-'}</td>
-                    <td className="px-4 py-3 text-sm text-foreground">{permit.permit_expiry_time || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{permit.created_at ? formatTime(permit.created_at) : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{permit.permit_expiry_date || (permit.expiry_date_and_time ? dateFormatSTD(permit.expiry_date_and_time) : '-') || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{permit.permit_expiry_time || (permit.expiry_date_and_time ? formatTime(permit.expiry_date_and_time) : '-') || '-'}</td>
                   </tr>
                 ))}
               </tbody>
