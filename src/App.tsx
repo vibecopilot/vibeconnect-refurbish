@@ -93,6 +93,7 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
 
 // Import ProtectedRoute
 import { ProtectedRoute } from './routes';
+import { ContactBook, ContactBookCreate, ContactBookEdit, ContactBookView } from "./pages/ContactBook";
 
 // Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -236,6 +237,12 @@ function App() {
         <Route path="/service-desk/create" element={<AuthenticatedLayout><TicketCreate /></AuthenticatedLayout>} />
         <Route path="/service-desk/:id" element={<AuthenticatedLayout><TicketView /></AuthenticatedLayout>} />
         <Route path="/service-desk/:id/edit" element={<AuthenticatedLayout><TicketEdit /></AuthenticatedLayout>} />
+
+       {/* Contact Book */}
+        <Route path="/contact-book" element={<AuthenticatedLayout><ContactBook /></AuthenticatedLayout>} />
+        <Route path="//contact-book/create" element={<AuthenticatedLayout><ContactBookCreate /></AuthenticatedLayout>} />
+        <Route path="/contact-book/view/:id" element={<AuthenticatedLayout><ContactBookView /></AuthenticatedLayout>} />
+        <Route path="/contact-book/edit/:id" element={<AuthenticatedLayout><ContactBookEdit /></AuthenticatedLayout>} />
 
         {/* Incident Management - Safety Module */}
         <Route path="/incident" element={<AuthenticatedLayout><IncidentList /></AuthenticatedLayout>} />
