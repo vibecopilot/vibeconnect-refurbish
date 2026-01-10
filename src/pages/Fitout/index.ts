@@ -1,1 +1,1 @@
-export { default as FitoutList } from './FitoutList';
+export { default as FitoutList } from './FitoutList.tsx';

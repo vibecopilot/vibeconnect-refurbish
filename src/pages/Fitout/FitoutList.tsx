@@ -8,7 +8,11 @@ import StatusBadge, { StatusType } from '../../components/ui/StatusBadge';
 import { fitoutService, FitoutRequest } from '../../services/fitout.service';
 import { Loader2, HardHat, AlertCircle, RefreshCw } from 'lucide-react';
 
-const FitoutList: React.FC = () => {
+interface FitoutListProps {
+  embedded?: boolean;
+}
+
+const FitoutList: React.FC<FitoutListProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchValue, setSearchValue] = useState('');
@@ -16,7 +20,7 @@ const FitoutList: React.FC = () => {
   const [requests, setRequests] = useState<FitoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const getPerPage = (mode: 'grid' | 'table') => mode === 'grid' ? 12 : 10;
   const [pagination, setPagination] = useState({ page: 1, perPage: getPerPage('grid'), total: 0, totalPages: 0 });
 
@@ -67,7 +71,7 @@ const FitoutList: React.FC = () => {
 
   if (loading && requests.length === 0) {
     return (
-      <div className="p-6">
+      <div className={embedded ? '' : 'p-6'}>
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading fitout requests...</p>
@@ -78,7 +82,7 @@ const FitoutList: React.FC = () => {
 
   if (error && requests.length === 0) {
     return (
-      <div className="p-6">
+      <div className={embedded ? '' : 'p-6'}>
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-12 h-12 text-error mb-4" />
           <h3 className="text-lg font-semibold mb-2">Failed to Load Requests</h3>
@@ -92,8 +96,8 @@ const FitoutList: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <Breadcrumb items={[{ label: 'Fitout', path: '/fitout' }, { label: 'Requests' }]} />
+    <div className={embedded ? '' : 'p-6'}>
+      {!embedded && <Breadcrumb items={[{ label: 'Fitout', path: '/fitout' }, { label: 'Requests' }]} />}
 
       <ListToolbar
         searchPlaceholder="Search requests..."
@@ -144,11 +148,11 @@ const FitoutList: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records</div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Â«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">â€¹ Prev</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">A®</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">ƒ?1 Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next â€º</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Â»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ƒ?§</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">A¯</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>

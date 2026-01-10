@@ -48,10 +48,10 @@ const ComplianceTreeNode = ({ node, fetchComplianceTree }) => {
           {node.children && node.children && (
             <button
               onClick={toggleExpand}
-              className="text-sm text-green-600 focus:outline-none"
+              className="text-sm text-primary focus:outline-none"
             >
               {isExpanded ? (
-                <IoMdArrowDropdownCircle size={20} className="text-red-400" />
+                <IoMdArrowDropdownCircle size={20} className="text-muted-foreground" />
               ) : (
                 <IoMdArrowDroprightCircle size={20} />
               )}
@@ -80,13 +80,13 @@ const ComplianceTreeNode = ({ node, fetchComplianceTree }) => {
           <div className="flex justify-end">
             <button
               onClick={() => handleAddTask(node.id)}
-              className="ml-4 text-green-600 hover:text-green-800 border-green-500 focus:outline-none border p-1 rounded-md font-medium flex items-center gap-2"
+              className="ml-4 text-primary border border-border focus:outline-none px-3 py-1.5 rounded-lg text-sm font-medium inline-flex items-center gap-2 hover:bg-muted"
             >
               <BiPlusCircle size={15} className="inline" /> Add Task
             </button>
             <button
               onClick={() => handleAddSubCat( node.id)}
-              className="ml-4 text-green-600 hover:text-green-800 border-green-500 focus:outline-none border p-1 rounded-md font-medium flex items-center gap-2"
+              className="ml-4 text-primary border border-border focus:outline-none px-3 py-1.5 rounded-lg text-sm font-medium inline-flex items-center gap-2 hover:bg-muted"
             >
               <BiPlusCircle size={15} className="inline" /> Add Sub Category
             </button>
@@ -120,3 +120,4 @@ const ComplianceTreeNode = ({ node, fetchComplianceTree }) => {
 };
 
 export default ComplianceTreeNode;
+

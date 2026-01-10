@@ -186,7 +186,7 @@ const ComplianceTask = ({ onClose, nodeId, fetchComplianceTree }) => {
                 <div className="flex justify-end items-end col-span-2">
                   <button
                     type="button"
-                    className="text-red-400"
+                    className="text-muted-foreground"
                     onClick={() => handleDeleteTask(index)}
                   >
                     <FaTrash />
@@ -197,7 +197,7 @@ const ComplianceTask = ({ onClose, nodeId, fetchComplianceTree }) => {
             <div>
               <button
                 type="button"
-                className="flex items-center gap-2 p-2 bg-green-400 rounded-md text-white"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground"
                 onClick={handleAddTasks}
               >
                 <PiPlusCircle size={18} />
@@ -208,13 +208,13 @@ const ComplianceTask = ({ onClose, nodeId, fetchComplianceTree }) => {
         </div>
         <div className="flex justify-center items-center gap-2 my-2 border-t p-1">
           <button
-            className="bg-red-500 flex items-center gap-2 font-medium text-white rounded-md p-2 px-4 "
+            className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2 font-medium"
             onClick={onClose}
           >
             <MdClose /> Cancel
           </button>
           <button
-            className="bg-green-500 flex items-center gap-2 font-medium text-white rounded-md px-4 p-2 "
+            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2 font-medium"
             onClick={handleCreateTask}
           >
             <FaCheck /> Submit
@@ -226,3 +226,4 @@ const ComplianceTask = ({ onClose, nodeId, fetchComplianceTree }) => {
 };
 
 export default ComplianceTask;
+

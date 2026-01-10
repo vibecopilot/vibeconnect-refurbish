@@ -246,7 +246,7 @@ const ComplianceEvidence = () => {
               Mandatory: {task?.mandatory ? "Yes" : "No"}
             </p>
             <div className="flex justify-end">
-              <button className="p-1 rounded-md bg-green-400 text-white font-medium flex items-center gap-2 mb-1">
+              <button className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium inline-flex items-center gap-2 mb-1">
                 <FaDownload /> Format
               </button>
             </div>
@@ -270,11 +270,11 @@ const ComplianceEvidence = () => {
                 <p className="font-medium">Remark :</p>
                 <p>{task.comment}</p>
               </div>
-              <div className="flex items-center gap-4 bg-green-100 p-2 rounded-md">
+              <div className="flex items-center gap-4 bg-muted/50 p-2 rounded-lg">
                 <p className="font-medium">Auditor Recommendation :</p>
                 <p>{task?.auditorRecommendation}</p>
               </div>
-              <div className="flex items-center gap-4 bg-green-100 p-2 rounded-md">
+              <div className="flex items-center gap-4 bg-muted/50 p-2 rounded-lg">
                 <p className="font-medium">Auditor Observation :</p>
                 <p>{task?.auditorRecommendation}</p>
               </div>
@@ -325,12 +325,12 @@ const ComplianceEvidence = () => {
       <div className="border-t p-1 flex items-center justify-center gap-2">
         <Link
           to={"/compliance/vendor"}
-          className="bg-red-400 text-white p-2 flex items-center gap-2 rounded-md"
+          className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
         >
           <MdClose size={18} /> Cancel
         </Link>
         <button
-          className="bg-green-400 text-white p-2 flex items-center gap-2 rounded-md"
+          className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
           onClick={handleTaskSubmission}
         >
           <FaCheck /> Submit
@@ -341,3 +341,4 @@ const ComplianceEvidence = () => {
 };
 
 export default ComplianceEvidence;
+

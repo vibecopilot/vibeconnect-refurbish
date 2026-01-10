@@ -1,20 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { IoAddCircleOutline } from "react-icons/io5";
-import Table from "../../components/table/Table";
 import { BiEdit } from "react-icons/bi";
 import { RiDeleteBin5Line } from "react-icons/ri";
-import Navbar from "../../components/Navbar";
-import { useSelector } from "react-redux";
 import AddVisitorSetupModal from "../../containers/modals/AddVisitorSetupModal";
 import EditVisitorSetupModal from "../../containers/modals/EditVisitorSetupModal";
 import { getVisitorCategory, deleteVisitorCategory } from "../../api";
 import toast from "react-hot-toast";
 import VehicleParkingSetup from "./VehicleParkingSetupModal/VehicleParkingSetup";
-import { Link } from "react-router-dom";
-import SetupNavbar from "../../components/navbars/SetupNavbar";
 import DeviceConfiguration from "./VehicleParkingSetupModal/DeviceConfiguration";
+import Breadcrumb from "../../components/ui/Breadcrumb";
+import Button from "../../components/ui/Button";
+import DataTable from "../../components/ui/DataTable";
+import FormGrid from "../../components/ui/FormGrid";
+import FormInput from "../../components/ui/FormInput";
+import FormSection from "../../components/ui/FormSection";
+import TabNavigation from "../../components/ui/TabNavigation";
 function VisitorSetup() {
-  const themeColor = useSelector((state) => state.theme.color);
   const [page, setPage] = useState("deviceConfig");
   const [searchText, setSearchText] = useState("");
   const [visitorSetupModal, setVisitorSetupModal] = useState(false);
@@ -22,45 +23,38 @@ function VisitorSetup() {
   const [categories, setCategories] = useState([]);
   const [catId, setCatId] = useState("");
   const [added, setAdded] = useState(false);
-  const column = [
-    {
-      name: "Sr. no.",
-      selector: (row, index) => index + 1,
-      sortable: true,
-    },
-    {
-      name: "category",
-      selector: (row) => row.name,
-      sortable: true,
-    },
-
-    {
-      name: "Action",
-      selector: (row) => (
-        <div className="flex items-center gap-4">
-          <button onClick={() => handleEditCategory(row.id)}>
-            <BiEdit size={15} />
-          </button>
-          <button onClick={() => handleCategoryDelete(row.id)}>
-            <RiDeleteBin5Line size={15} />
-          </button>
-        </div>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      {
+        key: "index",
+        header: "Sr. no.",
+        render: (_val, _row, index) => index + 1,
+        width: "80px",
+      },
+      {
+        key: "name",
+        header: "Category",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "actions",
+        header: "Action",
+        render: (_val, row) => (
+          <div className="flex items-center gap-4">
+            <button onClick={() => handleEditCategory(row.id)}>
+              <BiEdit size={15} />
+            </button>
+            <button onClick={() => handleCategoryDelete(row.id)}>
+              <RiDeleteBin5Line size={15} />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
   const [filteredData, setFilteredData] = useState([]);
-  const handleSearch = (event) => {
-    const searchValue = event.target.value;
-    setSearchText(searchValue);
-    if (searchValue.trim() === "") {
-      setFilteredData(categories);
-    } else {
-      const filteredResults = categories.filter((items) =>
-        items.name.toLowerCase().includes(searchValue.toLowerCase())
-      );
-      setFilteredData(filteredResults);
-    }
-  };
 
   const getVisitor = async () => {
     try {
@@ -72,6 +66,14 @@ function VisitorSetup() {
       console.log(error);
     }
   };
+
+  const filteredCategories = useMemo(() => {
+    if (!searchText) return filteredData;
+    const needle = searchText.toLowerCase();
+    return filteredData.filter((items) =>
+      items.name?.toLowerCase().includes(needle)
+    );
+  }, [filteredData, searchText]);
 
   const handleCategoryDelete = async (id) => {
     try {
@@ -96,73 +98,45 @@ function VisitorSetup() {
     setEditVisitorSetupModal(true);
   };
   return (
-    <section className="flex">
-      <SetupNavbar/>
-      <div className="w-full flex mx-3 flex-col overflow-hidden">
-        <div className=" flex gap-2 p-2 pb-0 border-b-2 border-gray-200 w-full">
-          <h2
-            className={`p-1 ${
-              page === "deviceConfig" &&
-              `bg-white font-medium text-blue-500 shadow-custom-all-sides`
-            } rounded-t-md px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-            onClick={() => setPage("deviceConfig")}
-          >
-            Device Configuration
-          </h2>
-          <h2
-            className={`p-1 ${
-              page === "visitor" &&
-              `bg-white font-medium text-blue-500 shadow-custom-all-sides`
-            } rounded-t-md px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-            onClick={() => setPage("visitor")}
-          >
-            Staff Category
-          </h2>
-          <h2
-            className={`p-1 ${
-              page === "vehicleParking" &&
-              "bg-white font-medium text-blue-500 shadow-custom-all-sides"
-            } rounded-t-md px-4 cursor-pointer transition-all duration-300 ease-linear`}
-            onClick={() => setPage("vehicleParking")}
-          >
-            Parking Slot
-          </h2>
-        </div>
-        <div className="flex gap-2 my-2">
-          <Link className="font-medium text-gray-600" to={"/setup"}>
-            Setup
-          </Link>
-          <p className="font-medium text-gray-600">{">"}</p>
-          <Link
-            className="font-medium text-gray-600"
-            to={"/setup/visitor-setup"}
-          >
-            Visitor Setup
-          </Link>
-        </div>
+    <section className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "Setup", path: "/setup" },
+          { label: "CRM" },
+          { label: "Visitor Setup" },
+        ]}
+      />
+      <FormSection title="Visitor Setup">
+        <TabNavigation
+          tabs={[
+            { id: "deviceConfig", label: "Device Configuration" },
+            { id: "visitor", label: "Staff Category" },
+            { id: "vehicleParking", label: "Parking Slot" },
+          ]}
+          activeTab={page}
+          onTabChange={setPage}
+        />
+
         {page === "visitor" ? (
-          <div>
-            <div className="flex flex-col sm:flex-row md:justify-between gap-3 my-3">
-              <input
-                type="text"
-                placeholder="Search"
-                className="border p-2 sm:w-96 border-gray-300 rounded-lg"
+          <div className="space-y-4">
+            <FormGrid columns={2}>
+              <FormInput
+                label="Search"
+                name="search"
                 value={searchText}
-                onChange={handleSearch}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search by name or category"
               />
-              <div className="flex gap-3 sm:flex-row flex-col">
-                <button
-                  className="text-white font-semibold px-4 p-1 flex gap-2 items-center justify-center rounded-md"
-                  style={{ background: themeColor }}
+              <div className="flex items-end justify-end">
+                <Button
+                  leftIcon={<IoAddCircleOutline className="w-4 h-4" />}
                   onClick={() => setVisitorSetupModal(true)}
                 >
-                  <IoAddCircleOutline size={22} /> Add
-                </button>
+                  Add
+                </Button>
               </div>
-            </div>
-            <div className="my-3">
-              <Table columns={column} data={filteredData} isPagination={true} />
-            </div>
+            </FormGrid>
+            <DataTable columns={columns} data={filteredCategories} />
             {visitorSetupModal && (
               <AddVisitorSetupModal
                 setAdded={setAdded}
@@ -177,14 +151,12 @@ function VisitorSetup() {
               />
             )}
           </div>
-        ) : page === "vehicleParking"? (
-          <div>
-            <VehicleParkingSetup />
-          </div>
+        ) : page === "vehicleParking" ? (
+          <VehicleParkingSetup />
         ) : (
-          <DeviceConfiguration/>
+          <DeviceConfiguration />
         )}
-      </div>
+      </FormSection>
     </section>
   );
 }

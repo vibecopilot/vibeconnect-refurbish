@@ -25,23 +25,14 @@ const InjurySetup = () => {
 
       cell: (row) => (
         <div className="flex items-center gap-2">
-           <div>
-      {isEditing ? (
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={handleSave}
-        />
-      ) : (
-        <button onClick={handleEdit} className="text-blue-500">
-          <BiEdit size={15} />
-          {name}
-        </button>
-      )}
-    </div>
+          <button
+            onClick={() => showModal(true)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <BiEdit size={15} />
+          </button>
 
-          <button className="text-red-500">
+          <button className="text-muted-foreground hover:text-foreground">
             <FaTrash size={15} />
           </button>
         </div>
@@ -107,12 +98,12 @@ const InjurySetup = () => {
               />
               <button
                 onClick={handleSubmit}
-                className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               >
                 <FaCheck /> Submit
               </button>
               <button
-                className="bg-red-400 text-white flex items-center gap-2 p-2 rounded-md"
+                className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
                 onClick={() => setAddInjury(false)}
               >
                 <MdClose /> Cancel
@@ -121,7 +112,7 @@ const InjurySetup = () => {
           )}
           {!addInjury && (
             <button
-              className="bg-green-500 p-2 rounded-md text-white flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAddInjury(true)}
             >
               <PiPlusCircle /> Add
@@ -138,3 +129,4 @@ const InjurySetup = () => {
 };
 
 export default InjurySetup;
+

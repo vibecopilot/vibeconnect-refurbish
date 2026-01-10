@@ -65,7 +65,7 @@ import {
   BookHotel
 } from "./pages/Amenities";
 import { SpaceBookingsList, BookSpace } from "./pages/SpaceBooking";
-import FitoutList from "./pages/Fitout/FitoutList";
+import FitoutHub from "./pages/Fitout/FitoutHub";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
 import { PermitList, CreatePermit, ViewPermit } from "./pages/Permit/index";
@@ -86,6 +86,19 @@ import ParkingDetails from "./pages/SubPages/details/ParkingDetails";
 import Survey from "./pages/SubPages/survey/Survey";
 import AddSurvey from "./pages/SubPages/survey/AddSurvey";
 import SurveyDetails from "./pages/SubPages/survey/SurveyDetails";
+import SetupPage from "./pages/Setup/SetupPage";
+import AccountPage from "./pages/Setup/Account/AccountPage";
+import UsersPage from "./pages/Setup/Users/UsersPage";
+import CreateUserPage from "./pages/Setup/Users/CreateUserPage";
+import AddressesSetup from "./pages/Setup/AddressSetup/AddressSetup";
+import AddAddressesSetup from "./pages/Setup/AddressSetup/AddAddressSetup";
+import EditAddressesSetup from "./pages/Setup/AddressSetup/EditAddressSetup";
+import FMUserSetupNew from "./pages/Setup/FMUserSetupNew";
+import AddFMUserSetupNew from "./pages/Setup/AddFMUserSetupNew";
+import EditFMUserSetupNew from "./pages/Setup/EditFMUserSetupNew";
+import InvoiceApprovalSetup from "./pages/Setup/InvoiceApprovalSetupPages/InvoiceApprovalSetup";
+import AddInvoiceApprovalsSetup from "./pages/Setup/InvoiceApprovalSetupPages/AddInvoiceApprovalSetup";
+import EditInvoiceApprovalsSetup from "./pages/Setup/InvoiceApprovalSetupPages/EditInvoiceApprovalSet";
 // Placeholder pages for other modules
 // Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -293,7 +306,10 @@ function App() {
         <Route path="/documents/shared" element={<AuthenticatedLayout><DocumentsList /></AuthenticatedLayout>} />
 
         {/* Fitout */}
-        <Route path="/fitout" element={<AuthenticatedLayout><FitoutList /></AuthenticatedLayout>} />
+        <Route path="/fitout" element={<AuthenticatedLayout><FitoutHub /></AuthenticatedLayout>} />
+        <Route path="/fitout/setup/page" element={<AuthenticatedLayout><FitoutHub initialTab="setup" /></AuthenticatedLayout>} />
+        <Route path="/fitout/request/list" element={<AuthenticatedLayout><FitoutHub initialTab="requests" /></AuthenticatedLayout>} />
+        <Route path="/fitout/checklist/list" element={<AuthenticatedLayout><FitoutHub initialTab="checklist" /></AuthenticatedLayout>} />
         <Route path="/fitout/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Fitout Request" /></AuthenticatedLayout>} />
         <Route path="/fitout/:id" element={<AuthenticatedLayout><PlaceholderPage title="Fitout Details" /></AuthenticatedLayout>} />
         <Route path="/fitout/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Fitout Request" /></AuthenticatedLayout>} />
@@ -352,6 +368,21 @@ function App() {
         <Route path="/survey" element={<AuthenticatedLayout><Survey /></AuthenticatedLayout>} />
         <Route path="/admin/add-survey" element={<AuthenticatedLayout><AddSurvey /></AuthenticatedLayout>} />
         <Route path="/admin/survey-details/:id" element={<AuthenticatedLayout><SurveyDetails /></AuthenticatedLayout>} />
+
+        {/* Setup - System Configuration */}
+        <Route path="/setup" element={<AuthenticatedLayout><SetupPage /></AuthenticatedLayout>} />
+        <Route path="/setup/account" element={<AuthenticatedLayout><AccountPage /></AuthenticatedLayout>} />
+        <Route path="/setup/users" element={<AuthenticatedLayout><UsersPage /></AuthenticatedLayout>} />
+        <Route path="/setup/users/create" element={<AuthenticatedLayout><CreateUserPage /></AuthenticatedLayout>} />
+        <Route path="/admin/addresses-setup" element={<AuthenticatedLayout><AddressesSetup /></AuthenticatedLayout>} />
+        <Route path="/admin/add-addresses-setup" element={<AuthenticatedLayout><AddAddressesSetup /></AuthenticatedLayout>} />
+        <Route path="/admin/edit-addresses-setup/:id" element={<AuthenticatedLayout><EditAddressesSetup /></AuthenticatedLayout>} />
+        <Route path="/admin/fm-user" element={<AuthenticatedLayout><FMUserSetupNew /></AuthenticatedLayout>} />
+        <Route path="/admin/add-fm-user" element={<AuthenticatedLayout><AddFMUserSetupNew /></AuthenticatedLayout>} />
+        <Route path="/admin/fm-user-details/:id" element={<AuthenticatedLayout><EditFMUserSetupNew /></AuthenticatedLayout>} />
+        <Route path="/admin/invoice-approval-setup" element={<AuthenticatedLayout><InvoiceApprovalSetup /></AuthenticatedLayout>} />
+        <Route path="/admin/add-invoice-approval-setup" element={<AuthenticatedLayout><AddInvoiceApprovalsSetup /></AuthenticatedLayout>} />
+        <Route path="/admin/edit-invoice-approval-setup/:id" element={<AuthenticatedLayout><EditInvoiceApprovalsSetup /></AuthenticatedLayout>} />
 
         {/* Safety Module - Under Development Pages */}
         <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />

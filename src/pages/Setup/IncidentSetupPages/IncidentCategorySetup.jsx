@@ -191,13 +191,13 @@ const IncidentCategorySetup = () => {
                 onChange={(e) => SetCat(e.target.value)}
               />
               <button
-                className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
                 onClick={handleAddCategory}
               >
                 <FaCheck /> Submit
               </button>
               <button
-                className="bg-red-400 text-white flex items-center gap-2 p-2 rounded-md"
+                className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
                 onClick={() => setAddCategory(false)}
               >
                 <MdClose /> Cancel
@@ -232,13 +232,13 @@ const IncidentCategorySetup = () => {
                 name="SubCategory"
               />
               <button
-                className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
                 onClick={handleAddSubCategory}
               >
                 <FaCheck /> Submit
               </button>
               <button
-                className="bg-red-400 text-white flex items-center gap-2 p-2 rounded-md"
+                className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
                 onClick={() => setAddSubCat(false)}
               >
                 <MdClose /> Cancel
@@ -288,13 +288,13 @@ const IncidentCategorySetup = () => {
               />
 
               <button
-                className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
                 onClick={handleAddSubSubCategory}
               >
                 <FaCheck /> Submit
               </button>
               <button
-                className="bg-red-400 text-white flex items-center gap-2 p-2 rounded-md"
+                className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
                 onClick={() => setAddSubSubCat(false)}
               >
                 <MdClose /> Cancel
@@ -305,7 +305,7 @@ const IncidentCategorySetup = () => {
         <div className="flex justify-end gap-2">
           {!addCategory && (
             <button
-              className="bg-green-400 p-2 rounded-md text-white flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAddCategory(true)}
             >
               <PiPlusCircle /> Add Category
@@ -313,7 +313,7 @@ const IncidentCategorySetup = () => {
           )}
           {!addSubCat && (
             <button
-              className="bg-green-500 p-2 rounded-md text-white flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAddSubCat(true)}
             >
               <PiPlusCircle /> Add Sub Category
@@ -321,7 +321,7 @@ const IncidentCategorySetup = () => {
           )}
           {!addSubSubCat && (
             <button
-              className="bg-green-600 p-2 rounded-md text-white flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAddSubSubCat(true)}
             >
               <PiPlusCircle /> Add Sub Sub Category
@@ -354,3 +354,4 @@ const IncidentCategorySetup = () => {
 };
 
 export default IncidentCategorySetup;
+

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BiEdit, BiTrash } from "react-icons/bi";
-import Table from "../../../components/table/Table";
 import { PiPlusCircle } from "react-icons/pi";
-import Navbar from "../../../components/Navbar";
-import { Link } from "react-router-dom";
 import {
   deleteVendorCategory,
   deleteVendorType,
   getVendorCategory,
   getVendorsType,
 } from "../../../api";
-import { useSelector } from "react-redux";
 import SupplierModal from "./SupplierModal";
 import EditSupplierModal from "./EditSupplierModal";
 import toast from "react-hot-toast";
-import SetupNavbar from "../../../components/navbars/SetupNavbar";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
+import Button from "../../../components/ui/Button";
+import DataTable from "../../../components/ui/DataTable";
+import FormSection from "../../../components/ui/FormSection";
+import TabNavigation from "../../../components/ui/TabNavigation";
 
 const SupplierSetup = () => {
   const [page, setPage] = useState("type");
@@ -26,20 +26,24 @@ const SupplierSetup = () => {
   const [catId, setCatId] = useState("");
   const [typeId, setTypeId] = useState("");
 
-  const typeColumn = [
+  const typeColumns = useMemo(
+    () => [
     {
-      name: "Sr. no.",
-      selector: (row, index) => index + 1,
-      sortable: true,
+      key: "index",
+      header: "Sr. no.",
+      render: (_val, _row, index) => index + 1,
+      width: "80px",
     },
     {
-      name: "Type",
-      selector: (row) => row.name,
+      key: "name",
+      header: "Type",
       sortable: true,
+      render: (val) => val || "-",
     },
     {
-      name: "Action",
-      cell: (row) => (
+      key: "actions",
+      header: "Action",
+      render: (_val, row) => (
         <div className="flex items-center gap-4">
           <button onClick={() => handleEditTypeModal(row.id)}>
             <BiEdit size={15} />
@@ -50,22 +54,28 @@ const SupplierSetup = () => {
         </div>
       ),
     },
-  ];
-  const catColumn = [
+  ],
+    []
+  );
+  const catColumns = useMemo(
+    () => [
     {
-      name: "Sr. no.",
-      selector: (row, index) => index + 1,
-      sortable: true,
+      key: "index",
+      header: "Sr. no.",
+      render: (_val, _row, index) => index + 1,
+      width: "80px",
     },
     {
-      name: "category",
-      selector: (row) => row.name,
+      key: "name",
+      header: "Category",
       sortable: true,
+      render: (val) => val || "-",
     },
 
     {
-      name: "Action",
-      cell: (row) => (
+      key: "actions",
+      header: "Action",
+      render: (_val, row) => (
         <div className="flex items-center gap-4">
           <button onClick={() => handleEditCategoryModal(row.id)}>
             <BiEdit size={15} />
@@ -76,7 +86,9 @@ const SupplierSetup = () => {
         </div>
       ),
     },
-  ];
+  ],
+    []
+  );
 
   const fetchType = async () => {
     try {
@@ -99,7 +111,6 @@ const SupplierSetup = () => {
     fetchType();
     fetchCategory();
   }, [added]);
-  const themeColor = useSelector((state) => state.theme.color);
   const handleEditTypeModal = (id) => {
     setTypeId(id);
     setEditModal(true);
@@ -143,64 +154,38 @@ const SupplierSetup = () => {
     }
   };
   return (
-    <section className="flex">
-      <SetupNavbar/>
-      <div className="w-full flex mx-3 mb-5 flex-col overflow-hidden">
-        <div className=" flex gap-2 p-2 pb-0 border-b-2 border-gray-200 w-full">
-          <h2
-            className={`p-1 ${
-              page === "type" &&
-              `bg-white font-medium text-blue-500 shadow-custom-all-sides`
-            } rounded-t-md px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-            onClick={() => setPage("type")}
-          >
-            Supplier Type
-          </h2>
-          <h2
-            className={`p-1 ${
-              page === "category" &&
-              "bg-white font-medium text-blue-500 shadow-custom-all-sides"
-            } rounded-t-md px-4 cursor-pointer transition-all duration-300 ease-linear`}
-            onClick={() => setPage("category")}
-          >
-            Supplier Category
-          </h2>
-        </div>
-        <div className="mt-5 flex justify-between items-center gap-4 my-2">
-          <div className="flex gap-2">
-            <Link className="font-medium" to={"/setup"}>
-              Setup
-            </Link>
-            <p className="font-medium">{">"}</p>
-            <Link className="font-medium" to={"/setup/supplier-setup"}>
-              Supplier Setup
-            </Link>
-          </div>
+    <section className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "Setup", path: "/setup" },
+          { label: "CRM" },
+          { label: "Supplier Setup" },
+        ]}
+      />
+      <FormSection title="Supplier Setup">
+        <TabNavigation
+          tabs={[
+            { id: "type", label: "Supplier Type" },
+            { id: "category", label: "Supplier Category" },
+          ]}
+          activeTab={page}
+          onTabChange={setPage}
+        />
 
-          {page === "type" ? (
-            <button
-              onClick={() => setAddModal(true)}
-              style={{ background: themeColor }}
-              className="border-2 font-semibold   duration-300 ease-in-out transition-all p-1 px-4 rounded-md text-white cursor-pointer text-center flex items-center gap-2 justify-center"
-            >
-              <PiPlusCircle size={20} />
-              Add Type
-            </button>
-          ) : (
-            <button
-              onClick={() => setAddModal(true)}
-              style={{ background: themeColor }}
-              className="border-2 font-semibold   duration-300 ease-in-out transition-all  p-1 px-4 rounded-md text-white cursor-pointer text-center flex items-center gap-2 justify-center"
-            >
-              <PiPlusCircle size={20} />
-              Add Category
-            </button>
-          )}
+        <div className="flex justify-end">
+          <Button
+            leftIcon={<PiPlusCircle className="w-4 h-4" />}
+            onClick={() => setAddModal(true)}
+          >
+            {page === "type" ? "Add Type" : "Add Category"}
+          </Button>
         </div>
 
-        {page === "type" && <Table columns={typeColumn} data={types} />}
-        {page === "category" && <Table columns={catColumn} data={categories} />}
-      </div>
+        {page === "type" && <DataTable columns={typeColumns} data={types} />}
+        {page === "category" && (
+          <DataTable columns={catColumns} data={categories} />
+        )}
+      </FormSection>
       {addModal && (
         <SupplierModal
           page={page}

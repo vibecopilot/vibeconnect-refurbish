@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from "react";
-import Table from "../../../components/table/Table";
+import React, { useMemo, useState, useEffect } from "react";
 import { BiEdit } from "react-icons/bi";
 import { Link } from "react-router-dom";
 import { PiPlusCircle } from "react-icons/pi";
-import { BsEye } from "react-icons/bs";
 import {
   editParkingConfiguration,
   getFloors,
@@ -11,9 +9,12 @@ import {
   getParkingConfigurationDetails,
 } from "../../../api";
 import { FaTimes } from "react-icons/fa";
-import { useSelector } from "react-redux";
 import { getItemInLocalStorage } from "../../../utils/localStorage";
 import toast from "react-hot-toast";
+import Button from "../../../components/ui/Button";
+import DataTable from "../../../components/ui/DataTable";
+import FormGrid from "../../../components/ui/FormGrid";
+import FormInput from "../../../components/ui/FormInput";
 
 const ParkingConfigurationSetup = () => {
   const [data, setData] = useState([]); // Store the original data here
@@ -21,7 +22,6 @@ const ParkingConfigurationSetup = () => {
   const [editid, setEditId] = useState(null);
   const [parkname, setparkname] = useState(null);
   const [update, setupdate] = useState(false);
-  const themeColor = useSelector((state) => state.theme.color);
   const [location, setLocation] = useState(null);
   const [floor, setFloor] = useState(null);
   const [floors, setFloors] = useState([]);
@@ -82,10 +82,12 @@ const ParkingConfigurationSetup = () => {
     fetchFloors();
   }, [location]);
 
-  const column = [
+  const columns = useMemo(
+    () => [
     {
-      name: "Actions",
-      cell: (row) => (
+      key: "actions",
+      header: "Actions",
+      render: (_val, row) => (
         <div className="flex items-center gap-4">
           <button onClick={() => openModal(row.id)}>
             <BiEdit size={15} />
@@ -93,15 +95,23 @@ const ParkingConfigurationSetup = () => {
         </div>
       ),
     },
-    { name: "Name", selector: (row) => row.name, sortable: true },
-    { name: "Location", selector: (row) => row.building_name, sortable: true },
-    { name: "Floor", selector: (row) => row.floor_name, sortable: true },
+    { key: "name", header: "Name", sortable: true },
     {
-      name: "Parking Type",
-      selector: (row) => row.vehicle_type,
+      key: "building_name",
+      header: "Location",
       sortable: true,
+      render: (val) => val || "-",
     },
-  ];
+    { key: "floor_name", header: "Floor", sortable: true },
+    {
+      key: "vehicle_type",
+      header: "Parking Type",
+      sortable: true,
+      render: (val) => val || "-",
+    },
+  ],
+    []
+  );
 
   // Updated handleSearch function
   const handleSearch = (event) => {
@@ -136,112 +146,84 @@ const ParkingConfigurationSetup = () => {
   };
 
   return (
-    <section className="flex">
-      <div className="w-full flex mx-3 flex-col overflow-hidden">
-        <div className="flex m-3 flex-col">
-          <div className="flex gap-2 items-center justify-between my-2">
-            <input
-              type="text"
-              placeholder="Search By building name"
-              value={searchText}
-              onChange={handleSearch}
-              className="border-2 p-2 w-96 border-gray-300 rounded-lg"
-            />
-            <Link
-              to={"/admin/add-parking-config"}
-              className="border-2 font-semibold hover:bg-black hover:text-white transition-all border-black p-2 rounded-md text-black cursor-pointer text-center flex items-center gap-2 justify-center"
-              style={{ height: "1cm" }}
+    <div className="space-y-4">
+      <FormGrid columns={2}>
+        <FormInput
+          label="Search"
+          name="search"
+          placeholder="Search by building name"
+          value={searchText}
+          onChange={handleSearch}
+        />
+        <div className="flex items-end justify-end">
+          <Link to="/admin/add-parking-config">
+            <Button leftIcon={<PiPlusCircle className="w-4 h-4" />}>Add</Button>
+          </Link>
+        </div>
+      </FormGrid>
+
+      <DataTable columns={columns} data={filteredData} />
+
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={closeModal}
+          ></div>
+          <div className="bg-card w-[420px] rounded-lg shadow-lg p-6 relative z-10 border border-border">
+            <button
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              onClick={closeModal}
             >
-              <PiPlusCircle size={20} />
-              Add
-            </Link>
-          </div>
-          <Table
-            columns={column}
-            data={filteredData}
-            responsive
-            fixedHeader
-            fixedHeaderScrollHeight="500px"
-            pagination
-            selectableRowsHighlight
-            highlightOnHover
-          />
-          {isModalOpen && (
-            <div className="fixed inset-0 flex items-center justify-center z-50">
-              <div
-                className="fixed inset-0 bg-black bg-opacity-90"
-                onClick={closeModal}
-              ></div>
-              <div className="bg-white w-96 rounded-lg shadow-lg p-4 relative z-10">
-                <button
-                  className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
-                  onClick={closeModal}
-                >
-                  <FaTimes />
-                </button>
-                <h2 className="text-xl font-semibold mb-4">
-                  Edit Parking Configuration
-                </h2>
-                <div className="flex flex-col gap-4">
-                  <div className="grid md:grid-cols-1 gap-2">
-                    <div className="grid gap-2 items-center w-full">
-                      <select
-                        name="building_id"
-                        className="border p-1 px-4 border-gray-500 rounded-md"
-                        value={location || ""}
-                        onChange={(e) => setLocation(e.target.value)}
-                      >
-                        <option value="">Select a location</option>
-                        {buildings?.map((building) => (
-                          <option value={building.id} key={building.id}>
-                            {building.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="grid gap-2 items-center w-full">
-                      <select
-                        className="border p-1 px-4 border-gray-500 rounded-md"
-                        value={floor || ""}
-                        onChange={(e) => setFloor(e.target.value)}
-                      >
-                        <option value="">Select Floor</option>
-                        {floors?.map((floor) => (
-                          <option value={floor.id} key={floor.id}>
-                            {floor.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="grid gap-2 items-center w-full">
-                      <input
-                        id="category-name"
-                        name="name"
-                        className="border p-1 px-4 w-full border-gray-500 rounded-md"
-                        onChange={(e) => setparkname(e.target.value)}
-                        value={parkname || ""}
-                        type="text"
-                        placeholder="Enter Parking Name"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <button
-                      className="bg-green-400 text-white rounded-md flex items-center gap-2 p-2 font-medium"
-                      type="button"
-                      style={{ background: themeColor }}
-                      onClick={handleEdit}
-                    >
-                      Update
-                    </button>
-                  </div>
-                </div>
+              <FaTimes />
+            </button>
+            <h2 className="text-lg font-semibold mb-4">
+              Edit Parking Configuration
+            </h2>
+            <div className="space-y-4">
+              <FormInput
+                label="Location"
+                name="building_id"
+                type="select"
+                value={location || ""}
+                onChange={(e) => setLocation(e.target.value)}
+                options={
+                  buildings?.map((building) => ({
+                    value: building.id,
+                    label: building.name,
+                  })) || []
+                }
+                placeholder="Select a location"
+              />
+              <FormInput
+                label="Floor"
+                name="floor_id"
+                type="select"
+                value={floor || ""}
+                onChange={(e) => setFloor(e.target.value)}
+                options={
+                  floors?.map((floorItem) => ({
+                    value: floorItem.id,
+                    label: floorItem.name,
+                  })) || []
+                }
+                placeholder="Select floor"
+              />
+              <FormInput
+                label="Parking Name"
+                name="parking_name"
+                value={parkname || ""}
+                onChange={(e) => setparkname(e.target.value)}
+                placeholder="Enter parking name"
+              />
+              <div className="flex justify-end">
+                <Button onClick={handleEdit}>Update</Button>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 };
 

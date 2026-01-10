@@ -106,13 +106,13 @@ const ComplianceChecklist = () => {
               <div className="flex items-center gap-2 mt-2">
                 <button
                   onClick={() => setAdd(false)}
-                  className="w-full bg-red-500 text-white px-4 py-2 rounded "
+                  className="w-full px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => setAdd(false)}
-                  className="w-full bg-green-500 text-white px-4 py-2 rounded"
+                  className="w-full px-4 py-2 rounded-lg bg-primary text-primary-foreground"
                 >
                   Save Checklist
                 </button>
@@ -132,7 +132,7 @@ const ComplianceChecklist = () => {
                       <span className="text-gray-700">{task}</span>
                       <button
                         onClick={() => handleRemoveTask(index)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-muted-foreground hover:text-foreground"
                       >
                         <FaTrash />
                       </button>
@@ -146,7 +146,7 @@ const ComplianceChecklist = () => {
         <div className="flex justify-end mr-5 my-2">
           {!add && (
             <button
-              className="bg-green-400 font-medium text-white p-2 rounded-md flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAdd(true)}
             >
               <PiPlusCircle /> Add
@@ -161,3 +161,4 @@ const ComplianceChecklist = () => {
 };
 
 export default ComplianceChecklist;
+

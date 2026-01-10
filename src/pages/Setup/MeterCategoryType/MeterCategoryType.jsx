@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { PiPlusCircle } from "react-icons/pi";
-import Table from "../../../components/table/Table";
 import { BiEdit } from "react-icons/bi";
-import Navbar from "../../../components/Navbar";
 import AddGroupMeterCategoryTypeModal from "./AddGroupMeterCategoryTypeModal";
 import EditGroupMeterCategoryTypeModal from "./EditGroupMeterCategoryTypeModal";
 import AddSubGroupMeterCategoryTypeModal from "./AddSubGroupMeterCategoryTypeModal";
 import EditSubGroupMeterCategoryTypeModal from "./EditSubGroupMeterCategoryTypeModal";
 import AddSubSubGroupMeterCategoryTypeModal from "./AddSubSubGroupMeterCategoryTypeModal";
 import EditSubSubGroupMeterCategoryTypeModal from "./EditSubSubGroupMeterCategoryTypeModal";
-import { useSelector } from "react-redux";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
+import Button from "../../../components/ui/Button";
+import DataTable from "../../../components/ui/DataTable";
+import FormSection from "../../../components/ui/FormSection";
 
 function MeterCategoryType() {
   const [addGroupModal, setAddGroupModal] = useState(false);
@@ -18,17 +19,20 @@ function MeterCategoryType() {
   const [editSubGroupModal, setEditSubGroupModal] = useState(false);
   const [addSubSubGroupModal, setAddSubSubGroupModal] = useState(false);
   const [editSubSubGroupModal, setEditSubSubGroupModal] = useState(false);
-  const themeColor = useSelector((state) => state.theme.color);
-  const meterColumns = [
+  const meterColumns = useMemo(
+    () => [
     {
-      name: "Sr. No",
-      selector: (row, index) => row.srNo,
+      key: "srNo",
+      header: "Sr. No",
       sortable: true,
+      render: (val) => val ?? "-",
+      width: "80px",
     },
     {
-      name: "Group Name",
-      selector: (row) => row.name,
+      key: "name",
+      header: "Group Name",
       sortable: true,
+      render: (val) => val || "-",
     },
     // {
     //   name: "Description",
@@ -36,8 +40,9 @@ function MeterCategoryType() {
     //   sortable: true,
     // },
     {
-      name: "Action",
-      cell: (row) => (
+      key: "actions",
+      header: "Action",
+      render: (_val, row) => (
         <div className="flex items-center gap-4">
           <button onClick={() => setEditGroupModal(!editGroupModal)}>
             <BiEdit size={15} />
@@ -45,7 +50,9 @@ function MeterCategoryType() {
         </div>
       ),
     },
-  ];
+  ],
+    [editGroupModal]
+  );
 
   const meterData = [
     {
@@ -70,21 +77,26 @@ function MeterCategoryType() {
     },
   ];
 
-  const subMeterColumns = [
+  const subMeterColumns = useMemo(
+    () => [
     {
-      name: "Sr. No",
-      selector: (row, index) => row.srNo,
+      key: "srNo",
+      header: "Sr. No",
       sortable: true,
+      render: (val) => val ?? "-",
+      width: "80px",
     },
     {
-      name: "Group Name",
-      selector: (row) => row.name,
+      key: "name",
+      header: "Group Name",
       sortable: true,
+      render: (val) => val || "-",
     },
     {
-      name: "Sub Group Name",
-      selector: (row) => row.subGroupName,
+      key: "subGroupName",
+      header: "Sub Group Name",
       sortable: true,
+      render: (val) => val || "-",
     },
     // {
     //   name: "Description",
@@ -92,8 +104,9 @@ function MeterCategoryType() {
     //   sortable: true,
     // },
     {
-      name: "Action",
-      cell: (row) => (
+      key: "actions",
+      header: "Action",
+      render: (_val, row) => (
         <div className="flex items-center gap-4">
           <button onClick={() => setEditSubGroupModal(!editSubGroupModal)}>
             <BiEdit size={15} />
@@ -101,7 +114,9 @@ function MeterCategoryType() {
         </div>
       ),
     },
-  ];
+  ],
+    [editSubGroupModal]
+  );
 
   const subMeterData = [
     {
@@ -150,26 +165,32 @@ function MeterCategoryType() {
       subGroupName: "Destination (Output)",
     },
   ];
-  const subSubMeterColumns = [
+  const subSubMeterColumns = useMemo(
+    () => [
     {
-      name: "Sr. No",
-      selector: (row, index) => row.srNo,
+      key: "srNo",
+      header: "Sr. No",
       sortable: true,
+      render: (val) => val ?? "-",
+      width: "80px",
     },
     {
-      name: "Group Name",
-      selector: (row) => row.name,
+      key: "name",
+      header: "Group Name",
       sortable: true,
+      render: (val) => val || "-",
     },
     {
-      name: "Sub Group Name",
-      selector: (row) => row.subGroupName,
+      key: "subGroupName",
+      header: "Sub Group Name",
       sortable: true,
+      render: (val) => val || "-",
     },
     {
-      name: "Sub Sub Group Name",
-      selector: (row) => row.subSubGroupName,
+      key: "subSubGroupName",
+      header: "Sub Sub Group Name",
       sortable: true,
+      render: (val) => val || "-",
     },
     // {
     //   name: "Description",
@@ -177,8 +198,9 @@ function MeterCategoryType() {
     //   sortable: true,
     // },
     {
-      name: "Action",
-      cell: (row) => (
+      key: "actions",
+      header: "Action",
+      render: (_val, row) => (
         <div className="flex items-center gap-4">
           <button
             onClick={() => setEditSubSubGroupModal(!editSubSubGroupModal)}
@@ -188,7 +210,9 @@ function MeterCategoryType() {
         </div>
       ),
     },
-  ];
+  ],
+    [editSubSubGroupModal]
+  );
 
   const subSubMeterData = [
     {
@@ -217,66 +241,57 @@ function MeterCategoryType() {
     },
   ];
   return (
-    <div className="flex">
-      <Navbar />
-      <div className="flex flex-col w-full overflow-hidden px-5">
-        <h2
-          style={{ background: themeColor }}
-          className="text-center text-xl font-bold p-2 rounded-full text-white my-5"
-        >
-          Meter Category Type
-        </h2>
-        <div className="py-3">
-          <div className="mt-5 flex justify-between items-center gap-4">
-            <h2 className="font-medium my-3 text-xl">Category Type</h2>
-            <button
-              className="border-2 font-semibold  p-1 px-4 rounded-md text-white cursor-pointer text-center flex items-center gap-2 justify-center"
-              onClick={() => setAddGroupModal(!addGroupModal)}
-              style={{ background: themeColor }}
-            >
-              <PiPlusCircle size={20} />
-              Add Category Type
-            </button>
+    <section className="space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "Setup", path: "/setup" },
+          { label: "FM Module" },
+          { label: "Meter Category Type" },
+        ]}
+      />
+      <FormSection title="Meter Category Type">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="font-medium text-lg">Category Type</h2>
+              <Button
+                leftIcon={<PiPlusCircle className="w-4 h-4" />}
+                onClick={() => setAddGroupModal(!addGroupModal)}
+              >
+                Add Category Type
+              </Button>
+            </div>
+            <DataTable columns={meterColumns} data={meterData} />
           </div>
-          <Table columns={meterColumns} data={meterData} isPagination={true} />
-        </div>
-        <div className="py-3">
-          <div className="mt-5 flex justify-between items-center gap-4">
-            <h2 className="font-medium my-3 text-xl">Sub Category Type</h2>
-            <button
-              className="border-2 font-semibold  p-1 px-4 rounded-md text-white cursor-pointer text-center flex items-center gap-2 justify-center"
-              onClick={() => setAddSubGroupModal(!addSubGroupModal)}
-              style={{ background: themeColor }}
-            >
-              <PiPlusCircle size={20} />
-              Add Sub Category Type
-            </button>
+
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="font-medium text-lg">Sub Category Type</h2>
+              <Button
+                leftIcon={<PiPlusCircle className="w-4 h-4" />}
+                onClick={() => setAddSubGroupModal(!addSubGroupModal)}
+              >
+                Add Sub Category Type
+              </Button>
+            </div>
+            <DataTable columns={subMeterColumns} data={subMeterData} />
           </div>
-          <Table
-            columns={subMeterColumns}
-            data={subMeterData}
-            isPagination={true}
-          />
-        </div>
-        <div className="py-3">
-          <div className="mt-5 flex justify-between items-center gap-4">
-            <h2 className="font-medium my-3 text-xl">Sub Sub Meter Type Category</h2>
-            <button
-              className="border-2 font-semibold  p-1 px-4 rounded-md text-white cursor-pointer text-center flex items-center gap-2 justify-center"
-              onClick={() => setAddSubSubGroupModal(!addSubSubGroupModal)}
-              style={{ background: themeColor }}
-            >
-              <PiPlusCircle size={20} />
-              Add Sub Sub Category Type
-            </button>
+
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="font-medium text-lg">Sub Sub Meter Type Category</h2>
+              <Button
+                leftIcon={<PiPlusCircle className="w-4 h-4" />}
+                onClick={() => setAddSubSubGroupModal(!addSubSubGroupModal)}
+              >
+                Add Sub Sub Category Type
+              </Button>
+            </div>
+            <DataTable columns={subSubMeterColumns} data={subSubMeterData} />
           </div>
-          <Table
-            columns={subSubMeterColumns}
-            data={subSubMeterData}
-            isPagination={true}
-          />
         </div>
-      </div>
+      </FormSection>
+
       {addGroupModal && (
         <AddGroupMeterCategoryTypeModal
           onclose={() => setAddGroupModal(false)}
@@ -307,7 +322,7 @@ function MeterCategoryType() {
           onclose={() => setEditSubSubGroupModal(false)}
         />
       )}
-    </div>
+    </section>
   );
 }
 

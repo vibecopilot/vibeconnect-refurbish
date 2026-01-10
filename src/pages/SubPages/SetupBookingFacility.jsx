@@ -1,212 +1,357 @@
-import React, { useEffect, useState } from "react";
-import DataTable from "react-data-table-component";
+import React, { useEffect, useMemo, useState } from "react";
 import { BiEdit, BiExport } from "react-icons/bi";
-import { ImEye } from "react-icons/im";
-import { IoAddCircleOutline } from "react-icons/io5";
-import { Link, useParams } from "react-router-dom";
-import Switch from "../../Buttons/Switch";
-import Navbar from "../../components/Navbar";
-import Table from "../../components/table/Table";
-import { useSelector } from "react-redux";
 import { BsEye } from "react-icons/bs";
-import SeatBooking from "./SeatBooking";
+import { IoAddCircleOutline } from "react-icons/io5";
+import { Link } from "react-router-dom";
+import { getFacitilitySetup, getHotelSetup, getTurfSetup } from "../../api";
+import Button from "../../components/ui/Button";
+import DataTable from "../../components/ui/DataTable";
+import FormGrid from "../../components/ui/FormGrid";
+import FormInput from "../../components/ui/FormInput";
+import FormSection from "../../components/ui/FormSection";
+import TabNavigation from "../../components/ui/TabNavigation";
 import SetupSeatBooking from "./SetupSeatBooking";
-import SetupNavbar from "../../components/navbars/SetupNavbar";
-import { getFacitilitySetup } from "../../api";
 
 const SetupBookingFacility = () => {
-  // const id = useParams()
-  const [setupData, setSetupData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
-  
- useEffect(() => {
-     const fetchIncidentsCategory = async () => {
-       try {
-         const res = await getFacitilitySetup();
-         setSetupData(res.data.amenities);
-        //  console.log("Response received", res.data.amenities);
-       } catch (error) {
-         console.log(error);
-       }
-     };
- 
-     fetchIncidentsCategory();
-   }, []);
+  const [activeTab, setActiveTab] = useState("facility");
+  const [facilityData, setFacilityData] = useState([]);
+  const [hotelData, setHotelData] = useState([]);
+  const [turfData, setTurfData] = useState([]);
+  const [facilitySearch, setFacilitySearch] = useState("");
+  const [hotelSearch, setHotelSearch] = useState("");
+  const [turfSearch, setTurfSearch] = useState("");
+  const [loadingFacility, setLoadingFacility] = useState(true);
+  const [loadingHotel, setLoadingHotel] = useState(true);
+  const [loadingTurf, setLoadingTurf] = useState(true);
+  const [errorFacility, setErrorFacility] = useState("");
+  const [errorHotel, setErrorHotel] = useState("");
+  const [errorTurf, setErrorTurf] = useState("");
+  const [pageNo] = useState(1);
+  const [perPage] = useState(10);
 
-  // const fetchFacilitySetup = async () => {
-  //   try {
-  //     const response = await getFacilitySetup(id);
-  //     const data = response.data;
-  //     return data;
-  //   } catch (error) {
-  //     console.error(error);
-  //     return [];
-  //   }
-  // };
-  const [searchText, setSearchText] = useState("");
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      try {
+        setLoadingFacility(true);
+        const res = await getFacitilitySetup();
+        const amenities = res.data.amenities || [];
+        const filteredAmenities = amenities.filter(
+          (facility) =>
+            facility.is_hotel !== true && facility.type_of_facility !== "turf"
+        );
+        setFacilityData(filteredAmenities);
+      } catch (error) {
+        console.error(error);
+        setErrorFacility("Failed to fetch booking facilities. Please try again.");
+      } finally {
+        setLoadingFacility(false);
+      }
+    };
 
-  const setupColumn = [
-    {
-      name: "Action",
-      cell: (row) => (
-        <div className="flex items-center gap-2 px-2 py-2 mt-1">
-          <Link to={`/setup/facility-details/${row.id}`}>
-            <BsEye />
-          </Link>
-          <Link to={`/setup/facility-details/edit/${row.id}`}>
-            <BiEdit size={15} />
-          </Link>
-        </div>
-      ),
-      sortable: true,
-    },
-    { name: "ID", selector: (row) => row.id, sortable: true },
-    {
-      name: "Name",
-      selector: (row) => row.fac_name,
-      sortable: true,
-    },
-    { name: "Type", selector: (row) => row.fac_type, sortable: true },
-    { name: "Department", selector: (row) => row.department, sortable: true },
-    {
-      name: "Book By",
-      selector: (row) => row.bookBy,
-      sortable: true,
-    },
-    {
-      name: "Book Before",
-      selector: (row) => row.bookBefore,
-      sortable: true,
-    },
-    {
-      name: "Advance Booking",
-      selector: (row) => row.advBooking,
-      sortable: true,
-    },
-    {
-      name: "Created On",
-      selector: (row) => row.created_at,
-      sortable: true,
-    },
-    // {
-    //   name: "Created By",
-    //   selector: (row) => row.createdBy,
-    //   sortable: true,
-    // },
-    // {
-    //   name: "Status",
-    //   selector: (row) => row.status,
-    //   sortable: true,
-    // },
-  ];
+    fetchFacilities();
+  }, []);
 
-  // const setupData = [
-  //   {
-  //     id: 1,
-  //     action: <ImEye />,
-  //     facility: "fac1",
-  //     type: "Bookable",
-  //     department: "Electrical",
-  //     bookBy: "slot",
-  //     bookBefore: "date/time",
-  //     advBooking: "date/time",
-  //     createdOn: "23/04/2024 - time",
-  //     createdBy: "user",
-  //     // status: <Switch checked={"checked"} />,
-  //   },
-  //   {
-  //     id: 2,
-  //     action: <ImEye />,
-  //     facility: "Test",
-  //     type: "Bookable",
-  //     department: "Electrical",
-  //     bookBy: "slot",
-  //     bookBefore: "date/time",
-  //     advBooking: "date/time",
-  //     createdOn: "23/04/2024 - time",
-  //     createdBy: "user",
-  //     // status: <Switch />,
-  //   },
-  // ];
-  //const [filteredData, setFilteredData] = useState(setupData);
-  const handleSearch = (event) => {
-    const searchValue = event.target.value;
-    setSearchText(searchValue);
-    const filteredResults = setupData.filter((item) =>
-      item.fac_name.toLowerCase().includes(searchValue.toLowerCase())
-    );
-    setFilteredData(filteredResults);
+  useEffect(() => {
+    const fetchHotelBooking = async () => {
+      try {
+        setLoadingHotel(true);
+        const response = await getHotelSetup(true, pageNo, perPage);
+        setHotelData(response.data.amenities || []);
+      } catch (error) {
+        console.error("Error fetching hotel bookings", error);
+        setErrorHotel("Failed to fetch hotel bookings. Please try again.");
+      } finally {
+        setLoadingHotel(false);
+      }
+    };
+    fetchHotelBooking();
+  }, [pageNo, perPage]);
+
+  useEffect(() => {
+    const fetchTurfBooking = async () => {
+      try {
+        setLoadingTurf(true);
+        const response = await getTurfSetup("turf", pageNo, perPage);
+        setTurfData(response.data.amenities || []);
+      } catch (error) {
+        console.error("Error fetching turf bookings", error);
+        setErrorTurf("Failed to fetch turf bookings. Please try again.");
+      } finally {
+        setLoadingTurf(false);
+      }
+    };
+    fetchTurfBooking();
+  }, [pageNo, perPage]);
+
+  const bookByName = useMemo(() => {
+    const userName = localStorage.getItem("Name")?.replace(/"/g, "");
+    const lastName = localStorage.getItem("LASTNAME")?.replace(/"/g, "");
+    return `${userName || "Unknown"} ${lastName || ""}`.trim();
+  }, []);
+
+  const formatOffset = (offset) => {
+    const data = Array.isArray(offset) ? offset[1] : offset;
+    if (!data) return "Not Available";
+    const days = data.days ?? 0;
+    const hours = data.hours ?? 0;
+    const minutes = data.minutes ?? 0;
+    return `${days} days, ${hours} hours, ${minutes} minutes`;
   };
 
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    const yy = date.getFullYear().toString();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${dd}/${mm}/${yy}`;
+  };
 
-  const themeColor = useSelector((state) => state.theme.color);
-  const [page, setPage] = useState("facility");
-  return (
-    <div className="flex">
-      <SetupNavbar />
-
-      <div className="w-full flex mx-3 flex-col overflow-hidden">
-        <div className="flex justify-center my-2">
-          <div className="sm:flex grid grid-cols-2 sm:flex-row gap-5 font-medium p-2 sm:rounded-full rounded-md opacity-90 bg-gray-200 ">
-            <h2
-              className={`p-1 ${
-                page === "facility" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center  transition-all duration-300 ease-linear`}
-              onClick={() => setPage("facility")}
-            >
-              Workspace booking
-            </h2>
-            <h2
-              className={`p-1 ${
-                page === "seatBooking" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center  transition-all duration-300 ease-linear`}
-              onClick={() => setPage("seatBooking")}
-            >
-              Seat
-            </h2>
-          </div>
-        </div>
-        {page === "facility" && (
-          <>
-            <div className="flex gap-2 items-center w-full">
-              <input
-                type="text"
-                placeholder="Search by name"
-                className="border p-2 border-gray-300 rounded-md w-full"
-                value={searchText}
-                onChange={handleSearch}
-              />
-              <div className="flex gap-2 justify-end ">
-                <Link
-                  style={{ background: themeColor }}
-                  to={"/setup/facility/setup-facility"}
-                  className="bg-black w-20 rounded-lg flex font-semibold items-center gap-2 text-white p-2 my-2"
-                >
-                  <IoAddCircleOutline size={20} />
-                  Add
+  const columns = useMemo(
+    () => [
+      {
+        key: "action",
+        header: "Action",
+        render: (_val, row) => {
+          if (activeTab === "hotel") {
+            return (
+              <div className="flex items-center gap-2">
+                <Link to={`/setup/hotel-details/${row.id}`}>
+                  <BsEye size={16} />
                 </Link>
-                <button
-                  style={{ background: themeColor }}
-                  className="bg-black rounded-lg flex font-semibold items-center gap-2 text-white p-2 my-2"
-                >
-                  <BiExport size={20} />
-                  Export
-                </button>
+                <Link to={`/setup/hotel-details/edit/${row.id}`}>
+                  <BiEdit size={16} />
+                </Link>
               </div>
+            );
+          }
+          if (activeTab === "turf") {
+            return (
+              <div className="flex items-center gap-2">
+                <Link to={`/setup/turf-details/${row.id}`}>
+                  <BsEye size={16} />
+                </Link>
+                <Link to={`/setup/turf-details/edit/${row.id}`}>
+                  <BiEdit size={16} />
+                </Link>
+              </div>
+            );
+          }
+          return (
+            <div className="flex items-center gap-2">
+              <Link to={`/setup/facility-details/${row.id}`}>
+                <BsEye size={16} />
+              </Link>
+              <Link to={`/setup/facility-details/edit/${row.id}`}>
+                <BiEdit size={16} />
+              </Link>
             </div>
-            <Table
-              columns={setupColumn}
-              data={searchText ? filteredData : setupData}
-              // customStyles={customStyle}
-            />
-          </>
+          );
+        },
+      },
+      {
+        key: "id",
+        header: "ID",
+        sortable: true,
+        render: (val) => val ?? "-",
+      },
+      {
+        key: "fac_name",
+        header: "Name",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "fac_type",
+        header: "Type",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "department",
+        header: "Department",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "book_by",
+        header: "Book By",
+        sortable: true,
+        render: () => bookByName,
+      },
+      {
+        key: "book_before",
+        header: "Book Before",
+        sortable: true,
+        render: (_val, row) => formatOffset(row.book_before),
+      },
+      {
+        key: "advance_booking",
+        header: "Advance Booking",
+        sortable: true,
+        render: (_val, row) => formatOffset(row.advance_booking),
+      },
+      {
+        key: "created_at",
+        header: "Created On",
+        sortable: true,
+        render: (val) => formatDate(val),
+      },
+    ],
+    [activeTab, bookByName]
+  );
+
+  const facilityRows = useMemo(() => {
+    if (!facilitySearch) return facilityData;
+    return facilityData.filter((item) =>
+      item.fac_name?.toLowerCase().includes(facilitySearch.toLowerCase())
+    );
+  }, [facilityData, facilitySearch]);
+
+  const hotelRows = useMemo(() => {
+    if (!hotelSearch) return hotelData;
+    return hotelData.filter((item) =>
+      item.fac_name?.toLowerCase().includes(hotelSearch.toLowerCase())
+    );
+  }, [hotelData, hotelSearch]);
+
+  const turfRows = useMemo(() => {
+    if (!turfSearch) return turfData;
+    return turfData.filter((item) =>
+      item.fac_name?.toLowerCase().includes(turfSearch.toLowerCase())
+    );
+  }, [turfData, turfSearch]);
+
+  const renderTable = (loading, error, data) => {
+    if (loading) {
+      return (
+        <div className="bg-card border border-border rounded-lg p-12 text-center">
+          <p className="text-muted-foreground">Loading bookings...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-card border border-border rounded-lg p-12 text-center">
+          <p className="text-error">{error}</p>
+        </div>
+      );
+    }
+
+    return <DataTable columns={columns} data={data} />;
+  };
+
+  const tabs = [
+    { id: "facility", label: "Workspace booking" },
+    { id: "seatBooking", label: "Seat" },
+    { id: "hotel", label: "Hotel" },
+    { id: "turf", label: "Turf" },
+  ];
+  return (
+    <section className="space-y-6">
+      <FormSection title="Workspace Booking">
+        <TabNavigation
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+
+        {activeTab === "facility" && (
+          <div className="space-y-4">
+            <FormGrid columns={2}>
+              <FormInput
+                label="Search"
+                name="facilitySearch"
+                placeholder="Search by name"
+                value={facilitySearch}
+                onChange={(e) => setFacilitySearch(e.target.value)}
+              />
+              <div className="flex items-end justify-end gap-2">
+                <Link to="/setup/facility/setup-facility">
+                  <Button leftIcon={<IoAddCircleOutline className="w-4 h-4" />}>
+                    Add
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  leftIcon={<BiExport className="w-4 h-4" />}
+                >
+                  Export
+                </Button>
+              </div>
+            </FormGrid>
+
+            {renderTable(loadingFacility, errorFacility, facilityRows)}
+          </div>
         )}
 
-        {page === "seatBooking" && <SetupSeatBooking />}
-      </div>
-    </div>
+        {activeTab === "seatBooking" && (
+          <div className="space-y-4">
+            <SetupSeatBooking />
+          </div>
+        )}
+
+        {activeTab === "hotel" && (
+          <div className="space-y-4">
+            <FormGrid columns={2}>
+              <FormInput
+                label="Search"
+                name="hotelSearch"
+                placeholder="Search by name"
+                value={hotelSearch}
+                onChange={(e) => setHotelSearch(e.target.value)}
+              />
+              <div className="flex items-end justify-end gap-2">
+                <Link to="/setup/facility/create-hotelbooking">
+                  <Button leftIcon={<IoAddCircleOutline className="w-4 h-4" />}>
+                    Add
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  leftIcon={<BiExport className="w-4 h-4" />}
+                >
+                  Export
+                </Button>
+              </div>
+            </FormGrid>
+
+            {renderTable(loadingHotel, errorHotel, hotelRows)}
+          </div>
+        )}
+
+        {activeTab === "turf" && (
+          <div className="space-y-4">
+            <FormGrid columns={2}>
+              <FormInput
+                label="Search"
+                name="turfSearch"
+                placeholder="Search by name"
+                value={turfSearch}
+                onChange={(e) => setTurfSearch(e.target.value)}
+              />
+              <div className="flex items-end justify-end gap-2">
+                <Link to="/setup/facility/create-turfbooking">
+                  <Button leftIcon={<IoAddCircleOutline className="w-4 h-4" />}>
+                    Add
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  leftIcon={<BiExport className="w-4 h-4" />}
+                >
+                  Export
+                </Button>
+              </div>
+            </FormGrid>
+
+            {renderTable(loadingTurf, errorTurf, turfRows)}
+          </div>
+        )}
+      </FormSection>
+    </section>
   );
 };
 
