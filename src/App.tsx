@@ -65,7 +65,7 @@ import {
   BookHotel
 } from "./pages/Amenities";
 import { SpaceBookingsList, BookSpace } from "./pages/SpaceBooking";
-import FitoutHub from "./pages/Fitout/FitoutHub";
+import FitoutHub from "./pages/FitOut/FitoutHub";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
 import { PermitList, CreatePermit, ViewPermit } from "./pages/Permit/index";
