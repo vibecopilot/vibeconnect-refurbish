@@ -88,7 +88,7 @@ import AddSurvey from "./pages/SubPages/survey/AddSurvey";
 import SurveyDetails from "./pages/SubPages/survey/SurveyDetails";
 import SetupPage from "./pages/Setup/SetupPage";
 import AccountPage from "./pages/Setup/Account/AccountPage";
-import UsersPage from "./pages/Setup/Users/UsersPage";
+import UsersPage from "./pages/Setup/users/UsersPage";
 import CreateUserPage from "./pages/Setup/Users/CreateUserPage";
 import AddressesSetup from "./pages/Setup/AddressSetup/AddressSetup";
 import AddAddressesSetup from "./pages/Setup/AddressSetup/AddAddressSetup";
