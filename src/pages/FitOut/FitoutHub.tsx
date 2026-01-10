@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import TabNavigation from '../../components/ui/TabNavigation';
-import FitoutList from './FitoutList.tsx';
+import FitoutList from './FitOutList.tsx';
 import FitOutSetupPage from './FitOutSetupPage';
 import FitoutChecklistList from './FitoutChecklistList';
 
