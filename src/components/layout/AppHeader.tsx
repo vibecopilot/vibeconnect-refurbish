@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
+import {
   Settings,
   ChevronDown,
   ChevronUp,
@@ -55,7 +55,8 @@ const modules = [
     name: 'FM Module',
     subModules: [
       { id: 'service-desk', name: 'Service Desk', path: '/service-desk' },
-      { id: 'asset', name: 'Asset', path: '/asset', 
+      {
+        id: 'asset', name: 'Asset', path: '/asset',
         children: [
           { name: 'Asset', path: '/asset' },
           { name: 'AMC', path: '/asset/amc' },
@@ -69,7 +70,8 @@ const modules = [
           { name: 'Overview', path: '/asset/overview' },
         ]
       },
-      { id: 'soft-services', name: 'Soft Services', path: '/soft-services',
+      {
+        id: 'soft-services', name: 'Soft Services', path: '/soft-services',
         children: [
           { name: 'Service', path: '/soft-services' },
           { name: 'Checklist', path: '/soft-services/checklist' },
@@ -77,7 +79,8 @@ const modules = [
           { name: 'Overview', path: '/soft-services/overview' },
         ]
       },
-      { id: 'inventory', name: 'Inventory', path: '/inventory/masters',
+      {
+        id: 'inventory', name: 'Inventory', path: '/inventory/masters',
         children: [
           { name: 'Masters', path: '/inventory/masters' },
           { name: 'Stocks', path: '/inventory/stocks' },
@@ -86,9 +89,11 @@ const modules = [
         ]
       },
       { id: 'supplier', name: 'Supplier/Vendor', path: '/supplier' },
-      { id: 'audit', name: 'Audit', path: '/audit/operational/scheduled',
+      {
+        id: 'audit', name: 'Audit', path: '/audit/operational/scheduled',
       },
       { id: 'mail-room', name: 'Mail Room', path: '/mail-room' },
+      { id: 'contact-book', name: 'Contact Book', path: '/contact-book' },
       { id: 'compliance', name: 'Compliance', path: '/compliance' },
       { id: 'parking', name: 'Parking', path: '/parking' },
       { id: 'survey', name: 'Survey', path: '/survey' },
@@ -110,7 +115,8 @@ const modules = [
     name: 'Booking Management',
     subModules: [
       { id: 'fb', name: 'F&B', path: '/fb/restaurant' },
-      { id: 'amenities', name: 'Amenities Booking', path: '/amenities',
+      {
+        id: 'amenities', name: 'Amenities Booking', path: '/amenities',
         children: [
           { name: 'Amenities Bookings', path: '/amenities' },
           { name: 'Hotel Bookings', path: '/amenities/hotel' },
@@ -207,7 +213,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   // Filter modules based on enabled features
   const isModuleEnabled = (moduleId: string): boolean => {
     if (enabledFeatures.length === 0) return true; // Show all if no features configured
-    
+
     for (const [feature, moduleIds] of Object.entries(featureToModuleMap)) {
       if (moduleIds.includes(moduleId)) {
         return enabledFeatures.includes(feature);
@@ -221,7 +227,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     return modules.map(mod => ({
       ...mod,
       subModules: mod.subModules.filter(sub => isModuleEnabled(sub.id))
-    })).filter(mod => 
+    })).filter(mod =>
       mod.path || (mod.subModules && mod.subModules.length > 0)
     );
   }, [enabledFeatures]);
@@ -237,9 +243,9 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           name: site.name || site.site_name || site.building_name,
           company: site.company || site.company_name || ''
         })) : [];
-        
+
         setSitesData(formattedSites);
-        
+
         // Set selected site from localStorage or first available
         const savedSiteId = getItemInLocalStorage('SITEID');
         if (savedSiteId && formattedSites.length) {
@@ -254,7 +260,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
         setLoadingSites(false);
       }
     };
-    
+
     fetchSites();
   }, []);
 
@@ -266,7 +272,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     const email = String(getItemInLocalStorage('EMAIL') || getItemInLocalStorage('email') || '');
     const mobile = String(getItemInLocalStorage('MOBILE') || getItemInLocalStorage('phone') || '');
     const avatar = String(getItemInLocalStorage('AVATAR') || getItemInLocalStorage('profileImage') || '');
-    
+
     const name = `${firstName} ${lastName}`.trim() || 'User';
     const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 'U';
 
@@ -325,20 +331,19 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   // Derive active module and sub-module from current path
   const getActiveFromPath = () => {
     const pathname = location.pathname;
-    
     for (const mod of filteredModules) {
       for (const subMod of mod.subModules) {
-        
         // Check if submodule has children - PRIORITIZE EXACT MATCHES
         if (subMod.children && subMod.children.length > 0) {
-          
+          console.log('      Submodule has children:', subMod.children.length);
+
           // FIRST: Check all children for exact matches
           for (const child of subMod.children) {
             if (pathname === child.path) {
               return { moduleId: mod.id, subModuleId: subMod.id };
             }
           }
-          
+
           // SECOND: If no exact match found, check startsWith for nested routes
           for (const child of subMod.children) {
             if (child.path !== '/asset' && pathname.startsWith(child.path + '/')) {
@@ -389,18 +394,17 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
   // Reorder level 3 items so active one comes first
   const sortedLevel3 = useMemo(() => {
-    
     if (!currentSubModule?.children) {
       return [];
     }
-    
+
     const activePath = location.pathname;
     console.log('  Checking children for active path:', activePath);
-    
+
     // Find active item with improved logic
     const activeItem = currentSubModule.children.find(c => {
       console.log('    Checking child:', c.name, 'path:', c.path);
-      
+
       // Handle exact match for /asset path
       if (c.path === '/asset') {
         const match = activePath === '/asset';
@@ -410,20 +414,20 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       // Handle other paths with exact match only (no startsWith for SoftService)
       const exactMatch = activePath === c.path;
       console.log('      exact match for', c.path, ':', exactMatch);
-      
+
       if (exactMatch) {
         return true;
       }
       return false;
     });
-    
+
     console.log('  Active item found:', activeItem?.name);
-    
+
     if (!activeItem) {
       console.log('  ❌ No active item found, returning all children');
       return currentSubModule.children;
     }
-    
+
     const rest = currentSubModule.children.filter(c => c.path !== activeItem.path);
     console.log('  Returning reordered list with active item first');
     return [activeItem, ...rest];
@@ -436,12 +440,12 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   //   }
   // }, [currentSubModule]);
 
- const isActivePath = (path: string) => {
-  const pathname = location.pathname;
-  
-  // Exact match only - no startsWith
-  return pathname === path;
-};
+  const isActivePath = (path: string) => {
+    const pathname = location.pathname;
+
+    // Exact match only - no startsWith
+    return pathname === path;
+  };
 
   const handleModuleClick = (moduleId: string) => {
     const mod = filteredModules.find(m => m.id === moduleId);
@@ -463,168 +467,165 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     <header className="sticky top-0 z-50 bg-card border-b border-border">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-      {/* Left Side - Site Selector & Dashboard */}
-      <div className="flex items-center gap-4">
-         {/* Logo */}
-        <Link to="/dashboard" className="text-xl font-bold text-foreground">
-        LOGO
-        </Link>
-       
+        {/* Left Side - Site Selector & Dashboard */}
+        <div className="flex items-center gap-4">
+          {/* Logo */}
+          <Link to="/dashboard" className="text-xl font-bold text-foreground">
+            LOGO
+          </Link>
 
-        {/* Dashboard Link */}
-        <Link 
-        to="/dashboard" 
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
-          location.pathname === '/dashboard' 
-          ? 'bg-primary text-primary-foreground' 
-          : 'hover:bg-accent text-foreground'
-        }`}
-        >
-        <LayoutDashboard className="w-4 h-4" />
-        <span className="text-sm font-medium">Dashboard</span>
-        </Link>
-      </div>
 
-      {/* Right Side Controls */}
-      <div className="flex items-center gap-4">
-        {/* Site/Company Selector */}
-       
-   <div className="relative" ref={siteDropdownRef}>
-        <button 
-          onClick={() => setShowSiteDropdown(!showSiteDropdown)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition-colors"
-          disabled={loadingSites}
-        >
-          <Building2 className="w-4 h-4 text-primary" />
-          <div className="text-left">
-          {loadingSites ? (
-            <div className="text-sm text-muted-foreground">Loading...</div>
-          ) : selectedSite ? (
-            <>
-            {selectedSite.company && (
-              <div className="text-xs text-muted-foreground">{selectedSite.company}</div>
-            )}
-            <div className="text-sm font-medium text-foreground flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              {selectedSite.name}
-            </div>
-            </>
-          ) : (
-            <div className="text-sm text-muted-foreground">No sites</div>
-          )}
-          </div>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </button>
-
-        {showSiteDropdown && sitesData.length > 0 && (
-          <div className="absolute left-0 top-full mt-1 w-64 bg-card border border-border rounded-lg shadow-lg z-50">
-          <div className="p-2">
-            <div className="text-xs font-medium text-muted-foreground px-2 py-1">Select Site</div>
-            {sitesData.map((site) => (
-            <button
-              key={site.id}
-              onClick={() => handleSiteChange(site)}
-              className={`w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors ${
-              selectedSite?.id === site.id ? 'bg-accent' : ''
+          {/* Dashboard Link */}
+          <Link
+            to="/dashboard"
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${location.pathname === '/dashboard'
+              ? 'bg-primary text-primary-foreground'
+              : 'hover:bg-accent text-foreground'
               }`}
-            >
-              <div className="text-sm font-medium text-foreground">{site.name}</div>
-              {site.company && <div className="text-xs text-muted-foreground">{site.company}</div>}
-            </button>
-            ))}
-          </div>
-          </div>
-        )}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span className="text-sm font-medium">Dashboard</span>
+          </Link>
         </div>
-        {/* Settings Icon */}
-        <button className="p-2 hover:bg-accent rounded-lg transition-colors">
-        <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
 
-        {/* User Dropdown */}
-        <div className="relative" ref={userDropdownRef}>
-        <button 
-          onClick={() => setShowUserDropdown(!showUserDropdown)}
-          className="flex items-center gap-2 hover:bg-accent rounded-lg p-1 transition-colors"
-        >
-          {userData.avatar ? (
-          <img 
-            src={userData.avatar} 
-            alt={userData.name}
-            className="w-8 h-8 rounded-full object-cover"
-          />
-          ) : (
-          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
-            {userData.initials}
-          </div>
-          )}
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </button>
+        {/* Right Side Controls */}
+        <div className="flex items-center gap-4">
+          {/* Site/Company Selector */}
 
-        {showUserDropdown && (
-          <div className="absolute right-0 top-full mt-1 w-72 bg-card border border-border rounded-lg shadow-lg z-50">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-3">
-            {userData.avatar ? (
-              <img 
-              src={userData.avatar} 
-              alt={userData.name}
-              className="w-12 h-12 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold">
-              {userData.initials}
+          <div className="relative" ref={siteDropdownRef}>
+            <button
+              onClick={() => setShowSiteDropdown(!showSiteDropdown)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition-colors"
+              disabled={loadingSites}
+            >
+              <Building2 className="w-4 h-4 text-primary" />
+              <div className="text-left">
+                {loadingSites ? (
+                  <div className="text-sm text-muted-foreground">Loading...</div>
+                ) : selectedSite ? (
+                  <>
+                    {selectedSite.company && (
+                      <div className="text-xs text-muted-foreground">{selectedSite.company}</div>
+                    )}
+                    <div className="text-sm font-medium text-foreground flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {selectedSite.name}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No sites</div>
+                )}
+              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+
+            {showSiteDropdown && sitesData.length > 0 && (
+              <div className="absolute left-0 top-full mt-1 w-64 bg-card border border-border rounded-lg shadow-lg z-50">
+                <div className="p-2">
+                  <div className="text-xs font-medium text-muted-foreground px-2 py-1">Select Site</div>
+                  {sitesData.map((site) => (
+                    <button
+                      key={site.id}
+                      onClick={() => handleSiteChange(site)}
+                      className={`w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors ${selectedSite?.id === site.id ? 'bg-accent' : ''
+                        }`}
+                    >
+                      <div className="text-sm font-medium text-foreground">{site.name}</div>
+                      {site.company && <div className="text-xs text-muted-foreground">{site.company}</div>}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
-            <div>
-              <div className="font-semibold text-foreground">{userData.name}</div>
-              <div className="text-xs text-muted-foreground bg-accent px-2 py-0.5 rounded inline-block">
-              {userData.userType}
-              </div>
-            </div>
-            </div>
           </div>
-          
-          <div className="p-3 space-y-2">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Mail className="w-4 h-4" />
-            <span>{userData.email || 'Not available' }</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Phone className="w-4 h-4" />
-            <span>{userData.mobile || 'Not available'}</span>
-            </div>
-          </div>
+          {/* Settings Icon */}
+          <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </button>
 
-          <div className="p-2 border-t border-border">
-            <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+          {/* User Dropdown */}
+          <div className="relative" ref={userDropdownRef}>
+            <button
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
+              className="flex items-center gap-2 hover:bg-accent rounded-lg p-1 transition-colors"
             >
-            <LogOut className="w-4 h-4" />
-            Logout
+              {userData.avatar ? (
+                <img
+                  src={userData.avatar}
+                  alt={userData.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
+                  {userData.initials}
+                </div>
+              )}
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
+
+            {showUserDropdown && (
+              <div className="absolute right-0 top-full mt-1 w-72 bg-card border border-border rounded-lg shadow-lg z-50">
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    {userData.avatar ? (
+                      <img
+                        src={userData.avatar}
+                        alt={userData.name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold">
+                        {userData.initials}
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-semibold text-foreground">{userData.name}</div>
+                      <div className="text-xs text-muted-foreground bg-accent px-2 py-0.5 rounded inline-block">
+                        {userData.userType}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 space-y-2">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Mail className="w-4 h-4" />
+                    <span>{userData.email || 'Not available'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Phone className="w-4 h-4" />
+                    <span>{userData.mobile || 'Not available'}</span>
+                  </div>
+                </div>
+
+                <div className="p-2 border-t border-border">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          </div>
-        )}
         </div>
-      </div>
       </div>
 
       {/* Module Navigation - Level 1 */}
       <div className="relative">
-        <nav 
-          className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto transition-all duration-300 ease-in-out ${
-            collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-2 opacity-100'
-          }`}
+        <nav
+          className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto transition-all duration-300 ease-in-out ${collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-2 opacity-100'
+            }`}
         >
           {sortedModules.map((module) => (
             <button
               key={module.id}
               onClick={() => handleModuleClick(module.id)}
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative uppercase
-                ${activeModule === module.id 
-                  ? 'text-primary' 
+                ${activeModule === module.id
+                  ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
@@ -655,18 +656,17 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       {/* Sub-Module Navigation - Level 2 */}
       {currentModule && currentModule.subModules.length > 0 && (
         <div className="relative">
-          <nav 
-            className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto bg-secondary/30 transition-all duration-300 ease-in-out ${
-              collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-2 opacity-100'
-            }`}
+          <nav
+            className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto bg-secondary/30 transition-all duration-300 ease-in-out ${collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-2 opacity-100'
+              }`}
           >
             {sortedSubModules.map((subModule) => (
               <button
                 key={subModule.id}
                 onClick={() => handleSubModuleClick(subModule.path)}
                 className={`px-4 py-2.5 text-sm whitespace-nowrap transition-colors relative uppercase
-                  ${activeSubModule === subModule.id 
-                    ? 'text-primary font-medium' 
+                  ${activeSubModule === subModule.id
+                    ? 'text-primary font-medium'
                     : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
@@ -693,7 +693,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
         </div>
       )}
 
-            {/* Tertiary Navigation - Level 3 */}
+      {/* Tertiary Navigation - Level 3 */}
       {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
         <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
           {sortedLevel3.map((item, idx) => (
@@ -714,7 +714,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           ))}
         </nav>
       )}
-      
+
       {/* Debug Info */}
       <div className="hidden debug-info p-2 text-xs text-muted-foreground border-t">
       </div>

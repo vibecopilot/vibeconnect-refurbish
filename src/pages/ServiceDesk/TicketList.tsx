@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'; 
+import * as XLSX from 'xlsx';
 import React, { useState, useEffect, useCallback } from "react";
 import toast from 'react-hot-toast'; // Add this import
 import { useNavigate, Link } from "react-router-dom";
@@ -17,12 +17,13 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  Edit,
+  Edit, Clock, CheckCircle, XCircle, RefreshCcw, HelpCircle, MessageCircle, FileText, MessageSquare,
+  FileCheck,
 } from "lucide-react";
 
 const TicketList: React.FC = () => {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [searchValue, setSearchValue] = useState("");
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -32,13 +33,13 @@ const TicketList: React.FC = () => {
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
-  
+
   // Quick filter state
   const [quickFilter, setQuickFilter] = useState<"All" | "Open" | "Closed" | "Pending" | "Completed">("All");
-  
+
   // Dashboard card filter state (for server-side filtering)
   const [selectedDashboardStatus, setSelectedDashboardStatus] = useState<string | null>(null);
-  
+
   const [filters, setFilters] = useState<{
     building_name?: string;
     floor_name?: string;
@@ -51,6 +52,59 @@ const TicketList: React.FC = () => {
     date_end?: string;
     search?: string; // Add search to filters for server-side search
   }>({});
+  const colorOptions = [
+    { key: "Pending", bg: "bg-blue-500", border: "border-blue-500", text: "text-blue-600" },
+    { key: "Closed", bg: "bg-red-500", border: "border-red-500", text: "text-red-600" },
+    { key: "Complete", bg: "bg-green-500", border: "border-green-500", text: "text-green-600" },
+    { key: "Work Completed", bg: "bg-green-600", border: "border-green-600", text: "text-green-700" },
+    { key: "Reopened", bg: "bg-orange-500", border: "border-orange-500", text: "text-orange-600" },
+    { key: "Approved", bg: "bg-teal-500", border: "border-teal-500", text: "text-teal-600" },
+    { key: "Work In Process", bg: "bg-indigo-500", border: "border-indigo-500", text: "text-indigo-600" },
+    { key: "Approval Pending", bg: "bg-yellow-500", border: "border-yellow-500", text: "text-yellow-600" },
+
+  ];
+
+  const typeColorMap: Record<string, { bg: string; border: string; text: string }> = {
+    Complaint: {
+      bg: "bg-red-500",
+      border: "border-red-500",
+      text: "text-red-600",
+    },
+    Request: {
+      bg: "bg-blue-500",
+      border: "border-blue-500",
+      text: "text-blue-600",
+    },
+    Suggestion: {
+      bg: "bg-green-500",
+      border: "border-green-500",
+      text: "text-green-600",
+    },
+    Req: {
+      bg: "bg-indigo-500",
+      border: "border-indigo-500",
+      text: "text-indigo-600",
+    },
+  };
+  const getTypeCardColor = (label: string) => {
+    return (
+      typeColorMap[label] || {
+        bg: "bg-purple-500",
+        border: "border-purple-500",
+        text: "text-purple-600",
+      }
+    );
+  };
+
+  const getCardColor = (label: string) => {
+    return (
+      colorOptions.find((c) => c.key === label) || {
+        bg: "bg-purple-500",
+        border: "border-purple-500",
+        text: "text-purple-600",
+      }
+    );
+  };
 
   const [lookups, setLookups] = useState<{
     buildings: string[];
@@ -69,6 +123,37 @@ const TicketList: React.FC = () => {
     priorities: [],
     assignees: [],
   });
+  // Status Icons
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "Pending":
+        return <Clock className="w-7 h-7" />;
+      case "Closed":
+        return <XCircle className="w-7 h-7" />;
+      case "Complete":
+      case "Work Completed":
+        return <CheckCircle className="w-7 h-7" />;
+      case "Reopened":
+        return <RefreshCcw className="w-7 h-7" />;
+      default:
+        return <FileCheck className="w-7 h-7" />;
+    }
+  };
+
+  // Type Icons
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "Complaint":
+        return <AlertCircle className="w-7 h-7" />;
+      case "Request":
+      case "Req":
+        return <HelpCircle className="w-7 h-7" />;
+      case "Suggestion":
+        return <MessageSquare className="w-7 h-7" />;
+      default:
+        return <FileText className="w-7 h-7" />;
+    }
+  };
 
   // Hidden columns state
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
@@ -101,7 +186,7 @@ const TicketList: React.FC = () => {
       if (selectedDashboardStatus) {
         apiFilters.status = selectedDashboardStatus;
       }
-      
+
       const response = await serviceDeskService.getTickets(
         pagination.page,
         pagination.perPage,
@@ -178,7 +263,7 @@ const TicketList: React.FC = () => {
     if (quickFilter !== "All") {
       filtered = filtered.filter((item) => {
         const status = (item.status || (item as any).issue_status || "").toLowerCase();
-        
+
         if (quickFilter === "Open") {
           return status === "pending" || status === "open";
         } else if (quickFilter === "Closed") {
@@ -245,7 +330,7 @@ const TicketList: React.FC = () => {
     const startIndex = (pagination.page - 1) * pagination.perPage;
     const endIndex = startIndex + pagination.perPage;
     const paginatedData = filtered.slice(startIndex, endIndex);
-    
+
     setTickets(paginatedData);
     setPagination((prev) => ({
       ...prev,
@@ -475,83 +560,82 @@ const TicketList: React.FC = () => {
 
   // Export excel function
   const exportToExcel = async () => {
-  try {
-    toast.loading('Preparing export...');
-    
-    // Fetch all tickets for export
-    const response = await serviceDeskService.getAllTickets();
-    const data = response.data;
-    const allTicketsData = Array.isArray(data)
-      ? data
-      : data?.complaints || data?.data || [];
+    try {
+      toast.loading('Preparing export...');
 
-    if (allTicketsData.length === 0) {
+      // Fetch all tickets for export
+      const response = await serviceDeskService.getAllTickets();
+      const data = response.data;
+      const allTicketsData = Array.isArray(data)
+        ? data
+        : data?.complaints || data?.data || [];
+
+      if (allTicketsData.length === 0) {
+        toast.dismiss();
+        toast.error('No tickets to export');
+        return;
+      }
+
+      // Format the data for Excel (matching existing project format)
+      const formattedData = allTicketsData.map((ticket: any) => {
+        // Format complaint logs as a single string
+        const complaintLogs = (ticket.complaint_logs || [])
+          .map((log: any) => {
+            return `Log By: ${log.log_by || 'N/A'}, Status: ${log.log_status || 'N/A'}, Date: ${log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'
+              }`;
+          })
+          .join(' | ');
+
+        return {
+          'Site Name': ticket.site_name || '-',
+          'Ticket No.': ticket.ticket_number || '-',
+          'Related To': ticket.issue_type_id || '-',
+          'Title': ticket.heading || ticket.title || '-',
+          'Description': ticket.text || ticket.description || '-',
+          'Building': ticket.building_name || '-',
+          'Floor': ticket.floor_name || '-',
+          'Unit': ticket.unit || ticket.unit_name || '-',
+          'Category': ticket.category_type || ticket.category || '-',
+          'Sub Category': ticket.sub_category || '-',
+          'Status': ticket.issue_status || ticket.status || '-',
+          'Type': ticket.issue_type || '-',
+          'Priority': ticket.priority || '-',
+          'Assigned To': ticket.assigned_to || '-',
+          'Created By': ticket.created_by || '-',
+          'Created On': ticket.created_at
+            ? new Date(ticket.created_at).toLocaleString()
+            : '-',
+          'Updated On': ticket.updated_at
+            ? new Date(ticket.updated_at).toLocaleString()
+            : '-',
+          'Updated By': ticket.updated_by || '-',
+          'Resolution Breached': ticket.resolution_breached ? 'Yes' : 'No',
+          'Response Breached': ticket.response_breached ? 'Yes' : 'No',
+          'Complaint Logs': complaintLogs || '-',
+        };
+      });
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(formattedData);
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Tickets');
+
+      // Generate filename with current date
+      const fileName = `helpdesk_tickets_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
       toast.dismiss();
-      toast.error('No tickets to export');
-      return;
+      toast.success('Tickets exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.dismiss();
+      toast.error('Failed to export tickets');
     }
-
-    // Format the data for Excel (matching existing project format)
-    const formattedData = allTicketsData.map((ticket: any) => {
-      // Format complaint logs as a single string
-      const complaintLogs = (ticket.complaint_logs || [])
-        .map((log: any) => {
-          return `Log By: ${log.log_by || 'N/A'}, Status: ${log.log_status || 'N/A'}, Date: ${
-            log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'
-          }`;
-        })
-        .join(' | ');
-
-      return {
-        'Site Name': ticket.site_name || '-',
-        'Ticket No.': ticket.ticket_number || '-',
-        'Related To': ticket.issue_type_id || '-',
-        'Title': ticket.heading || ticket.title || '-',
-        'Description': ticket.text || ticket.description || '-',
-        'Building': ticket.building_name || '-',
-        'Floor': ticket.floor_name || '-',
-        'Unit': ticket.unit || ticket.unit_name || '-',
-        'Category': ticket.category_type || ticket.category || '-',
-        'Sub Category': ticket.sub_category || '-',
-        'Status': ticket.issue_status || ticket.status || '-',
-        'Type': ticket.issue_type || '-',
-        'Priority': ticket.priority || '-',
-        'Assigned To': ticket.assigned_to || '-',
-        'Created By': ticket.created_by || '-',
-        'Created On': ticket.created_at
-          ? new Date(ticket.created_at).toLocaleString()
-          : '-',
-        'Updated On': ticket.updated_at
-          ? new Date(ticket.updated_at).toLocaleString()
-          : '-',
-        'Updated By': ticket.updated_by || '-',
-        'Resolution Breached': ticket.resolution_breached ? 'Yes' : 'No',
-        'Response Breached': ticket.response_breached ? 'Yes' : 'No',
-        'Complaint Logs': complaintLogs || '-',
-      };
-    });
-
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Tickets');
-
-    // Generate filename with current date
-    const fileName = `helpdesk_tickets_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-    // Download file
-    XLSX.writeFile(wb, fileName);
-
-    toast.dismiss();
-    toast.success('Tickets exported successfully!');
-  } catch (error) {
-    console.error('Export error:', error);
-    toast.dismiss();
-    toast.error('Failed to export tickets');
-  }
-};
+  };
   // Filter visible columns
   const visibleColumns = allColumns.filter(col => !hiddenColumns.has(col.id));
 
@@ -603,12 +687,15 @@ const TicketList: React.FC = () => {
     <div className="p-6">
       <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Service Desk', path: '/service-desk' }, { label: 'Service' }]} />
 
-
       {/* Dashboard Statistics */}
       {dashboard && (
         <div className="mb-6">
-          <h3 className="text-base font-semibold mb-3 text-foreground">Dashboard Statistics</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <h3 className="text-base font-semibold mb-3 text-foreground">
+            Dashboard Statistics
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+
             {/* Status stats */}
             {[
               "Pending",
@@ -621,58 +708,76 @@ const TicketList: React.FC = () => {
               "Approval Pending",
             ].map((label) => {
               const isActive = selectedDashboardStatus === label;
+              const color = getCardColor(label);
+
               return (
                 <div
                   key={label}
                   onClick={() => {
-                    // Toggle: if same card clicked, deselect it
-                    if (selectedDashboardStatus === label) {
-                      setSelectedDashboardStatus(null);
-                    } else {
-                      setSelectedDashboardStatus(label);
-                      // Clear quick filter when using dashboard cards
-                      setQuickFilter("All");
-                    }
+                    setSelectedDashboardStatus(isActive ? null : label);
+                    setQuickFilter("All");
                     setPagination((prev) => ({ ...prev, page: 1 }));
                   }}
-                  className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                    isActive
-                      ? 'bg-blue-500 text-white border-blue-500'
-                      : 'bg-card text-blue-500 border-blue-500 hover:bg-blue-50'
-                  }`}
+                  className={`rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg
+        ${isActive
+                      ? `${color.bg} text-white ${color.border}`
+                      : `bg-card ${color.text} ${color.border} hover:bg-muted`
+                    }`}
                 >
-                  <TicketIcon className="w-8 h-8 mb-2" />
-                  <span className="text-sm font-medium">{label}</span>
-                  <span className={`text-2xl font-bold mt-1 ${isActive ? 'text-white' : 'text-foreground'}`}>
+                  <span className="text-xl p-2 mb-2">
+                    {getStatusIcon(label)}
+                  </span>
+
+                  <span className="text-md font-medium">{label}</span>
+
+                  <span className={`p-2 text-[20px] font-bold mt-1 ${isActive ? "text-white" : "text-foreground"}`}>
                     {getStatusCount(label)}
                   </span>
                 </div>
               );
             })}
-          
+
+
             {/* Type stats */}
-            {['Complaint', 'Request', 'Suggestion', 'Req'].map((label) => (
-              <div
-                key={label}
-                onClick={() => {
-                  // Set filter for issue type
-                  setFilters((prev) => ({
-                    ...prev,
-                    category: label === "Req" ? "Request" : label, // Map "Req" to "Request"
-                  }));
-                  setPagination((prev) => ({ ...prev, page: 1 }));
-                }}
-                className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                  'bg-card text-purple-500 border-purple-500 hover:bg-purple-50'
-                }`}
-              >
-                <TicketIcon className="w-8 h-8 mb-2" />
-                <span className="text-sm font-medium">{label}</span>
-                <span className="text-2xl font-bold mt-1 text-foreground">
-                  {getTypeCount(label)}
-                </span>
-              </div>
-            ))}
+            {["Complaint", "Request", "Suggestion", "Req"].map((label) => {
+              const isActive = filters.category === (label === "Req" ? "Request" : label);
+              const color = getTypeCardColor(label);
+
+              return (
+                <div
+                  key={label}
+                  onClick={() => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      category: label === "Req" ? "Request" : label,
+                    }));
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }}
+                  className={`rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg
+        ${isActive
+                      ? `${color.bg} text-white ${color.border}`
+                      : `bg-card ${color.text} ${color.border} hover:bg-muted`
+                    }`}
+                >
+                  {/* ICON */}
+                  <span className="text-xl mb-2">
+                    {getTypeIcon(label)}
+                  </span>
+
+                  {/* NAME */}
+                  <span className="text-md font-medium">
+                    {label === "Req" ? "Request" : label}
+                  </span>
+
+                  {/* COUNT */}
+                  <span className={`text-[20px] font-bold mt-1 ${isActive ? "text-white" : "text-foreground"}`}>
+                    {getTypeCount(label)}
+                  </span>
+                </div>
+              );
+            })}
+
+
           </div>
         </div>
       )}
@@ -680,7 +785,7 @@ const TicketList: React.FC = () => {
       {/* Combined Filters and Toolbar */}
       <div className="mb-4 flex items-center justify-between gap-4">
         {/* Left side - Quick Filters Radio Buttons */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap mb-6">
           {["All", "Open", "Closed", "Pending", "Completed"].map((filter) => (
             <label key={filter} className="flex items-center gap-2 cursor-pointer">
               <input

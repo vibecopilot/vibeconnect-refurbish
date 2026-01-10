@@ -47,6 +47,7 @@ const featureToModuleMap = {
   'space': ['Fit Out'],
   'hrms': ['Employee WorkSpace'],
   'survey': ['Survey'],
+  'contact_book':['Contact Book'],
 };
 
 const navItems = [
@@ -54,7 +55,7 @@ const navItems = [
     name: 'FM Module',
     children: [
       { name: 'Service Desk', path: '/tickets' },
-      { name: 'contact book', path: '/contact-book'},
+      { name: 'Contact Book', path: '/contact-book'},
       { name: 'Asset', path: '/assets' },
       { name: 'Soft Services', path: '/services' },
       { name: 'Inventory', path: '/materials' },
