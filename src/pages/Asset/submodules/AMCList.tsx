@@ -5,7 +5,6 @@ import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import { Loader2, Package, AlertCircle, RefreshCw, Eye, EyeOff, Download, Edit } from 'lucide-react';
 import { getAMC } from '../../../api';
 import * as XLSX from 'xlsx';
-import toast from 'react-hot-toast';
 
 interface AMC {
   id: number;
@@ -48,7 +47,6 @@ const AMCList: React.FC<AMCListProps> = ({
   const [amcList, setAmcList] = useState<AMC[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
@@ -105,7 +103,7 @@ const AMCList: React.FC<AMCListProps> = ({
   // No need for client-side pagination - handled by server
   // Use amcList directly from API
 
-  // Export to Excel functionality
+  // Export to Excel functionality - removed toast notification
   const handleExportToExcel = useCallback(() => {
     const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
     const fileName = "AMC_data.xlsx";
@@ -118,17 +116,14 @@ const AMCList: React.FC<AMCListProps> = ({
     link.href = url;
     link.download = fileName;
     link.click();
-    
-    toast.success('Excel file exported successfully');
   }, [amcList]);
 
-  // Expose export function to parent (only once)
+  // Expose export function to parent
   useEffect(() => {
     if (onExportSet) {
-      onExportSet(handleExportToExcel);
+      onExportSet(() => handleExportToExcel);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onExportSet]);
+  }, [onExportSet, handleExportToExcel]);
 
   const allColumns: Array<TableColumn<AMC> & { id: string; label: string }> = [
     // Action column
@@ -253,14 +248,10 @@ const AMCList: React.FC<AMCListProps> = ({
           ))}
         </div>
       ) : (
-        <DataTable 
-          columns={visibleColumns} 
-          data={amcList} 
-          selectable 
-          selectedRows={selectedRows} 
-          onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} 
-          onSelectAll={() => setSelectedRows(selectedRows.length === amcList.length ? [] : amcList.map(a => String(a.id)))} 
-          viewPath={(row) => `/asset/amc/${row.id}`} 
+        <DataTable
+          columns={visibleColumns}
+          data={amcList}
+          viewPath={(row) => `/asset/amc/${row.id}`}
         />
       )}
 

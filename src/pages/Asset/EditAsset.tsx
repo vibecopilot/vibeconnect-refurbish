@@ -2,11 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { Settings, MapPin, Package, Calendar, FileText, Shield, Plus, X, Loader2 } from "lucide-react";
+import { Settings, MapPin, Package, Calendar, FileText, Shield, Plus, X, Loader2, UserPlus } from "lucide-react";
 import FormSection from "../../components/ui/FormSection";
 import FormInput from "../../components/ui/FormInput";
 import FormGrid from "../../components/ui/FormGrid";
-import FormToggle from "../../components/ui/FormToggle";
 import Button from "@/components/ui/Button";
 import PageTitle from "../../components/ui/PageTitle";
 import { getItemInLocalStorage } from "../../utils/localStorage";
@@ -21,6 +20,7 @@ import {
   EditSiteAsset,
   getSiteAssetDetails,
 } from "../../api";
+import AddSuppliers from "../../containers/modals/AddSuppliersModal";
 
 const EditAsset: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +38,9 @@ const EditAsset: React.FC = () => {
   const [parentAsset, setParentAsset] = useState<any[]>([]);
   const [consumptionData, setConsumptionData] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [meterType, setMeterType] = useState("");
+  const [consumptionType, setConsumptionType] = useState("");
 
   const [formData, setFormData] = useState({
     site_id: getItemInLocalStorage("SITEID") || "",
@@ -61,6 +64,10 @@ const EditAsset: React.FC = () => {
     installation: "",
     warranty_expiry: "",
     warranty_start: "",
+    warranty: false,
+    complianceApplicable: false,
+    compliance_start: "",
+    compliance_end: "",
     critical: false,
     capacity: "",
     breakdown: false,
@@ -68,11 +75,27 @@ const EditAsset: React.FC = () => {
     asset_type: "",
     vendor_id: "",
     unit: "",
+    remarks: "",
+    description: "",
     invoice: [] as File[],
     insurance: [] as File[],
     manuals: [] as File[],
     others: [] as File[],
   });
+
+  const fetchVendors = async () => {
+    try {
+      const vendorResp = await getVendors();
+      setVendors(vendorResp.data || []);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+    }
+  };
+
+  const handleAddSupplierSuccess = () => {
+    fetchVendors();
+    setShowAddSupplierModal(false);
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -145,6 +168,10 @@ const EditAsset: React.FC = () => {
           installation: formatDateForInput(data.installation),
           warranty_expiry: formatDateForInput(data.warranty_expiry),
           warranty_start: formatDateForInput(data.warranty_start),
+          warranty: data.warranty_start ? true : false,
+          complianceApplicable: false,
+          compliance_start: "",
+          compliance_end: "",
           critical: data.critical || false,
           capacity: data.capacity || "",
           breakdown: data.breakdown || false,
@@ -152,11 +179,17 @@ const EditAsset: React.FC = () => {
           asset_type: data.asset_type || "",
           vendor_id: String(data.vendor_id || ""),
           unit: data.uom || "",
+          remarks: data.remarks || "",
+          description: data.description || "",
           invoice: [],
           insurance: [],
           manuals: [],
           others: [],
         });
+
+        if (data.asset_type) {
+          setMeterType(data.asset_type);
+        }
 
         // Load existing consumption data (asset_params)
         if (data.asset_params && Array.isArray(data.asset_params)) {
@@ -224,10 +257,6 @@ const EditAsset: React.FC = () => {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
-  };
-
-  const handleToggleChange = (field: string, value: boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleFileChange = (files: FileList | null, fieldName: string) => {
@@ -352,7 +381,7 @@ const EditAsset: React.FC = () => {
       await EditSiteAsset(formDataSend, id!);
       toast.dismiss();
       toast.success("Asset Updated Successfully");
-      navigate(`/asset/${id}`);
+      navigate(`/assets/asset-details/${id}`);
     } catch (error) {
       toast.dismiss();
       toast.error("Failed to update asset");
@@ -554,12 +583,118 @@ const EditAsset: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter UOM"
             />
+            <FormInput
+              label="Comprehensive"
+              name="comprehensive"
+              type="select"
+              value={formData.comprehensive}
+              onChange={handleChange}
+              options={[
+                { value: "true", label: "Comprehensive" },
+                { value: "false", label: "Non-Comprehensive" },
+              ]}
+              placeholder="Select Asset Type"
+            />
           </FormGrid>
+
           <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-border">
-            <FormToggle label="Critical Asset" checked={formData.critical} onChange={(v) => handleToggleChange("critical", v)} />
-            <FormToggle label="Breakdown" checked={formData.breakdown} onChange={(v) => handleToggleChange("breakdown", v)} />
-            <FormToggle label="Is Meter" checked={formData.is_meter} onChange={(v) => handleToggleChange("is_meter", v)} />
+            <div className="flex items-center gap-4">
+              <label className="font-medium text-sm">Critical:</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={formData.critical === true}
+                    onChange={() => setFormData(prev => ({ ...prev, critical: true }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Yes</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={formData.critical === false}
+                    onChange={() => setFormData(prev => ({ ...prev, critical: false }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">No</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium">Status:</label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Breakdown</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!formData.breakdown}
+                    onChange={() => setFormData(prev => ({ ...prev, breakdown: !prev.breakdown }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+                <span className="text-sm text-muted-foreground">In Use</span>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.is_meter}
+                onChange={() => setFormData(prev => ({ ...prev, is_meter: !prev.is_meter }))}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">Meter Applicable</span>
+            </label>
           </div>
+
+          {formData.is_meter && (
+            <div className="mt-4 pt-4 border-t border-border space-y-4">
+              <div className="flex items-center gap-4">
+                <label className="font-medium text-sm">Meter Type:</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      checked={meterType === "parent"}
+                      onChange={() => {
+                        setMeterType("parent");
+                        setFormData(prev => ({ ...prev, asset_type: "parent", parent_asset_id: "" }));
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Parent</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      checked={meterType === "sub"}
+                      onChange={() => {
+                        setMeterType("sub");
+                        setFormData(prev => ({ ...prev, asset_type: "sub" }));
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Sub</span>
+                  </label>
+                </div>
+              </div>
+
+              {meterType === "sub" && (
+                <FormInput
+                  label="Parent Meter"
+                  name="parent_asset_id"
+                  type="select"
+                  value={formData.parent_asset_id}
+                  onChange={handleChange}
+                  options={parentOptions}
+                  placeholder="Select Parent Meter"
+                />
+              )}
+            </div>
+          )}
         </FormSection>
 
         {/* Purchase & Warranty Details */}
@@ -581,93 +716,300 @@ const EditAsset: React.FC = () => {
               required
               placeholder="Enter Purchase Cost"
             />
-            <FormInput
-              label="Installation Date"
-              name="installation"
-              type="date"
-              value={formData.installation}
-              onChange={handleChange}
-            />
-            <FormInput
-              label="Warranty Start"
-              name="warranty_start"
-              type="date"
-              value={formData.warranty_start}
-              onChange={handleChange}
-            />
-            <FormInput
-              label="Warranty Expiry"
-              name="warranty_expiry"
-              type="date"
-              value={formData.warranty_expiry}
-              onChange={handleChange}
-            />
-            <FormInput
-              label="Comprehensive"
-              name="comprehensive"
-              value={formData.comprehensive}
-              onChange={handleChange}
-              placeholder="Enter Comprehensive Details"
-            />
           </FormGrid>
+
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-4 mb-4">
+              <label className="font-medium text-sm">Under Warranty:</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={formData.warranty === true}
+                    onChange={() => setFormData(prev => ({ ...prev, warranty: true }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Yes</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={formData.warranty === false}
+                    onChange={() => setFormData(prev => ({ ...prev, warranty: false }))}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">No</span>
+                </label>
+              </div>
+            </div>
+
+            {formData.warranty && (
+              <FormGrid columns={3}>
+                <FormInput
+                  label="Warranty Start Date"
+                  name="warranty_start"
+                  type="date"
+                  value={formData.warranty_start}
+                  onChange={handleChange}
+                />
+                <FormInput
+                  label="Warranty Expiry Date"
+                  name="warranty_expiry"
+                  type="date"
+                  value={formData.warranty_expiry}
+                  onChange={handleChange}
+                />
+                <FormInput
+                  label="Commissioning Date"
+                  name="installation"
+                  type="date"
+                  value={formData.installation}
+                  onChange={handleChange}
+                />
+              </FormGrid>
+            )}
+          </div>
         </FormSection>
 
-        {/* Meter Configuration */}
-        {formData.is_meter && (
-          <FormSection title="Meter Parameters" icon={Settings}>
-            <div className="space-y-4">
-              {consumptionData.map((item, index) => (
-                <div key={index} className="relative bg-muted/50 p-4 rounded-lg border border-border">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveConsumption(index)}
-                    className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <FormGrid columns={4}>
-                    <FormInput
-                      label="Parameter Name"
-                      name={`consumption_${index}_name`}
-                      value={item.name}
-                      onChange={(e) => handleConsumptionChange(index, 'name', e.target.value)}
-                      placeholder="Name"
-                    />
-                    <FormInput
-                      label="Unit Type"
-                      name={`consumption_${index}_unit_type`}
-                      value={item.unit_type}
-                      onChange={(e) => handleConsumptionChange(index, 'unit_type', e.target.value)}
-                      placeholder="Unit Type"
-                    />
-                    <FormInput
-                      label="Min Value"
-                      name={`consumption_${index}_min_val`}
-                      type="number"
-                      value={item.min_val}
-                      onChange={(e) => handleConsumptionChange(index, 'min_val', e.target.value)}
-                      placeholder="Min"
-                    />
-                    <FormInput
-                      label="Max Value"
-                      name={`consumption_${index}_max_val`}
-                      type="number"
-                      value={item.max_val}
-                      onChange={(e) => handleConsumptionChange(index, 'max_val', e.target.value)}
-                      placeholder="Max"
-                    />
-                  </FormGrid>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={handleAddConsumption}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Parameter
-              </button>
+        {/* Compliance Details */}
+        <FormSection title="Compliance Details" icon={Shield}>
+          <div className="flex items-center gap-4 mb-4">
+            <label className="font-medium text-sm">Compliance Applicable:</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.complianceApplicable === true}
+                  onChange={() => setFormData(prev => ({ ...prev, complianceApplicable: true }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Yes</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.complianceApplicable === false}
+                  onChange={() => setFormData(prev => ({ ...prev, complianceApplicable: false }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">No</span>
+              </label>
             </div>
+          </div>
+
+          {formData.complianceApplicable && (
+            <FormGrid columns={2}>
+              <FormInput
+                label="Start Date"
+                name="compliance_start"
+                type="date"
+                value={formData.compliance_start}
+                onChange={handleChange}
+              />
+              <FormInput
+                label="End Date"
+                name="compliance_end"
+                type="date"
+                value={formData.compliance_end}
+                onChange={handleChange}
+              />
+            </FormGrid>
+          )}
+        </FormSection>
+
+        {/* Supplier Details */}
+        <FormSection title="Supplier Contact Details" icon={UserPlus}>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <FormInput
+                label="Select Supplier"
+                name="vendor_id"
+                type="select"
+                value={formData.vendor_id}
+                onChange={handleChange}
+                options={vendorOptions}
+                placeholder="Select Supplier"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAddSupplierModal(true)}
+              className="mt-6"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Supplier
+            </Button>
+          </div>
+        </FormSection>
+
+        {/* Comments and Description */}
+        <FormSection title="Additional Information" icon={FileText}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Comments</label>
+              <textarea
+                name="remarks"
+                value={formData.remarks}
+                onChange={handleChange}
+                placeholder="Enter Comments"
+                rows={3}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Enter Description"
+                rows={3}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </FormSection>
+
+        {/* Consumption Asset Measure */}
+        {formData.is_meter && (
+          <FormSection title="Consumption Asset Measure" icon={Settings}>
+            <div className="mb-4">
+              <FormInput
+                label="Select Consumption Asset Measure Type"
+                name="consumption_type"
+                type="select"
+                value={consumptionType}
+                onChange={(e) => setConsumptionType(e.target.value)}
+                options={[
+                  { value: "ConsumptionAssetMeasureType", label: "Consumption Asset Measure Type" },
+                  { value: "nonConsumption", label: "Non Consumption Asset Measure Type" },
+                ]}
+                placeholder="Select Type"
+              />
+            </div>
+
+            {(consumptionType === "ConsumptionAssetMeasureType" || consumptionType === "nonConsumption") && (
+              <div className="space-y-4">
+                {consumptionData.map((item, index) => (
+                  <div key={index} className="p-4 border border-border rounded-lg relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => handleRemoveConsumption(index)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                    <FormGrid columns={4}>
+                      <FormInput
+                        label="Name"
+                        name="name"
+                        value={item.name}
+                        onChange={(e) => handleConsumptionChange(index, "name", e.target.value)}
+                        placeholder="Name"
+                      />
+                      <FormInput
+                        label="Sequence"
+                        name="order"
+                        type="number"
+                        value={item.order}
+                        onChange={(e) => handleConsumptionChange(index, "order", e.target.value)}
+                        placeholder="Sequence"
+                      />
+                      <FormInput
+                        label="Unit Type"
+                        name="unit_type"
+                        value={item.unit_type}
+                        onChange={(e) => handleConsumptionChange(index, "unit_type", e.target.value)}
+                        placeholder="Unit Type"
+                      />
+                      <FormInput
+                        label="Input Character Limit"
+                        name="digit"
+                        type="number"
+                        value={item.digit}
+                        onChange={(e) => handleConsumptionChange(index, "digit", e.target.value)}
+                        placeholder="Digit"
+                      />
+                      <FormInput
+                        label="Min Value"
+                        name="min_val"
+                        type="number"
+                        value={item.min_val}
+                        onChange={(e) => handleConsumptionChange(index, "min_val", e.target.value)}
+                        placeholder="Min Value"
+                      />
+                      <FormInput
+                        label="Max Value"
+                        name="max_val"
+                        type="number"
+                        value={item.max_val}
+                        onChange={(e) => handleConsumptionChange(index, "max_val", e.target.value)}
+                        placeholder="Max Value"
+                      />
+                      <FormInput
+                        label="Alert Below"
+                        name="alert_below"
+                        type="number"
+                        value={item.alert_below}
+                        onChange={(e) => handleConsumptionChange(index, "alert_below", e.target.value)}
+                        placeholder="Alert Below"
+                      />
+                      <FormInput
+                        label="Alert Above"
+                        name="alert_above"
+                        type="number"
+                        value={item.alert_above}
+                        onChange={(e) => handleConsumptionChange(index, "alert_above", e.target.value)}
+                        placeholder="Alert Above"
+                      />
+                      <FormInput
+                        label="Multiplier Factor"
+                        name="multiplier_factor"
+                        type="number"
+                        value={item.multiplier_factor}
+                        onChange={(e) => handleConsumptionChange(index, "multiplier_factor", e.target.value)}
+                        placeholder="Multiplier Factor"
+                      />
+                    </FormGrid>
+                    <div className="flex gap-4 mt-3">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={item.dashboard_view}
+                          onChange={(e) => handleConsumptionChange(index, "dashboard_view", e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">Dashboard View</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={item.consumption_view}
+                          onChange={(e) => handleConsumptionChange(index, "consumption_view", e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">Consumption View</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={item.check_prev}
+                          onChange={(e) => handleConsumptionChange(index, "check_prev", e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">Check Previous Reading</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" onClick={handleAddConsumption}>
+                  <Plus className="w-4 h-4 mr-2" /> Add Parameter
+                </Button>
+              </div>
+            )}
           </FormSection>
         )}
 
@@ -717,7 +1059,7 @@ const EditAsset: React.FC = () => {
         <div className="flex justify-end gap-4 pt-6 border-t border-border">
           <Button
             variant="outline"
-            onClick={() => navigate(`/asset/${id}`)}
+            onClick={() => navigate(`/assets/asset-details/${id}`)}
             disabled={isSubmitting}
           >
             Cancel
@@ -726,10 +1068,17 @@ const EditAsset: React.FC = () => {
             onClick={handleSubmit}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Updating...' : 'Update Asset'}
+            {isSubmitting ? 'Updating...' : 'Save & Show Details'}
           </Button>
         </div>
       </div>
+
+      {showAddSupplierModal && (
+        <AddSuppliers
+          onclose={() => setShowAddSupplierModal(false)}
+          fetchVendors={handleAddSupplierSuccess}
+        />
+      )}
     </div>
   );
 };

@@ -47,10 +47,14 @@ import AssetList from "./pages/Asset/AssetList";
 import CreateAsset from "./pages/Asset/CreateAsset";
 import CreateAMC from "./pages/Asset/CreateAMC";
 import CreateChecklist from "./pages/Asset/CreateChecklist";
+import EditChecklist from "./pages/Asset/EditChecklist";
 import CreatePPMActivity from "./pages/Asset/CreatePPMActivity";
-import ViewAsset from "./pages/Asset/ViewAsset";
+import CreatePPMChecklist from "./pages/Asset/CreatePPMChecklist";
+import CopyChecklist from "./pages/SubPages/CopyChecklist";
+import AssetDetails from "./pages/SubPages/details/AssetDetails";
 import EditAsset from "./pages/Asset/EditAsset";
 import EditStockItem from "./pages/Asset/EditStockItem";
+import EditAMC from "./pages/SubPages/details/EditAMC";
 import { ViewAMC, ViewMeter, ViewChecklist as ViewAssetChecklist, ViewRoutineTask, ViewPPMChecklist, ViewPPMActivity, ViewStockItem } from "./pages/Asset/submodules";
 import { TicketList, TicketCreate, TicketView, TicketEdit } from "./pages/ServiceDesk";
 import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList, SoftServicesOverview } from "./pages/SoftService";
@@ -164,14 +168,14 @@ function App() {
         {/* Asset Module */}
         <Route path="/asset" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/create" element={<AuthenticatedLayout><CreateAsset /></AuthenticatedLayout>} />
-        <Route path="/asset/:id" element={<AuthenticatedLayout><ViewAsset /></AuthenticatedLayout>} />
+        <Route path="/asset/:id" element={<AuthenticatedLayout><AssetDetails /></AuthenticatedLayout>} />
         <Route path="/asset/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
         
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/amc/create" element={<AuthenticatedLayout><CreateAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id" element={<AuthenticatedLayout><ViewAMC /></AuthenticatedLayout>} />
-        <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit AMC" /></AuthenticatedLayout>} />
+        <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><EditAMC /></AuthenticatedLayout>} />
         
         {/* Meter */}
         <Route path="/asset/meter" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
@@ -182,7 +186,7 @@ function App() {
         <Route path="/asset/checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/create" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/:id" element={<AuthenticatedLayout><ViewAssetChecklist /></AuthenticatedLayout>} />
-        <Route path="/asset/checklist/:id/edit" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
+        <Route path="/asset/checklist/:id/edit" element={<AuthenticatedLayout><EditChecklist /></AuthenticatedLayout>} />
         
         {/* Routine Task */}
         <Route path="/asset/routine-task" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
@@ -190,6 +194,7 @@ function App() {
         
         {/* PPM Checklist */}
         <Route path="/asset/ppm-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-checklist/create" element={<AuthenticatedLayout><CreatePPMChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-checklist/:id" element={<AuthenticatedLayout><ViewPPMChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
         
@@ -228,7 +233,10 @@ function App() {
         <Route path="/soft-services/task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Task Details" /></AuthenticatedLayout>} />
 
         {/* Soft Services - Overview Tab */}
-        <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} isColumnMenuOpen={false} setIsColumnMenuOpen={() => {}} /></AuthenticatedLayout>} />
+        <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} /></AuthenticatedLayout>} />
+
+        {/* Soft Services - Copy Checklist */}
+        <Route path="/admin/copy-checklist/service/:id" element={<AuthenticatedLayout><CopyChecklist /></AuthenticatedLayout>} />
 
         <Route path="/soft-service" element={<Navigate to="/soft-services" replace />} />
 

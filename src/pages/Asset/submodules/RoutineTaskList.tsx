@@ -16,7 +16,6 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
   const [tasks, setTasks] = useState<RoutineTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
 
   // Update perPage when prop changes
@@ -136,7 +135,11 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
           ))}
         </div>
       ) : (
-        <DataTable columns={columns} data={filteredTasks} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === filteredTasks.length ? [] : filteredTasks.map(t => String(t.id)))} viewPath={(row) => `/asset/routine-task/${row.asset_id || 0}/${row.id}`} />
+        <DataTable
+          columns={columns}
+          data={filteredTasks}
+          viewPath={(row) => `/asset/routine-task/${row.asset_id || 0}/${row.id}`}
+        />
       )}
 
       {filteredTasks.length > 0 && (

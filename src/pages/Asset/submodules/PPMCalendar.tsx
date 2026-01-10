@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { getPPMTask } from '../../../api';
+import { getPPMCalendar, getPPMTask } from '../../../api';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from "react-hot-toast";
 
@@ -18,39 +18,77 @@ const PPMCalendar: React.FC<PPMCalendarProps> = ({ searchValue }) => {
   const [selectedDate] = useState(new Date());
   const [modal, setModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const mapTaskEvents = (tasks: any[]) =>
+    tasks.map((task: any) => ({
+      title: task?.asset_name || "No Title",
+      start: task?.start_time || new Date().toISOString(),
+      extendedProps: {
+        assignTo: task?.assigned_to_name || "Unassigned",
+        status: task?.status || "unknown",
+        checklistName: task?.checklist_name || "",
+      },
+    }));
+
+  const mapCalendarEvents = (items: any[]) =>
+    items.map((event: any) => ({
+      title: event?.title || "No Title",
+      start: event?.start || new Date().toISOString(),
+      extendedProps: {
+        assignTo: event?.assigned_to || "Unassigned",
+        status: event?.status || "unknown",
+        checklistName: event?.checklist_name || "",
+      },
+    }));
+
+  const fetchPPMTask = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    toast.loading("Please wait...");
+    try {
+      const taskResponse = await getPPMTask();
+      const formattedEvents = mapTaskEvents(taskResponse.data.activities || []);
+      setEvents(formattedEvents);
+      toast.dismiss();
+      toast.success("PPM Calendar data loaded");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      toast.dismiss();
+      toast.error("Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchPPMCalendar = useCallback(async () => {
+    if (!startDate || !endDate) return;
+    if (startDate >= endDate) {
+      toast.error("Start date must be before End date");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    toast.loading("Please wait...");
+    try {
+      const response = await getPPMCalendar(startDate, endDate);
+      const formattedEvents = mapCalendarEvents(response.data || []);
+      setEvents(formattedEvents);
+      toast.dismiss();
+      toast.success("PPM Calendar data loaded");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      toast.dismiss();
+      toast.error("Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate]);
 
   useEffect(() => {
-    const fetchPPMTask = async () => {
-      setLoading(true);
-      setError(null);
-      toast.loading("Please wait...");
-      try {
-        const taskResponse = await getPPMTask();
-
-        const formattedEvents = taskResponse.data.activities.map((task: any) => ({
-          title: task?.asset_name || "No Title",
-          start: task?.start_time || new Date().toISOString(),
-          extendedProps: {
-            assignTo: task?.assigned_to_name || "Unassigned",
-            status: task?.status || "unknown",
-            checklistName: task?.checklist_name || "",
-          },
-        }));
-
-        setEvents(formattedEvents);
-        toast.dismiss();
-        toast.success("PPM Calendar data loaded");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load tasks');
-        toast.dismiss();
-        toast.error("Failed to load tasks");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPPMTask();
-  }, []);
+  }, [fetchPPMTask]);
 
   const handleEvent = (eventInfo: any) => {
     setSelectedEvent(eventInfo.event);
@@ -94,6 +132,46 @@ const PPMCalendar: React.FC<PPMCalendarProps> = ({ searchValue }) => {
   return (
     <>
       <div className="rounded-xl shadow-lg border border-border p-4 bg-card">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4">
+          <div className="flex flex-col">
+            <label className="text-sm text-muted-foreground mb-1">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border border-border rounded-lg px-3 py-2 bg-background text-sm"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-sm text-muted-foreground mb-1">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="border border-border rounded-lg px-3 py-2 bg-background text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchPPMCalendar}
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              disabled={!startDate || !endDate}
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+                fetchPPMTask();
+              }}
+              className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           headerToolbar={{

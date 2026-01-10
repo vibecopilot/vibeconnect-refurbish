@@ -1,31 +1,27 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, Loader2 } from "lucide-react";
-import PageTitle from "../../components/ui/PageTitle";
-import ChecklistCreateForm from "../../components/forms/ChecklistCreateForm";
-import { getChecklistDetails } from "../../api";
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import PageTitle from '../../components/ui/PageTitle';
+import ChecklistCreateForm from '../../components/forms/ChecklistCreateForm';
+import { getChecklistDetails } from '../../api';
 
-const CopyChecklist = () => {
-  const { id } = useParams();
+const EditChecklist: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [checklistData, setChecklistData] = useState(null);
+  const [checklistData, setChecklistData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchChecklistDetails = async () => {
-      if (!id) {
-        setError("Checklist not found");
-        setLoading(false);
-        return;
-      }
+      if (!id) return;
       setLoading(true);
       setError(null);
       try {
         const response = await getChecklistDetails(id);
         setChecklistData(response.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch checklist details");
+        setError(err instanceof Error ? err.message : 'Failed to fetch checklist details');
       } finally {
         setLoading(false);
       }
@@ -48,9 +44,9 @@ const CopyChecklist = () => {
       <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
         <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
         <h3 className="text-lg font-semibold mb-2">Failed to Load Checklist</h3>
-        <p className="text-muted-foreground mb-4">{error || "Checklist not found"}</p>
+        <p className="text-muted-foreground mb-4">{error || 'Checklist not found'}</p>
         <button
-          onClick={() => navigate("/soft-services/checklist")}
+          onClick={() => navigate('/asset/checklist')}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
           Back to List
@@ -62,17 +58,22 @@ const CopyChecklist = () => {
   return (
     <div className="p-6">
       <PageTitle
-        title="Copy Checklist"
+        title="Edit Checklist"
         breadcrumbs={[
-          { label: "Soft Services", path: "/soft-services" },
-          { label: "Checklist", path: "/soft-services/checklist" },
-          { label: "Copy Checklist" },
+          { label: 'Asset', path: '/asset' },
+          { label: 'Checklist', path: '/asset/checklist' },
+          { label: checklistData.name || 'Edit Checklist' }
         ]}
       />
 
-      <ChecklistCreateForm checklistType="routine" prefillData={checklistData} prefillMode="copy" />
+      <ChecklistCreateForm
+        checklistType="routine"
+        isEditMode={true}
+        existingData={checklistData}
+        checklistId={id}
+      />
     </div>
   );
 };
 
-export default CopyChecklist;
+export default EditChecklist;

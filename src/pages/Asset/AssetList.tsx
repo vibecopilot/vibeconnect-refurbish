@@ -48,7 +48,7 @@ const AssetList: React.FC = () => {
   const tabsWithQrCode = ['asset'];
 
   // Tabs with Export button
-  const tabsWithExport = ['asset', 'amc', 'checklist'];
+  const tabsWithExport = ['amc', 'checklist'];
 
   // Tabs with Import button
   const tabsWithImport = ['asset', 'checklist'];
@@ -57,7 +57,7 @@ const AssetList: React.FC = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const paths: Record<string, string> = {
       'asset': '/asset/create',
-      'meter': '/asset/meter/create',
+      'meter': '/asset/create',
       'checklist': '/asset/checklist/create',
       'ppm-checklist': '/asset/ppm-checklist/create',
     };
@@ -159,6 +159,7 @@ const AssetList: React.FC = () => {
   searchPlaceholder={`Search ${activeTab.replace('-', ' ')}...`}
   searchValue={searchValue}
   onSearchChange={handleSearch}
+  showSearch={activeTab !== 'overview' && activeTab !== 'ppm-calendar'}
   viewMode={viewMode}
   onViewModeChange={setViewMode}
   showViewToggle={activeTab !== 'ppm-calendar' && activeTab !== 'overview'} // ✅ Hide for overview
@@ -169,7 +170,9 @@ const AssetList: React.FC = () => {
   showQrCode={tabsWithQrCode.includes(activeTab)}
   onQrCode={tabsWithQrCode.includes(activeTab) ? qrCallback || undefined : undefined}
   additionalButtons={
-    activeTab !== 'overview' ? ( // ✅ Hide buttons for overview
+    activeTab === 'ppm-calendar'
+      ? null
+      : activeTab !== 'overview' ? ( // ?. Hide buttons for overview
       <>
         {tabsWithImport.includes(activeTab) && (
           <button
@@ -206,3 +209,7 @@ const AssetList: React.FC = () => {
 };
 
 export default AssetList;
+
+
+
+

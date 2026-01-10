@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Package, ClipboardCheck, ListChecks, Clock, CheckCircle, AlertCircle, Eye, EyeOff, Download, Search } from 'lucide-react';
+import { Loader2, Package, ClipboardCheck, ListChecks, Clock, CheckCircle, AlertCircle, Eye, EyeOff, Search, Grid, List } from 'lucide-react';
 import DataCard from '../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../components/ui/DataTable';
 import { getSoftServices, getServicesChecklist, getServicesTaskList } from '../../api';
@@ -21,16 +21,12 @@ interface SoftServicesOverviewProps {
   viewMode?: 'grid' | 'table';
   searchValue?: string;
   perPage?: number;
-  isColumnMenuOpen?: boolean;
-  setIsColumnMenuOpen?: (value: boolean) => void;
 }
 
 const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
   viewMode = 'table',
   searchValue = '',
   perPage = 10,
-  isColumnMenuOpen = false,
-  setIsColumnMenuOpen = () => {}
 }) => {
   const [loading, setLoading] = useState(true);
   const [allServices, setAllServices] = useState<Service[]>([]);
@@ -39,6 +35,8 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+  const [currentViewMode, setCurrentViewMode] = useState<'grid' | 'table'>(viewMode);
 
   // Statistics
   const [stats, setStats] = useState({
@@ -54,16 +52,30 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
+  useEffect(() => {
+    setCurrentViewMode(viewMode);
+  }, [viewMode]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch Services
-      const serviceResponse = await getSoftServices();
-      const sortedServices = serviceResponse.data.sort((a: any, b: any) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      setAllServices(sortedServices);
-      setFilteredServices(sortedServices);
+      // Fetch Services with pagination and search
+      const serviceResponse = await getSoftServices(pagination.page, pagination.perPage, searchValue);
+
+      // The API returns: { soft_services: [...], total_count, current_page, total_pages }
+      const servicesData = Array.isArray(serviceResponse.data.soft_services)
+        ? serviceResponse.data.soft_services
+        : [];
+
+      setAllServices(servicesData);
+      setFilteredServices(servicesData);
+
+      // Update pagination info from API response
+      setPagination(prev => ({
+        ...prev,
+        total: serviceResponse.data.total_count || 0,
+        totalPages: serviceResponse.data.total_pages || 1,
+      }));
 
       // Fetch Task Stats
       const taskResponse = await getServicesTaskList();
@@ -79,10 +91,11 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
       });
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error('Failed to fetch services data');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, searchValue]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -96,24 +109,15 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
     return new Date(dateString).toLocaleString();
   };
 
-  // Client-side search filtering
-  const filteredData = allServices.filter(service =>
-    !searchValue ||
-    service.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    service.building_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    service.floor_name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  // Client-side pagination
+  // Server-side pagination - data already filtered and paginated from API
   const startIndex = (pagination.page - 1) * pagination.perPage;
-  const endIndex = startIndex + pagination.perPage;
-  const paginatedServices = filteredData.slice(startIndex, endIndex);
+  const paginatedServices = filteredServices;
 
   // Export to Excel functionality
   const handleExportToExcel = () => {
     const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
     const fileName = "Soft_Services_Overview.xlsx";
-    const ws = XLSX.utils.json_to_sheet(filteredData);
+    const ws = XLSX.utils.json_to_sheet(allServices);
     const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const data = new Blob([excelBuffer], { type: fileType });
@@ -122,7 +126,7 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
     link.href = url;
     link.download = fileName;
     link.click();
-    
+
     toast.success('Excel file exported successfully');
   };
 
@@ -175,9 +179,9 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {/* Statistics Cards - Full Width Responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         {/* Total Services Card */}
         <div
           onClick={() => handleCardClick('all')}
@@ -303,6 +307,22 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
                 className="pl-10 pr-4 py-2 w-full sm:w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center border border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setCurrentViewMode('table')}
+                className={`p-2 ${currentViewMode === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentViewMode('grid')}
+                className={`p-2 ${currentViewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+            </div>
             
             {/* Column Visibility Toggle */}
             <div className="relative">
@@ -342,15 +362,48 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
         {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
         
         {paginatedServices.length > 0 ? (
-          <DataTable
-            columns={visibleColumns}
-            data={paginatedServices}
-            selectable
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={() => setSelectedRows(selectedRows.length === paginatedServices.length ? [] : paginatedServices.map(s => String(s.id)))}
-            viewPath={(row) => `/soft-services/${row.id}`}
-          />
+          currentViewMode === 'table' ? (
+            <DataTable
+              columns={visibleColumns}
+              data={paginatedServices}
+              selectable
+              selectedRows={selectedRows}
+              onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
+              onSelectAll={() => setSelectedRows(selectedRows.length === paginatedServices.length ? [] : paginatedServices.map(s => String(s.id)))}
+              viewPath={(row) => `/soft-services/${row.id}`}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {paginatedServices.map((service) => {
+                const unitNames = service.units?.map((unit) => unit.name).join(", ");
+                const serviceId = String(service.id);
+                return (
+                  <DataCard
+                    key={service.id}
+                    title={service.name || `Service #${service.id}`}
+                    subtitle={service.building_name || undefined}
+                    fields={[
+                      { label: 'Building', value: service.building_name || '-' },
+                      { label: 'Floor', value: service.floor_name || '-' },
+                      { label: 'Unit', value: unitNames || '-' },
+                      { label: 'Created By', value: service.user_name || '-' },
+                      { label: 'Created On', value: dateFormat(service.created_at) },
+                    ]}
+                    viewPath={`/soft-services/${service.id}`}
+                    editPath={`/soft-services/${service.id}/edit`}
+                    isSelected={selectedRows.includes(serviceId)}
+                    onToggleSelect={() =>
+                      setSelectedRows((prev) =>
+                        prev.includes(serviceId)
+                          ? prev.filter((rowId) => rowId !== serviceId)
+                          : [...prev, serviceId]
+                      )
+                    }
+                  />
+                );
+              })}
+            </div>
+          )
         ) : (
           <div className="flex flex-col items-center justify-center py-12">
             <Package className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -362,14 +415,14 @@ const SoftServicesOverview: React.FC<SoftServicesOverviewProps> = ({
         {paginatedServices.length > 0 && (
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
             <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} records
+              Showing {startIndex + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records
             </div>
             <div className="flex items-center gap-1">
               <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
               <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
               <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredData.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-              <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredData.length / prev.perPage) }))} disabled={endIndex >= filteredData.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
             </div>
             <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
               <option value={10}>10 / page</option>

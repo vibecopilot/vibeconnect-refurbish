@@ -8,165 +8,165 @@ import {
   Readings,
 } from "./assetSubDetails";
 import { getSiteAssetDetails } from "../../../api";
-import { useParams } from "react-router-dom";
-import Navbar from "../../../components/Navbar";
+import { useParams, useNavigate } from "react-router-dom";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
 import AssetDetailsLogs from "./assetSubDetails/AssetDetailsLogs";
 import CostOfOwnership from "./assetSubDetails/CostOfOwnership";
 import AssetsDetailsAssociated from "./assetSubDetails/AssetsDetailsAssociated";
+import {
+  Loader2,
+  AlertTriangle,
+  Info,
+  FileCheck,
+  Gauge,
+  Wrench
+} from "lucide-react";
 
 const AssetDetails = () => {
   const [page, setPage] = useState("assetInfo");
   const [asset, setAsset] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { id } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getDetails = async () => {
+      setLoading(true);
       try {
         const details = await getSiteAssetDetails(id);
         setAsset(details.data);
+        setError(null);
       } catch (error) {
         console.error("Error fetching site asset details:", error);
+        setError(error.message || "Failed to fetch asset details");
+      } finally {
+        setLoading(false);
       }
     };
 
     getDetails();
   }, [id]);
-  console.log("asset", asset)
+
+  console.log("asset", asset);
+
+  const tabs = [
+    { id: "assetInfo", label: "Asset Info", icon: Info },
+    { id: "AMCDetails", label: "AMC Details", icon: FileCheck },
+    { id: "readings", label: "Readings", icon: Gauge },
+    { id: "ppm", label: "PPM", icon: Wrench },
+  ];
+
+  if (loading) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading asset details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+        <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Failed to Load Asset</h3>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <button
+          onClick={() => navigate('/asset')}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          Back to Assets
+        </button>
+      </div>
+    );
+  }
 
   return (
-    // <section className="md:px-10 ">
-    //   <div className="p-4 w-full my-2 flex mx-5 flex-col ">
-    <section className="flex">
-      <div className="hidden md:block">
-        <Navbar />
-      </div>
-      <div className="md:p-4 w-full my-2 flex md:mx-2 overflow-hidden flex-col">
-        <div className="md:flex justify-center ">
-          <div className="sm:flex grid grid-cols-2 flex-row gap-2 md:gap-10  font-medium p-2 rounded-md sm:rounded-full bg-gray-100">
-            <h2
-              className={`p-1 ${
-                page === "assetInfo" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center  transition-all duration-300 ease-linear`}
-              onClick={() => setPage("assetInfo")}
-            >
-              Asset Info
-            </h2>
-            <h2
-              className={`p-1 ${
-                page === "AMCDetails" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-              onClick={() => setPage("AMCDetails")}
-            >
-              AMC Details
-            </h2>
-            <h2
-              className={`p-1 ${
-                page === "readings" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-              onClick={() => setPage("readings")}
-            >
-              Readings
-            </h2>
-            <h2
-              className={`p-1 ${
-                page === "ppm" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-              onClick={() => setPage("ppm")}
-            >
-              PPM
-            </h2>
-            {/* <h2
-              className={`p-1 ${
-                page === "logs" &&
-                "bg-white text-blue-500 shadow-custom-all-sides"
-              } rounded-full px-4 cursor-pointer text-center transition-all duration-300 ease-linear`}
-              onClick={() => setPage("logs")}
-            >
-              Logs
-            </h2> */}
-            {/* <h2
-              className={`p-1 ${
-                page === "activityFeed" && "bg-white text-blue-500"
-              } rounded-full  cursor-pointer text-center`}
-              onClick={() => setPage("activityFeed")}
-            >
-              Activity Feed
-            </h2> */}
-            {/* <h2
-              className={`p-1 ${
-                page === "history" && "bg-white text-blue-500"
-              } rounded-full px-4 cursor-pointer text-center`}
-              onClick={() => setPage("history")}
-            >
-              History Card
-            </h2> */}
-            {/* <h2
-              className={`p-1 ${
-                page === "costOfOwnership" && "bg-white text-blue-500"
-              } rounded-full px-4 cursor-pointer text-center`}
-              onClick={() => setPage("costOfOwnership")}
-            >
-              Cost Of Ownership
-            </h2>
-            <h2
-              className={`p-1 ${
-                page === "associated" && "bg-white text-blue-500"
-              } rounded-full px-4 cursor-pointer text-center`}
-              onClick={() => setPage("associated")}
-            >
-              Associated Assets
-            </h2> */}
+    <section className="p-6">
+      <Breadcrumb
+        items={[
+          { label: "FM Module", path: "/asset" },
+          { label: "Assets", path: "/asset" },
+          { label: asset.name || `Asset #${id}` },
+        ]}
+      />
+
+      <div className="mt-6">
+        {/* Tab Navigation */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex flex-wrap gap-2 p-2 bg-muted rounded-lg">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  className={`
+                    flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200
+                    ${
+                      page === tab.id
+                        ? "bg-card text-primary shadow-sm border border-border"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                    }
+                  `}
+                  onClick={() => setPage(tab.id)}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
-        {page === "assetInfo" && (
-          <div>
-            <Assetinfo assetData={asset} />
-          </div>
-        )}
-        {page === "AMCDetails" && (
-          <div>
-            <AMCDetails />
-          </div>
-        )}
-        {page === "readings" && (
-          <div>
-            <Readings />
-          </div>
-        )}
-        {page === "ppm" && (
-          <div>
-            <PPM />
-          </div>
-        )}
-        {page === "activityFeed" && (
-          <div>
-            <ActivityFeed />
-          </div>
-        )}
-         {page === "logs" && (
-          <div>
-            <AssetDetailsLogs />
-          </div>
-        )}
-        {page === "history" && (
-          <div>
-            <History />
-          </div>
-        )}
-        {page === "costOfOwnership" && (
-          <div>
-            <CostOfOwnership />
-          </div>
-        )}
-        {page === "associated" && (
-          <div>
-            <AssetsDetailsAssociated />
-          </div>
-        )}
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {page === "assetInfo" && (
+            <div>
+              <Assetinfo assetData={asset} />
+            </div>
+          )}
+          {page === "AMCDetails" && (
+            <div>
+              <AMCDetails />
+            </div>
+          )}
+          {page === "readings" && (
+            <div>
+              <Readings />
+            </div>
+          )}
+          {page === "ppm" && (
+            <div>
+              <PPM />
+            </div>
+          )}
+          {page === "activityFeed" && (
+            <div>
+              <ActivityFeed />
+            </div>
+          )}
+          {page === "logs" && (
+            <div>
+              <AssetDetailsLogs />
+            </div>
+          )}
+          {page === "history" && (
+            <div>
+              <History />
+            </div>
+          )}
+          {page === "costOfOwnership" && (
+            <div>
+              <CostOfOwnership />
+            </div>
+          )}
+          {page === "associated" && (
+            <div>
+              <AssetsDetailsAssociated />
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

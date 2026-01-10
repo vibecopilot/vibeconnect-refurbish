@@ -19,6 +19,12 @@ const Parkings = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    perPage: 10,
+    total: 0,
+    totalPages: 0,
+  });
 
   // Stats for allotment and vacancy (kept separate)
   const [stats, setStats] = useState({
@@ -36,20 +42,28 @@ const Parkings = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await getBookParking();
-      
+      const res = await getBookParking(pagination.page, pagination.perPage, searchValue);
+
       // Check if response has data
       if (!res || !res.data) {
         setBookingData([]);
         setFilteredData([]);
+        setPagination((prev) => ({ ...prev, total: 0, totalPages: 0 }));
         return;
       }
-      
-      // Ensure res.data is an array
-      const apiData = Array.isArray(res.data) ? res.data : [];
-      
+
+      // The API returns: { booking_parkings: [...], total_count, current_page, total_pages }
+      const apiData = Array.isArray(res.data.booking_parkings) ? res.data.booking_parkings : [];
+
+      // Set pagination info
+      setPagination((prev) => ({
+        ...prev,
+        total: res.data.total_count || 0,
+        totalPages: res.data.total_pages || 1,
+      }));
+
       const bookingReqData = apiData.map((item, index) => ({
-        unique_id: `${item.id || 'no-id'}-${index}`, // Create unique ID
+        unique_id: `${item.id || 'no-id'}-${item.parking_id || 'no-parking'}-${item.user_id || 'no-user'}-${item.booking_date || 'no-date'}-${index}`, // Create truly unique ID
         id: item.id || null,
         parking_id: item.parking_id || item.id || null,
         name: item.user_name || 'N/A',
@@ -63,7 +77,7 @@ const Parkings = () => {
         total_allotted_slots: item.total_allotted_slots || 0,
         total_vacant_slots: item.total_vacant_slots || 0,
       }));
-      
+
       setBookingData(bookingReqData);
       setFilteredData(bookingReqData);
 
@@ -82,13 +96,13 @@ const Parkings = () => {
           if (
             item.vehicle_type &&
             typeof item.vehicle_type === 'string' &&
-            item.vehicle_type.toLowerCase().includes("2-wheeler")
+            (item.vehicle_type.toLowerCase().includes("2-wheeler") || item.vehicle_type.toLowerCase().includes("2 wheeler"))
           ) {
             count2++;
           } else if (
             item.vehicle_type &&
             typeof item.vehicle_type === 'string' &&
-            item.vehicle_type.toLowerCase().includes("4-wheeler") || item.vehicle_type.toLowerCase().includes("car")
+            (item.vehicle_type.toLowerCase().includes("4-wheeler") || item.vehicle_type.toLowerCase().includes("car") || item.vehicle_type.toLowerCase().includes("4 wheeler"))
           ) {
             count4++;
           }
@@ -107,19 +121,22 @@ const Parkings = () => {
     }
   };
 
+  // Fetch data when pagination changes
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, pagination.perPage]);
 
   // Handle search with debouncing
   useEffect(() => {
-    const filteredResults = bookingdata.filter(
-      (item) =>
-        item.parking_name.toLowerCase().includes(searchValue.toLowerCase()) ||
-        item.name.toLowerCase().includes(searchValue.toLowerCase())
-    );
-    setFilteredData(filteredResults);
-  }, [searchValue, bookingdata]);
+    const timer = setTimeout(() => {
+      setPagination((prev) => ({ ...prev, page: 1 }));
+      fetchData();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue]);
 
 const columns = [
   {
@@ -293,6 +310,71 @@ const columns = [
             />
           </div>
         )
+      )}
+
+      {/* Pagination Controls */}
+      {filteredData.length > 0 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
+          <div className="text-sm text-muted-foreground">
+            Showing {(pagination.page - 1) * pagination.perPage + 1} to{" "}
+            {Math.min(pagination.page * pagination.perPage, pagination.total)}{" "}
+            of {pagination.total} records
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              «
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              ‹ Prev
+            </button>
+            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
+              {pagination.page}
+            </span>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              Next ›
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.totalPages }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              »
+            </button>
+          </div>
+          <select
+            value={pagination.perPage}
+            onChange={(e) =>
+              setPagination((prev) => ({
+                ...prev,
+                perPage: Number(e.target.value),
+                page: 1,
+              }))
+            }
+            className="px-2 py-1.5 text-sm border border-border rounded-md bg-background"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
       )}
     </div>
   );

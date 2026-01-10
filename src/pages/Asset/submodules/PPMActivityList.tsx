@@ -48,7 +48,6 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
   const [activities, setActivities] = useState<PPMActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -121,6 +120,11 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
 
   const allColumns: Array<TableColumn<PPMActivity> & { id: string; label: string }> = [
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
+    { id: 'view', label: 'View', key: 'view', header: 'View', width: '80px', render: (_v, row) => (
+      <Link to={`/assets/routine-task-details/${row.asset_id}/${row.id}`} className="inline-flex items-center justify-center text-primary hover:text-primary/80" aria-label="View details">
+        <Eye className="w-4 h-4" />
+      </Link>
+    ) },
     { id: 'asset_name', label: 'Asset Name', key: 'asset_name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
     { id: 'checklist_name', label: 'Checklist', key: 'checklist_name', header: 'Checklist', sortable: true, render: (v) => v || '-' },
     { id: 'start_time', label: 'Start Date', key: 'start_time', header: 'Start Date', sortable: true, render: (v) => dateFormat(v) },
@@ -277,10 +281,6 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
         <DataTable 
           columns={visibleColumns} 
           data={paginatedActivities} 
-          selectable 
-          selectedRows={selectedRows} 
-          onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} 
-          onSelectAll={() => setSelectedRows(selectedRows.length === paginatedActivities.length ? [] : paginatedActivities.map(a => String(a.id)))} 
           viewPath={(row) => `/assets/routine-task-details/${row.asset_id}/${row.id}`} 
         />
       )}

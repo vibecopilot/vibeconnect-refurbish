@@ -14,7 +14,7 @@ const CreateChecklist: React.FC = () => {
         ]} 
       />
       
-      <ChecklistCreateForm checklistType="routine" />
+      <ChecklistCreateForm />
     </div>
   );
 };

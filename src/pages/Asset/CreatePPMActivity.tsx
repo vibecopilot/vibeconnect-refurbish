@@ -14,7 +14,7 @@ const CreatePPMActivity: React.FC = () => {
         ]} 
       />
       
-      <ChecklistCreateForm checklistType="ppm" />
+      <ChecklistCreateForm />
     </div>
   );
 };

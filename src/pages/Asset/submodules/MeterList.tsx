@@ -48,7 +48,6 @@ const MeterList: React.FC<MeterListProps> = ({
   const [meters, setMeters] = useState<Meter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
@@ -187,10 +186,10 @@ const MeterList: React.FC<MeterListProps> = ({
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <Link to={`/asset/meter/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}`} className="text-primary hover:text-primary/80">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/asset/meter/${row.id}/edit`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}/edit`} className="text-primary hover:text-primary/80">
             <Edit className="w-4 h-4" />
           </Link>
         </div>
@@ -250,13 +249,31 @@ const MeterList: React.FC<MeterListProps> = ({
     );
   }
 
+  const hasActiveFilters = filters.building_id || filters.floor_id || filters.unit_id;
+
   if (paginatedMeters.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <Gauge className="w-16 h-16 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Meters Found</h3>
-        <p className="text-muted-foreground mb-4">{searchValue ? `No meters match "${searchValue}"` : 'No meter assets added yet'}</p>
-        <Link to="/asset/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add Asset</Link>
+        <p className="text-muted-foreground mb-4">
+          {hasActiveFilters
+            ? 'No meters match the selected filters'
+            : searchValue
+              ? `No meters match "${searchValue}"`
+              : 'No meter assets added yet'
+          }
+        </p>
+        {hasActiveFilters ? (
+          <button
+            onClick={handleFilterReset}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
+          >
+            Clear Filters
+          </button>
+        ) : (
+          <Link to="/asset/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add Asset</Link>
+        )}
       </div>
     );
   }
@@ -380,13 +397,13 @@ const MeterList: React.FC<MeterListProps> = ({
                 { label: 'Capacity', value: meter.capacity || '-' },
                 { label: 'Critical', value: meter.critical ? 'Yes' : 'No' },
               ]}
-              viewPath={`/asset/meter/${meter.id}`}
-              editPath={`/asset/meter/${meter.id}/edit`}
+              viewPath={`/asset/${meter.id}`}
+              editPath={`/asset/${meter.id}/edit`}
             />
           ))}
         </div>
       ) : (
-        <DataTable columns={visibleColumns} data={paginatedMeters} selectable selectedRows={selectedRows} onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} onSelectAll={() => setSelectedRows(selectedRows.length === paginatedMeters.length ? [] : paginatedMeters.map(m => String(m.id)))} viewPath={(row) => `/asset/meter/${row.id}`} />
+        <DataTable columns={visibleColumns} data={paginatedMeters} viewPath={(row) => `/asset/${row.id}`} />
       )}
 
       {paginatedMeters.length > 0 && (

@@ -52,7 +52,6 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
   const [checklists, setChecklists] = useState<PPMChecklist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
@@ -180,7 +179,7 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
         <ClipboardCheck className="w-16 h-16 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No PPM Checklists Found</h3>
         <p className="text-muted-foreground mb-4">{searchValue ? `No checklists match "${searchValue}"` : 'No PPM checklists created yet'}</p>
-        <Link to="/asset/ppm-activity/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add PPM</Link>
+        <Link to="/asset/ppm-checklist/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">+ Add PPM Checklist</Link>
       </div>
     );
   }
@@ -232,14 +231,10 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
           ))}
         </div>
       ) : (
-        <DataTable 
-          columns={visibleColumns} 
-          data={paginatedChecklists} 
-          selectable 
-          selectedRows={selectedRows} 
-          onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])} 
-          onSelectAll={() => setSelectedRows(selectedRows.length === paginatedChecklists.length ? [] : paginatedChecklists.map(c => String(c.id)))} 
-          viewPath={(row) => `/asset/ppm-checklist/${row.id}`} 
+        <DataTable
+          columns={visibleColumns}
+          data={paginatedChecklists}
+          viewPath={(row) => `/asset/ppm-checklist/${row.id}`}
         />
       )}
 

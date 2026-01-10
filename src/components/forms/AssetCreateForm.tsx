@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import { Settings, MapPin, Package, Calendar, FileText, Shield, Plus, X } from "lucide-react";
+import { Settings, MapPin, Package, Calendar, FileText, Shield, Plus, X, UserPlus } from "lucide-react";
 import FormSection from "../ui/FormSection";
 import FormInput from "../ui/FormInput";
 import FormGrid from "../ui/FormGrid";
@@ -18,6 +18,7 @@ import {
   getVendors,
   postSiteAsset,
 } from "../../api";
+import AddSuppliers from "../../containers/modals/AddSuppliersModal";
 
 const AssetCreateForm: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +34,9 @@ const AssetCreateForm: React.FC = () => {
   const [parentAsset, setParentAsset] = useState<any[]>([]);
   const [consumptionData, setConsumptionData] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [meterType, setMeterType] = useState("");
+  const [consumptionType, setConsumptionType] = useState("");
 
   const [formData, setFormData] = useState({
     site_id: getItemInLocalStorage("SITEID") || "",
@@ -56,6 +60,10 @@ const AssetCreateForm: React.FC = () => {
     installation: "",
     warranty_expiry: "",
     warranty_start: "",
+    warranty: false,
+    complianceApplicable: false,
+    compliance_start: "",
+    compliance_end: "",
     critical: false,
     capacity: "",
     breakdown: false,
@@ -68,6 +76,15 @@ const AssetCreateForm: React.FC = () => {
     manuals: [] as File[],
     others: [] as File[],
   });
+
+  const fetchVendors = async () => {
+    try {
+      const vendorResp = await getVendors();
+      setVendors(vendorResp.data || []);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -152,6 +169,11 @@ const AssetCreateForm: React.FC = () => {
         check_prev: false,
       },
     ]);
+  };
+
+  const handleAddSupplierSuccess = () => {
+    fetchVendors();
+    setShowAddSupplierModal(false);
   };
 
   const handleRemoveConsumption = (index: number) => {
@@ -396,27 +418,6 @@ const AssetCreateForm: React.FC = () => {
             placeholder="Select Parent Asset"
           />
           <FormInput
-            label="Asset Type"
-            name="asset_type"
-            type="select"
-            value={formData.asset_type}
-            onChange={handleChange}
-            options={[
-              { value: "fixed", label: "Fixed" },
-              { value: "movable", label: "Movable" },
-            ]}
-            placeholder="Select Asset Type"
-          />
-          <FormInput
-            label="Vendor"
-            name="vendor_id"
-            type="select"
-            value={formData.vendor_id}
-            onChange={handleChange}
-            options={vendorOptions}
-            placeholder="Select Vendor"
-          />
-          <FormInput
             label="Capacity"
             name="capacity"
             value={formData.capacity}
@@ -430,12 +431,118 @@ const AssetCreateForm: React.FC = () => {
             onChange={handleChange}
             placeholder="Enter UOM"
           />
+          <FormInput
+            label="Comprehensive"
+            name="comprehensive"
+            type="select"
+            value={formData.comprehensive}
+            onChange={handleChange}
+            options={[
+              { value: "true", label: "Comprehensive" },
+              { value: "false", label: "Non-Comprehensive" },
+            ]}
+            placeholder="Select Asset Type"
+          />
         </FormGrid>
+
         <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-border">
-          <FormToggle label="Critical Asset" checked={formData.critical} onChange={(v) => handleToggleChange("critical", v)} />
-          <FormToggle label="Breakdown" checked={formData.breakdown} onChange={(v) => handleToggleChange("breakdown", v)} />
-          <FormToggle label="Is Meter" checked={formData.is_meter} onChange={(v) => handleToggleChange("is_meter", v)} />
+          <div className="flex items-center gap-4">
+            <label className="font-medium text-sm">Critical:</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.critical === true}
+                  onChange={() => setFormData(prev => ({ ...prev, critical: true }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Yes</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.critical === false}
+                  onChange={() => setFormData(prev => ({ ...prev, critical: false }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">No</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium">Status:</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Breakdown</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!formData.breakdown}
+                  onChange={() => setFormData(prev => ({ ...prev, breakdown: !prev.breakdown }))}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+              <span className="text-sm text-muted-foreground">In Use</span>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.is_meter}
+              onChange={() => setFormData(prev => ({ ...prev, is_meter: !prev.is_meter }))}
+              className="w-4 h-4"
+            />
+            <span className="text-sm font-medium">Meter Applicable</span>
+          </label>
         </div>
+
+        {formData.is_meter && (
+          <div className="mt-4 pt-4 border-t border-border space-y-4">
+            <div className="flex items-center gap-4">
+              <label className="font-medium text-sm">Meter Type:</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={meterType === "parent"}
+                    onChange={() => {
+                      setMeterType("parent");
+                      setFormData(prev => ({ ...prev, asset_type: "parent", parent_asset_id: "" }));
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Parent</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={meterType === "sub"}
+                    onChange={() => {
+                      setMeterType("sub");
+                      setFormData(prev => ({ ...prev, asset_type: "sub" }));
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Sub</span>
+                </label>
+              </div>
+            </div>
+
+            {meterType === "sub" && (
+              <FormInput
+                label="Parent Meter"
+                name="parent_asset_id"
+                type="select"
+                value={formData.parent_asset_id}
+                onChange={handleChange}
+                options={parentOptions}
+                placeholder="Select Parent Meter"
+              />
+            )}
+          </div>
+        )}
       </FormSection>
 
       {/* Purchase & Warranty Details */}
@@ -457,47 +564,154 @@ const AssetCreateForm: React.FC = () => {
             required
             placeholder="Enter Purchase Cost"
           />
-          <FormInput
-            label="Installation Date"
-            name="installation"
-            type="date"
-            value={formData.installation}
-            onChange={handleChange}
-          />
-          <FormInput
-            label="Warranty Start"
-            name="warranty_start"
-            type="date"
-            value={formData.warranty_start}
-            onChange={handleChange}
-          />
-          <FormInput
-            label="Warranty Expiry"
-            name="warranty_expiry"
-            type="date"
-            value={formData.warranty_expiry}
-            onChange={handleChange}
-          />
-          <FormInput
-            label="Comprehensive"
-            name="comprehensive"
-            type="select"
-            value={formData.comprehensive}
-            onChange={handleChange}
-            options={[
-              { value: "yes", label: "Yes" },
-              { value: "no", label: "No" },
-            ]}
-            placeholder="Select"
-          />
         </FormGrid>
+
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex items-center gap-4 mb-4">
+            <label className="font-medium text-sm">Under Warranty:</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.warranty === true}
+                  onChange={() => setFormData(prev => ({ ...prev, warranty: true }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Yes</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={formData.warranty === false}
+                  onChange={() => setFormData(prev => ({ ...prev, warranty: false }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">No</span>
+              </label>
+            </div>
+          </div>
+
+          {formData.warranty && (
+            <FormGrid columns={3}>
+              <FormInput
+                label="Warranty Start Date"
+                name="warranty_start"
+                type="date"
+                value={formData.warranty_start}
+                onChange={handleChange}
+              />
+              <FormInput
+                label="Warranty Expiry Date"
+                name="warranty_expiry"
+                type="date"
+                value={formData.warranty_expiry}
+                onChange={handleChange}
+              />
+              <FormInput
+                label="Commissioning Date"
+                name="installation"
+                type="date"
+                value={formData.installation}
+                onChange={handleChange}
+              />
+            </FormGrid>
+          )}
+        </div>
       </FormSection>
 
-      {/* Meter Parameters */}
+      {/* Compliance Details */}
+      <FormSection title="Compliance Details" icon={Shield}>
+        <div className="flex items-center gap-4 mb-4">
+          <label className="font-medium text-sm">Compliance Applicable:</label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={formData.complianceApplicable === true}
+                onChange={() => setFormData(prev => ({ ...prev, complianceApplicable: true }))}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">Yes</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={formData.complianceApplicable === false}
+                onChange={() => setFormData(prev => ({ ...prev, complianceApplicable: false }))}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">No</span>
+            </label>
+          </div>
+        </div>
+
+        {formData.complianceApplicable && (
+          <FormGrid columns={2}>
+            <FormInput
+              label="Start Date"
+              name="compliance_start"
+              type="date"
+              value={formData.compliance_start}
+              onChange={handleChange}
+            />
+            <FormInput
+              label="End Date"
+              name="compliance_end"
+              type="date"
+              value={formData.compliance_end}
+              onChange={handleChange}
+            />
+          </FormGrid>
+        )}
+      </FormSection>
+
+      {/* Supplier Details */}
+      <FormSection title="Supplier Contact Details" icon={UserPlus}>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <FormInput
+              label="Select Supplier"
+              name="vendor_id"
+              type="select"
+              value={formData.vendor_id}
+              onChange={handleChange}
+              options={vendorOptions}
+              placeholder="Select Supplier"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowAddSupplierModal(true)}
+            className="mt-6"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Supplier
+          </Button>
+        </div>
+      </FormSection>
+
+      {/* Consumption Asset Measure */}
       {formData.is_meter && (
-        <FormSection title="Meter Parameters" icon={Settings}>
-          <div className="space-y-4">
-            {consumptionData.map((item, index) => (
+        <FormSection title="Consumption Asset Measure" icon={Settings}>
+          <div className="mb-4">
+            <FormInput
+              label="Select Consumption Asset Measure Type"
+              name="consumption_type"
+              type="select"
+              value={consumptionType}
+              onChange={(e) => setConsumptionType(e.target.value)}
+              options={[
+                { value: "ConsumptionAssetMeasureType", label: "Consumption Asset Measure Type" },
+                { value: "nonConsumption", label: "Non Consumption Asset Measure Type" },
+              ]}
+              placeholder="Select Type"
+            />
+          </div>
+
+          {(consumptionType === "ConsumptionAssetMeasureType" || consumptionType === "nonConsumption") && (
+            <div className="space-y-4">
+              {consumptionData.map((item, index) => (
               <div key={index} className="p-4 border border-border rounded-lg relative">
                 <Button
                   type="button"
@@ -571,30 +785,51 @@ const AssetCreateForm: React.FC = () => {
                     onChange={(e) => handleConsumptionChange(index, "alert_above", e.target.value)}
                     placeholder="Alert Above"
                   />
+                  <FormInput
+                    label="Multiplier Factor"
+                    name="multiplier_factor"
+                    type="number"
+                    value={item.multiplier_factor}
+                    onChange={(e) => handleConsumptionChange(index, "multiplier_factor", e.target.value)}
+                    placeholder="Multiplier Factor"
+                  />
                 </FormGrid>
                 <div className="flex gap-4 mt-3">
-                  <FormToggle
-                    label="Dashboard View"
-                    checked={item.dashboard_view}
-                    onChange={(v) => handleConsumptionChange(index, "dashboard_view", v)}
-                  />
-                  <FormToggle
-                    label="Consumption View"
-                    checked={item.consumption_view}
-                    onChange={(v) => handleConsumptionChange(index, "consumption_view", v)}
-                  />
-                  <FormToggle
-                    label="Check Previous"
-                    checked={item.check_prev}
-                    onChange={(v) => handleConsumptionChange(index, "check_prev", v)}
-                  />
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.dashboard_view}
+                      onChange={(e) => handleConsumptionChange(index, "dashboard_view", e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Dashboard View</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.consumption_view}
+                      onChange={(e) => handleConsumptionChange(index, "consumption_view", e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Consumption View</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.check_prev}
+                      onChange={(e) => handleConsumptionChange(index, "check_prev", e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Check Previous Reading</span>
+                  </label>
                 </div>
               </div>
             ))}
             <Button type="button" variant="outline" onClick={handleAddConsumption}>
               <Plus className="w-4 h-4 mr-2" /> Add Parameter
             </Button>
-          </div>
+            </div>
+          )}
         </FormSection>
       )}
 
@@ -642,9 +877,16 @@ const AssetCreateForm: React.FC = () => {
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Asset"}
+          {isSubmitting ? "Creating..." : "Save & Show Details"}
         </Button>
       </div>
+
+      {showAddSupplierModal && (
+        <AddSuppliers
+          onclose={() => setShowAddSupplierModal(false)}
+          fetchVendors={handleAddSupplierSuccess}
+        />
+      )}
     </div>
   );
 };
