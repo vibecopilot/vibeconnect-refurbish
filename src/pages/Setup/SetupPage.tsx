@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getItemInLocalStorage } from '../../utils/localStorage';
 import FloorPage from './Account/FloorPage';
 import UnitPage from './Account/UnitPage';
-import UsersPage from './Users/UsersPage';
+import UsersPage from './users/UsersPage';
 import AssetGroupPage from './AssetStock/AssetGroupPage';
 import TicketPage from './Ticket/TicketPage';
 import BusinessSetup from '../SubPages/BusinessSetup';
