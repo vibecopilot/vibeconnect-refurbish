@@ -20,7 +20,7 @@ import {
 } from "../../api";
 import { useSelector } from "react-redux";
 
-const FitoutChecklistList = () => {
+const FitoutChecklistList = ({ embedded = false }) => {
   const [searchText, setSearchText] = useState("");
   const [modal, showModal] = useState(false);
   const [category, setCategory] = useState([]);
@@ -29,9 +29,9 @@ const FitoutChecklistList = () => {
   const [users, setUsers] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [page, setPage] = useState("meetingBooking");
-  const [bookings, setBookings] = useState([]); // State to hold booking data
-  const [loading, setLoading] = useState(false); // Loading state
-  const [error, setError] = useState(null); // Error state
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [bookingFacility, setBookingFacility] = useState([]);
   const [originalBookings, setOriginalBookings] = useState([]);
   const themeColor = useSelector((state) => state.theme.color);
@@ -44,16 +44,10 @@ const FitoutChecklistList = () => {
       try {
         setLoading(true);
 
-        // Fetch Bookings
         const Response = await getFitoutChecklist();
         console.log("Fitout Response:", Response);
         setBookings(Response?.data || []);
         setOriginalBookings(Response?.data || []);
-
-        // Fetch Facility Setup
-        //   const facilityResponse = await getFacitilitySetup();
-        //   console.log("Facility Setup Response:", facilityResponse);
-        //   setBookingFacility(facilityResponse?.data || []);
 
         setLoading(false);
       } catch (error) {
@@ -65,7 +59,7 @@ const FitoutChecklistList = () => {
     fetchData();
     fetchDetails();
   }, []);
-  // Handle Search
+
   const handleSearch = (event) => {
     const searchValue = event.target.value.toLowerCase();
     setSearchText(searchValue);
@@ -76,7 +70,6 @@ const FitoutChecklistList = () => {
     }
 
     const filteredResults = originalBookings.filter((item) => {
-      // Find category and subcategory names
       const categoryName =
         category.find((c) => c.id === item.snag_audit_category_id)?.name || "";
       const subCatName =
@@ -90,7 +83,6 @@ const FitoutChecklistList = () => {
             .replace(/-/g, "-")
         : "";
 
-      // Check if search value matches any field
       return (
         checklistName.toLowerCase().includes(searchValue) ||
         categoryName.toLowerCase().includes(searchValue) ||
@@ -101,30 +93,9 @@ const FitoutChecklistList = () => {
 
     setBookings(filteredResults);
   };
-  // Columns for DataTable
-  const columns = [
-    // {
-    //   name: "Action",
-    //   cell: (row) => (
-    //     <div className="flex item-center gap-2">
-    //       <Link to={`/bookings/booking-details/${row.id}`}>
-    //         <BsEye />
-    //       </Link>
-    //       {/* <Link to={`bookings/edit_bookings/${row.id}`}>
-    //       <BiEdit size={15} />
-    //     </Link> */}
-    //     </div>
-    //   ),
-    //   sortable: false,
-    // },
-    { name: "Sr. No.", selector: (row, index) => index + 1, sortable: true },
 
-    // { name: "ID", selector: (row) => row.id, sortable: true },
-    // {
-    //   name: "Facility ID",
-    //   selector: (row) => row.amenity_id,
-    //   sortable: true,
-    // },
+  const columns = [
+    { name: "Sr. No.", selector: (row, index) => index + 1, sortable: true },
     {
       name: "Title",
       selector: (row) => {
@@ -136,8 +107,6 @@ const FitoutChecklistList = () => {
     {
       name: "Category",
       selector: (row) => {
-        // const floor = floors.find((f) => f.id === row.floor_id);
-        // return floor ? floor.name : "NA";
         const categoryName = category.find(
           (c) => c.id === row.snag_audit_category_id
         );
@@ -181,17 +150,7 @@ const FitoutChecklistList = () => {
     {
       name: "Action",
       cell: (row) => (
-        <div className="flex items-center gap-2">
-          {/* <Link to={`/fitout/checklist/form/${row.id}`}>
-            <FaEye
-              className="text-blue-500 hover:text-blue-700 cursor-pointer"
-              size={16}
-              title="View Checklist Form"
-            >
-              View
-            </FaEye> */}
-          {/* </Link> */}
-        </div>
+        <div className="flex items-center gap-2"></div>
       ),
       sortable: false,
     },
@@ -208,56 +167,61 @@ const FitoutChecklistList = () => {
       console.error("Error fetching details:", error);
     }
   };
+
+  const content = (
+    <div className="w-full flex m-3 flex-col overflow-hidden">
+      {page === "meetingBooking" && (
+        <div>
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              placeholder="Search By Name"
+              className="border p-2 w-full border-gray-300 rounded-lg"
+              value={searchText}
+              onChange={handleSearch}
+            />
+            <div className="flex justify-end">
+              <Link
+                to={"/fitout/checklist/create"}
+                style={{ background: "rgb(3 19 37)" }}
+                className="flex items-center gap-1 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition hover:shadow-lg whitespace-nowrap"
+              >
+                <IoAddCircleOutline size={20} />
+                Create Checklist
+              </Link>
+            </div>
+          </div>
+          <div className="flex min-h-screen">
+            {loading ? (
+              <p className="text-center">Loading bookings...</p>
+            ) : error ? (
+              <p className="text-center text-red-500">{error}</p>
+            ) : (
+              <div className="w-full">
+                <DataTable columns={columns} data={bookings} pagination />
+              </div>
+            )}
+          </div>
+          {modal && <ExportBookingModal onclose={() => showModal(false)} />}
+        </div>
+      )}
+
+      {page === "seatBooking" && (
+        <div>
+          <SeatBooking />
+        </div>
+      )}
+    </div>
+  );
+
+  if (embedded) {
+    return <div className="w-full">{content}</div>;
+  }
+
   return (
     <section className="flex">
       <FitOutList />
-      <div className="w-full flex m-3 flex-col overflow-hidden">
-        {/* <div className="flex justify-center">
-            <div className="sm:flex grid grid-cols-2 sm:flex-row gap-5 font-medium p-2 sm:rounded-full rounded-md opacity-90 bg-gray-200">
-            </div>
-          </div> */}
-        {page === "meetingBooking" && (
-          <div>
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                placeholder="Search By Name"
-                className="border p-2 w-full border-gray-300 rounded-lg"
-                value={searchText}
-                onChange={handleSearch}
-              />
-              <div className="flex justify-end">
-                <Link
-                  to={"/fitout/checklist/create"}
-                  style={{ background: "rgb(3 19 37)" }}
-                  className="flex items-center gap-1 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition hover:shadow-lg whitespace-nowrap"
-                >
-                  <IoAddCircleOutline size={20} />
-                  Create Checklist
-                </Link>
-              </div>
-            </div>
-            <div className="flex min-h-screen">
-              {loading ? (
-                <p className="text-center">Loading bookings...</p>
-              ) : error ? (
-                <p className="text-center text-red-500">{error}</p>
-              ) : (
-                <div className="w-full">
-                  <DataTable columns={columns} data={bookings} pagination />
-                </div>
-              )}
-            </div>
-            {modal && <ExportBookingModal onclose={() => showModal(false)} />}
-          </div>
-        )}
-
-        {page === "seatBooking" && (
-          <div>
-            <SeatBooking />
-          </div>
-        )}
-      </div>
+      {content}
     </section>
   );
 };

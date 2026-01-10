@@ -84,7 +84,7 @@ const ComplianceSubCatModal = ({ onclose, parentId, fetchComplianceTree }) => {
             <div className="grid grid-cols-2 gap-2 my-2">
               <div className="flex flex-col gap-1 col-span-2">
                 <label htmlFor="" className="font-medium text-sm">
-                  Name <span className="text-red-500">*</span>
+                  Name <span className="text-error">*</span>
                 </label>
                 <input
                   type="text"
@@ -152,13 +152,13 @@ const ComplianceSubCatModal = ({ onclose, parentId, fetchComplianceTree }) => {
           </div>
           <div className="flex justify-center items-center gap-2 mt-2 border-t p-1">
             <button
-              className="bg-red-500 flex items-center gap-2 font-medium text-white rounded-md p-2 px-4 "
+              className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2 font-medium"
               onClick={onclose}
             >
               <MdClose /> Cancel
             </button>
             <button
-              className="bg-green-500 flex items-center gap-2 font-medium text-white rounded-md px-4 p-2 "
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2 font-medium"
               onClick={handleAddChildCategory}
             >
               <FaCheck /> Submit
@@ -171,3 +171,4 @@ const ComplianceSubCatModal = ({ onclose, parentId, fetchComplianceTree }) => {
 };
 
 export default ComplianceSubCatModal;
+

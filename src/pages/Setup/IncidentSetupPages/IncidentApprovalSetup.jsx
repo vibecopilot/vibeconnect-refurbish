@@ -33,7 +33,7 @@ const IncidentApprovalSetup = () => {
                 setFormData({ ...formData, Attendees: selectedOption })
               }
             />
-            <button className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md">
+            <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2">
             <FaCheck /> Submit
             </button>
           </div>
@@ -45,3 +45,4 @@ const IncidentApprovalSetup = () => {
 };
 
 export default IncidentApprovalSetup;
+

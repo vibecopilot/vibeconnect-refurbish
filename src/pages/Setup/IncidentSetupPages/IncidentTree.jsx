@@ -39,10 +39,10 @@ const TreeNode = ({ node, fetchIncidentTree }) => {
           {node.children && node.children.length > 0 && (
             <button
               onClick={toggleExpand}
-              className="text-sm text-green-600 focus:outline-none"
+              className="text-sm text-primary focus:outline-none"
             >
               {isExpanded ? (
-                <IoMdArrowDropdownCircle size={20} className="text-red-400" />
+                <IoMdArrowDropdownCircle size={20} className="text-muted-foreground" />
               ) : (
                 <IoMdArrowDroprightCircle size={20} />
               )}
@@ -143,3 +143,4 @@ const TreeNode = ({ node, fetchIncidentTree }) => {
   );
 };
 export default TreeNode;
+

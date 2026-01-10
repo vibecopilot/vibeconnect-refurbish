@@ -1,85 +1,123 @@
-import React, { useEffect, useState } from "react";
-import Navbar from "../../../components/Navbar";
-import { IoMdAdd } from "react-icons/io";
-import Table from "../../../components/table/Table";
+import React, { useEffect, useMemo, useState } from "react";
 import { BiEdit } from "react-icons/bi";
+import { IoAddCircleOutline } from "react-icons/io5";
 import { Link } from "react-router-dom";
 import { getAllAddress } from "../../../api";
-import { IoAddCircleOutline } from "react-icons/io5";
-import SetupNavbar from "../../../components/navbars/SetupNavbar";
+import Button from "../../../components/ui/Button";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
+import DataTable from "../../../components/ui/DataTable";
+import FormGrid from "../../../components/ui/FormGrid";
+import FormInput from "../../../components/ui/FormInput";
 function AddressesSetup() {
-  const [filteredAddress, setFilteredAddress] = useState([]);
-  const column = [
-    {
-      name: "Actions",
+  const [addresses, setAddresses] = useState([]);
+  const [searchText, setSearchText] = useState("");
 
-      cell: (row) => (
-        <div className="flex items-center gap-4">
-          <Link to={`/admin/edit-addresses-setup/${row.id}`}>
-            <BiEdit size={15} />
-          </Link>
-        </div>
-      ),
-    },
-    { name: "Title", selector: (row) => row.address_title, sortable: true },
-    { name: "Email", selector: (row) => row.email_address, sortable: true },
-    {
-      name: "Phone Number",
-      selector: (row) => row.phone_number,
-      sortable: true,
-    },
-    {
-      name: "Building Name",
-      selector: (row) => row.building_name,
-      sortable: true,
-    },
-    { name: "Street Name", selector: (row) => row.street_name, sortable: true },
-    { name: "City", selector: (row) => row.city, sortable: true },
-    { name: "State", selector: (row) => row.state, sortable: true },
-    { name: "Pin Code", selector: (row) => row.pin_code, sortable: true },
-
-    // { name: "Fax", selector: (row) => row.fax, sortable: true },
-    // { name: "GST No.", selector: (row) => row.gstNo, sortable: true },
-    // { name: "Created On", selector: (row) => row.createdOn, sortable: true },
-    // { name: "Updated On", selector: (row) => row.updatedOn, sortable: true },
-  ];
+  const columns = useMemo(
+    () => [
+      {
+        key: "actions",
+        header: "Actions",
+        render: (_val, row) => (
+          <div className="flex items-center gap-4">
+            <Link to={`/admin/edit-addresses-setup/${row.id}`}>
+              <BiEdit size={15} />
+            </Link>
+          </div>
+        ),
+      },
+      {
+        key: "address_title",
+        header: "Title",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "email_address",
+        header: "Email",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "phone_number",
+        header: "Phone Number",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "building_name",
+        header: "Building Name",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      {
+        key: "street_name",
+        header: "Street Name",
+        sortable: true,
+        render: (val) => val || "-",
+      },
+      { key: "city", header: "City", sortable: true, render: (val) => val || "-" },
+      { key: "state", header: "State", sortable: true, render: (val) => val || "-" },
+      { key: "pin_code", header: "Pin Code", sortable: true, render: (val) => val || "-" },
+    ],
+    []
+  );
 
   useEffect(() => {
     const fetchAddress = async () => {
       try {
         const addressResp = await getAllAddress();
-        console.log(addressResp.data);
-        setFilteredAddress(addressResp.data);
+        setAddresses(addressResp.data || []);
       } catch (error) {
         console.log(error);
       }
     };
     fetchAddress();
   }, []);
- 
+
+  const filteredAddress = useMemo(() => {
+    if (!searchText) return addresses;
+    const needle = searchText.toLowerCase();
+    return addresses.filter((item) => {
+      return (
+        item.address_title?.toLowerCase().includes(needle) ||
+        item.email_address?.toLowerCase().includes(needle) ||
+        item.phone_number?.toLowerCase().includes(needle) ||
+        item.building_name?.toLowerCase().includes(needle) ||
+        item.street_name?.toLowerCase().includes(needle) ||
+        item.city?.toLowerCase().includes(needle) ||
+        item.state?.toLowerCase().includes(needle) ||
+        String(item.pin_code || "").includes(needle)
+      );
+    });
+  }, [addresses, searchText]);
+
   return (
-    <section className="flex">
-      <SetupNavbar/>
-      <div className="w-full flex mx-3 flex-col overflow-hidden">
-        <div className="flex flex-col sm:flex-row md:justify-between gap-3 mt-10 my-4">
-          <input
-            type="text"
-            placeholder="search"
-            className="border p-1 w-96 border-gray-400 rounded-md"
-          />
-          <div className="flex gap-3 sm:flex-row flex-col">
-            <Link
-              to={`/admin/add-addresses-setup`}
-              className=" font-semibold border-2 justify-center border-black px-4 p-1 flex gap-2 items-center rounded-md"
-            >
-              <IoAddCircleOutline /> Add
-            </Link>
-          </div>
+    <section className="space-y-4">
+      <Breadcrumb
+        items={[
+          { label: "Setup", path: "/setup" },
+          { label: "Finance" },
+          { label: "Addresses" },
+        ]}
+      />
+      <FormGrid columns={2}>
+        <FormInput
+          label="Search"
+          name="search"
+          placeholder="Search addresses"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
+        <div className="flex items-end justify-end">
+          <Link to="/admin/add-addresses-setup">
+            <Button leftIcon={<IoAddCircleOutline className="w-4 h-4" />}>
+              Add
+            </Button>
+          </Link>
         </div>
-        <div className="">
-          <Table columns={column} data={filteredAddress} isPagination={true} />
-        </div>
-      </div>
+      </FormGrid>
+
+      <DataTable columns={columns} data={filteredAddress} />
     </section>
   );
 }

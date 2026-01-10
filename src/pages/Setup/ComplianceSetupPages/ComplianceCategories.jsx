@@ -62,13 +62,13 @@ const ComplianceCategories = () => {
               />
 
               <button
-                className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md  font-medium justify-center"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2 font-medium justify-center"
                 onClick={handleAddCategory}
               >
                 <FaCheck /> Submit
               </button>
               <button
-                className="bg-red-400 text-white flex items-center gap-2 p-2 rounded-md  justify-center font-medium"
+                className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2 font-medium justify-center"
                 onClick={() => setAddCategory(false)}
               >
                 <MdClose /> Cancel
@@ -81,7 +81,7 @@ const ComplianceCategories = () => {
         <div className="flex w-full gap-2 justify-end">
           {!addCategory && (
             <button
-              className="bg-green-400 p-2 rounded-md text-white flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAddCategory(true)}
             >
               <PiPlusCircle /> Add Category
@@ -111,3 +111,4 @@ const ComplianceCategories = () => {
 };
 
 export default ComplianceCategories;
+

@@ -45,12 +45,12 @@ const IncidentSecSubCategoryModal = ({ onclose }) => {
           </div>
           <div className="flex justify-center items-center gap-2 mt-2 border-t p-1">
             <button
-              className="bg-red-500 flex items-center gap-2 text-white rounded-md p-2 px-4 "
+              className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
               onClick={onclose}
             >
               <MdClose /> Cancel
             </button>
-            <button className="bg-green-500 flex items-center gap-2 text-white rounded-md px-4 p-2 ">
+            <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2">
               <FaCheck /> Submit
             </button>
           </div>
@@ -61,3 +61,4 @@ const IncidentSecSubCategoryModal = ({ onclose }) => {
 };
 
 export default IncidentSecSubCategoryModal;
+

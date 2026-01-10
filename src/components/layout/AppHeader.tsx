@@ -463,6 +463,9 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   const toggleLevel1 = () => setCollapsedLevels(prev => ({ ...prev, level1: !prev.level1 }));
   const toggleLevel2 = () => setCollapsedLevels(prev => ({ ...prev, level2: !prev.level2 }));
 
+  // Check if we're on the setup page
+  const isSetupPage = location.pathname.startsWith('/setup');
+
   return (
     <header className="sticky top-0 z-50 bg-card border-b border-border">
       {/* Top Bar */}
@@ -487,6 +490,14 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             <span className="text-sm font-medium">Dashboard</span>
           </Link>
         </div>
+
+        {/* Settings Icon */}
+        <button
+          onClick={() => navigate('/setup')}
+          className="p-2 hover:bg-accent rounded-lg transition-colors"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
 
         {/* Right Side Controls */}
         <div className="flex items-center gap-4">
@@ -613,6 +624,9 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
         </div>
       </div>
 
+      {/* Hide all navigation when on setup page */}
+      {!isSetupPage && (
+      <>
       {/* Module Navigation - Level 1 */}
       <div className="relative">
         <nav
@@ -715,6 +729,8 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
         </nav>
       )}
 
+      </>
+      )}
       {/* Debug Info */}
       <div className="hidden debug-info p-2 text-xs text-muted-foreground border-t">
       </div>

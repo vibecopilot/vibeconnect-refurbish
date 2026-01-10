@@ -1023,6 +1023,50 @@ export const getFacitilitySetup = async () => {
   }
 };
 
+export const getHotelSetup = async (isHotel, page, per_page) => {
+  try {
+    const response = await axiosInstance.get(`/amenities.json`, {
+      params: {
+        token: token,
+        "q[is_hotel_eq]": isHotel,
+        page,
+        per_page,
+      },
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error("Error fetching facility setup:", error);
+    throw error;
+  }
+};
+
+export const getTurfSetup = async (type_of_facility, page, per_page) => {
+  try {
+    const response = await axiosInstance.get(`/amenities.json`, {
+      params: {
+        token: token,
+        "q[type_of_facility_eq]": type_of_facility,
+        page,
+        per_page,
+      },
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error("Error fetching turf setup:", error);
+    throw error;
+  }
+};
+
 export const getAmenitiesBooking = async () => {
   return axiosInstance.get(`/amenity_bookings.json`, {
     params: {
@@ -10389,4 +10433,3 @@ export const postReceiptNumber = async (data) =>
 
 // Default export for backward compatibility
 export default axiosInstance;
-

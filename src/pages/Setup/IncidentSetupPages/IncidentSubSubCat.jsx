@@ -43,7 +43,7 @@ const SubSubCategorysetup = () => {
             <BiEdit size={15} />
           </button>
 
-          <button className="text-red-500">
+          <button className="text-muted-foreground hover:text-foreground">
             <FaTrash size={15} />
           </button>
         </div>
@@ -165,13 +165,13 @@ const SubSubCategorysetup = () => {
               />
 
               <button
-                className="bg-green-500 text-white p-2 flex gap-2 items-center rounded-md"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
                 onClick={handleAddSubSubCategory}
               >
                 <FaCheck /> Submit
               </button>
               <button
-                className="bg-red-400 text-white flex items-center gap-2 p-2 rounded-md"
+                className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted inline-flex items-center gap-2"
                 onClick={() => setAddSubSubCat(false)}
               >
                 <MdClose /> Cancel
@@ -180,7 +180,7 @@ const SubSubCategorysetup = () => {
           )}
           {!addSubSubCat && (
             <button
-              className="bg-green-500 p-2 rounded-md text-white flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg inline-flex items-center gap-2"
               onClick={() => setAddSubSubCat(true)}
             >
               <PiPlusCircle /> Add
@@ -197,3 +197,4 @@ const SubSubCategorysetup = () => {
 };
 
 export default SubSubCategorysetup;
+

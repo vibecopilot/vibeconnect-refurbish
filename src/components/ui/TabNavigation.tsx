@@ -10,17 +10,18 @@ interface TabNavigationProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  fullWidth?: boolean;
 }
 
-const TabNavigation: React.FC<TabNavigationProps> = ({ tabs, activeTab, onTabChange }) => {
+const TabNavigation: React.FC<TabNavigationProps> = ({ tabs, activeTab, onTabChange, fullWidth = false }) => {
   return (
     <div className="border-b border-border mb-6">
-      <nav className="flex gap-1 overflow-x-auto scrollbar-hide">
+      <nav className={`flex gap-1 overflow-x-auto scrollbar-hide ${fullWidth ? 'w-full' : ''}`}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${fullWidth ? 'flex-1 text-center' : ''} ${
               activeTab === tab.id
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
