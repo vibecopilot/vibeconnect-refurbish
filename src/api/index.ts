@@ -1,3 +1,5 @@
+
+
 import { data } from "autoprefixer";
 import { getItemInLocalStorage } from "../utils/localStorage";
 import axiosInstance from "./axiosInstance";
@@ -672,6 +674,50 @@ export const getFacilitySetup = async (data) =>
       token: token,
     },
   });
+export const getHotelSetup = async (isHotel, page, per_page) => {
+try {
+const response = await axiosInstance.get(`/amenities.json`, {
+params: {
+token: token,
+"q[is_hotel_eq]": isHotel,
+page,
+per_page,
+},
+headers: {
+"Cache-Control": "no-cache",
+Pragma: "no-cache",
+Expires: "0",
+},
+});
+return response;
+} catch (error) {
+console.error("Error fetching facility setup:", error);
+throw error;
+}
+};
+
+export const getTurfSetup = async (type_of_facility, page, per_page) => {
+try {
+const response = await axiosInstance.get(`/amenities.json`, {
+params: {
+token: token,
+"q[type_of_facility_eq]": type_of_facility,
+page,
+per_page,
+},
+headers: {
+"Cache-Control": "no-cache",
+Pragma: "no-cache",
+Expires: "0",
+},
+});
+return response;
+} catch (error) {
+console.error("Error fetching turf setup:", error);
+throw error;
+}
+};
+
 
 export const getFacitilitySetupId = async (id) =>
   axiosInstance.get(`/amenities/${id}.json`, {
@@ -1019,50 +1065,6 @@ export const getFacitilitySetup = async () => {
     return response;
   } catch (error) {
     console.error("Error fetching facility setup:", error);
-    throw error;
-  }
-};
-
-export const getHotelSetup = async (isHotel, page, per_page) => {
-  try {
-    const response = await axiosInstance.get(`/amenities.json`, {
-      params: {
-        token: token,
-        "q[is_hotel_eq]": isHotel,
-        page,
-        per_page,
-      },
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-    });
-    return response;
-  } catch (error) {
-    console.error("Error fetching facility setup:", error);
-    throw error;
-  }
-};
-
-export const getTurfSetup = async (type_of_facility, page, per_page) => {
-  try {
-    const response = await axiosInstance.get(`/amenities.json`, {
-      params: {
-        token: token,
-        "q[type_of_facility_eq]": type_of_facility,
-        page,
-        per_page,
-      },
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-    });
-    return response;
-  } catch (error) {
-    console.error("Error fetching turf setup:", error);
     throw error;
   }
 };
@@ -2048,26 +2050,28 @@ export const postServiceAssociation = async (data) =>
     },
   });
 
+
 export const getSoftServices = (page = 1, perPage = 10, searchValue = "") => {
-  const params: any = {
-    token: token,
-    page: page,
-    per_page: perPage,
-    _t: Date.now() // Cache buster
-  };
-
-  if (searchValue) {
-    params['q[name_cont]'] = searchValue;
-  }
-
-  return axiosInstance.get('/soft_services.json', {
-    params,
-    headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    }
-  });
+const params: any = {
+token: token,
+page: page,
+per_page: perPage,
+_t: Date.now() // Cache buster
 };
+
+if (searchValue) {
+params['q[name_cont]'] = searchValue;
+}
+ return axiosInstance.get('/soft_services.json', {
+params,
+
+headers: {
+'Cache-Control': 'no-cache',
+'Pragma': 'no-cache'
+}
+});
+};
+
 
 export const getServicesChecklist = async () =>
   axiosInstance.get("/checklists.json?q[ctype_eq]=soft_service", {
@@ -2458,18 +2462,19 @@ export const getParkingSlots = async () =>
   });
 
 export const getBookParking = async (page = 1, perPage = 10, searchValue = "") => {
-  const params = {
-    token: token,
-    page: page,
-    per_page: perPage,
-  };
-
-  if (searchValue) {
-    params['q[search_cont]'] = searchValue;
-  }
-
-  return axiosInstance.get(`/booking_parkings.json`, { params });
+const params = {
+token: token,
+page: page,
+per_page: perPage,
 };
+
+if (searchValue) {
+params['q[search_cont]'] = searchValue;
+}
+
+return axiosInstance.get(`/booking_parkings.json`, { params });
+};
+
 
 export const fetchParkingDetail = async (id) =>
   axiosInstance.get(`/parking_configurations/${id}.json`, {
@@ -2819,12 +2824,21 @@ export const getStandardUnits = async () =>
       token: token,
     },
   });
-export const getContactBook = async () =>
-  axiosInstance.get(`/contact_books.json`, {
+export const getContactBook = (
+  page: number = 1,
+  perPage: number = 12,
+  search: string = ""
+) => {
+  return axiosInstance.get("/contact_books.json", {
     params: {
-      token: token,
+      token,
+      page,
+      per_page: perPage,
+      ...(search ? { search } : {}),
     },
   });
+};
+
 export const postContactBook = async (data) =>
   axiosInstance.post(`/contact_books.json`, data, {
     params: {
