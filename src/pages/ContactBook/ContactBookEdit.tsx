@@ -1,269 +1,522 @@
-import React, { useState } from "react";
-import {
-  useParams,
-  useNavigate,
-  useSearchParams,
-} from "react-router-dom";
-import { Pencil } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ChevronRight, Upload } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { getItemInLocalStorage } from "../../utils/localStorage";
 
-/* ---------- MOCK DATA ---------- */
-const CONTACT = {
-  id: 1,
-  companyName: "vibecopilot",
-  contactPerson: "Vinayak Rathod",
-  mobile: "9527697180",
-  landline: "",
-  primaryEmail: "vinayak313@gmail.com",
-  secondaryEmail: "",
-  website: "",
-  category: "Security Manager",
-  subCategory: "",
-  keyOffering: "",
-  createdOn: "02/06/2025, 10:15:30",
-  updatedOn: "05/11/2025, 18:35:36",
-  address: "",
-  description: "",
-  profile: "",
-  logo:
-    "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=300",
-  attachment:
-    "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=200",
-};
+<ToastContainer position="top-right" />
 
+/* ---------- API CONFIG ---------- */
+const API_BASE = "https://admin.vibecopilot.ai";
+const API_TOKEN = getItemInLocalStorage("TOKEN");
+
+/* ---------- TYPES ---------- */
+interface GenericInfo {
+    id: number;
+    name: string;
+    site_id?: number;
+}
+
+interface GenericSubInfo {
+    id: number;
+    name: string;
+    generic_info_name: number;
+}
+
+interface ContactFormData {
+    company_name: string;
+    contact_person_name: string;
+    mobile: string;
+    landline_no: string;
+    primary_email: string;
+    secondary_email: string;
+    website: string;
+    address: string;
+    key_offering: string;
+    description: string;
+    profile: string;
+    generic_info_name: string;
+    generic_sub_info_id: string;
+    site_id?: string;
+    status: boolean;
+}
+
+/* ---------- COMPONENT ---------- */
 const ContactBookEdit: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
 
-  const isEditMode = searchParams.get("mode") === "edit";
+    const [loading, setLoading] = useState(false);
+    const [categories, setCategories] = useState<GenericInfo[]>([]);
+    const [subCategories, setSubCategories] = useState<GenericSubInfo[]>([]);
+    const [companyLogo, setCompanyLogo] = useState<File | null>(null);
+    const [attachment, setAttachment] = useState<File | null>(null);
+    const [existingLogo, setExistingLogo] = useState<string | null>(null);
+    const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState(CONTACT);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    const [formData, setFormData] = useState<ContactFormData>({
+        company_name: "",
+        contact_person_name: "",
+        mobile: "",
+        landline_no: "",
+        primary_email: "",
+        secondary_email: "",
+        website: "",
+        address: "",
+        key_offering: "",
+        description: "",
+        profile: "",
+        generic_info_name: "",
+        generic_sub_info_id: "",
+        status: true,
+    });
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* HEADER */}
-      <div className="bg-gradient-to-r from-purple-700 via-purple-500 to-yellow-400 text-white py-3 text-center font-semibold">
-        Contact Details
-      </div>
+    /* ---------- FETCH CATEGORIES ---------- */
+    useEffect(() => {
+        fetchCategories();
+    }, []);
 
-      <div className="p-6">
-        {/* ACTION BUTTONS */}
-        <div className="flex justify-end gap-2 mb-4">
-          {isEditMode ? (
-            <>
-              <button
-                onClick={() => {
-                  console.log("Saved:", formData);
-                  navigate(`/contact-book/edit/${id}`);
-                }}
-                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => navigate(`/contact-book/edit/${id}`)}
-                className="border px-4 py-2 rounded hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() =>
-                navigate(`/contact-book/details/${id}?mode=details`)
-              }
-              className="flex items-center gap-2 border px-4 py-2 rounded hover:bg-gray-100"
-            >
-              <Pencil size={16} /> Edit
-            </button>
-          )}
+    /* ---------- FETCH DATA FOR EDIT ---------- */
+    useEffect(() => {
+        if (id) {
+            fetchContact();
+        }
+    }, [id]);
+
+    /* ---------- FETCH SUBCATEGORIES WHEN CATEGORY CHANGES ---------- */
+    useEffect(() => {
+        if (formData.generic_info_name) {
+            fetchSubCategories(formData.generic_info_name);
+        } else {
+            setSubCategories([]);
+        }
+    }, [formData.generic_info_name]);
+
+    /* ---------- API CALLS ---------- */
+    const fetchCategories = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/generic_infos.json?token=${API_TOKEN}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCategories(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch categories:", error);
+            toast.error("Failed to load categories");
+        }
+    };
+
+    const fetchSubCategories = async (categoryId: string) => {
+        try {
+            const res = await fetch(
+                `${API_BASE}/generic_sub_infos.json?token=${API_TOKEN}&generic_info_name=${categoryId}`
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setSubCategories(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch subcategories:", error);
+            toast.error("Failed to load subcategories");
+        }
+    };
+
+    const fetchContact = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`);
+
+            if (!res.ok) throw new Error("Failed to fetch contact");
+
+            const data = await res.json();
+            const categoryId = data.generic_info?.id?.toString() || "";
+            const subCategoryId = data.generic_sub_info?.id?.toString() || "";
+
+            setFormData({
+                company_name: data.company_name || "",
+                contact_person_name: data.contact_person_name || "",
+                mobile: data.mobile || "",
+                landline_no: data.landline_no || "",
+                primary_email: data.primary_email || "",
+                secondary_email: data.secondary_email || "",
+                website: data.website || "",
+                address: data.address || "",
+                key_offering: data.key_offering || "",
+                description: data.description || "",
+                profile: data.profile || "",
+                generic_info_name: data.generic_info_id?.toString() || "",
+                generic_sub_info_id: data.generic_sub_info_id?.toString() || "",
+                site_id: data.site_id?.toString() || "",
+                status: data.status ?? true,
+            });
+
+            const logoUrl =
+                data.logo && data.logo.length > 0
+                    ? `${API_BASE}${data.logo[0].document}`
+                    : null;
+
+            const attachmentUrl =
+                data.contact_books_attachment && data.contact_books_attachment.length > 0
+                    ? `${API_BASE}${data.contact_books_attachment[0].document}`
+                    : null;
+
+            setExistingLogo(logoUrl);
+            setExistingAttachment(attachmentUrl);
+
+            if (categoryId) {
+                fetchSubCategories(categoryId);
+            }
+        } catch (err) {
+            console.error("Fetch failed", err);
+            toast.error("Failed to load contact details");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /* ---------- HANDLERS ---------- */
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) setCompanyLogo(e.target.files[0]);
+    };
+
+    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) setAttachment(e.target.files[0]);
+    };
+
+    const handleChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
+        const { name, value } = e.target;
+
+        if ((name === "mobile" || name === "landline_no") && !/^\d*$/.test(value)) {
+            return;
+        }
+
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+            ...(name === "generic_info_name" ? { generic_sub_info_id: "" } : {}),
+        }));
+    };
+
+    /* ---------- SAVE HANDLER ---------- */
+    const handleSave = async () => {
+        // Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!formData.company_name) return toast.error("Please Enter Company Name");
+        if (!formData.contact_person_name) return toast.error("Please Enter Contact Person Name");
+        if (!formData.mobile) return toast.error("Please Enter Mobile Number");
+        if (!/^\d{10}$/.test(formData.mobile)) return toast.error("Mobile Number must be exactly 10 digits");
+        if (!formData.primary_email) return toast.error("Please Enter Primary Email");
+        if (!emailRegex.test(formData.primary_email)) return toast.error("Please Enter Valid Primary Email");
+        // if (formData.secondary_email && !emailRegex.test(formData.secondary_email)) {
+        //     return toast.error("Please Enter Valid Secondary Email");
+        // }
+        if (!formData.generic_info_name) return toast.error("Please Select Category");
+        if (!formData.generic_sub_info_id) return toast.error("Please Select Sub Category");
+
+
+        try {
+            setLoading(true);
+
+            const selectedCategory = categories.find(
+                (c) => c.id.toString() === formData.generic_info_name
+            );
+
+            const submitData = new FormData();
+
+            // fields
+            submitData.append("contact_book[company_name]", formData.company_name);
+            submitData.append("contact_book[contact_person_name]", formData.contact_person_name);
+            submitData.append("contact_book[mobile]", formData.mobile);
+            submitData.append("contact_book[landline_no]", formData.landline_no);
+            submitData.append("contact_book[primary_email]", formData.primary_email);
+            submitData.append("contact_book[secondary_email]", formData.secondary_email);
+            submitData.append("contact_book[website]", formData.website);
+            submitData.append("contact_book[key_offering]", formData.key_offering);
+            submitData.append("contact_book[address]", formData.address);
+            submitData.append("contact_book[description]", formData.description);
+            submitData.append("contact_book[profile]", formData.profile);
+            submitData.append("contact_book[generic_info_name]", formData.generic_info_name);
+            submitData.append("contact_book[generic_sub_info_id]", formData.generic_sub_info_id);
+
+            if (selectedCategory?.site_id) {
+                submitData.append("contact_book[site_id]", selectedCategory.site_id.toString());
+            }
+
+            // files (ONLY IF SELECTED)
+            if (companyLogo) {
+                submitData.append("contact_book[logo]", companyLogo);
+            }
+
+            if (attachment) {
+                submitData.append("contact_book[contact_books_attachment]", attachment);
+            }
+
+
+            const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`, {
+                method: "PUT",
+                body: submitData,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                console.error("Error response:", errorData);
+
+                if (errorData.errors) {
+                    Object.entries(errorData.errors).forEach(([field, messages]) => {
+                        toast.error(`${field}: ${(messages as string[]).join(", ")}`);
+                    });
+                } else {
+                    throw new Error("Failed to update contact");
+                }
+                return;
+            }
+
+            toast.success("Contact updated successfully");
+            navigate("/contact-book");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to save contact");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading && !formData.company_name) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-gray-600">Loading...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <ToastContainer position="top-right" />
+
+            {/* ---------- HEADER ---------- */}
+            <div className="bg-white px-6 py-4 mx-4 mt-4 rounded-lg shadow-sm">
+                <nav className="flex items-center text-xs text-gray-500">
+                    <span
+                        className="cursor-pointer hover:text-purple-600"
+                        onClick={() => navigate("/contact-book")}
+                    >
+                        Contact Book
+                    </span>
+                    <ChevronRight size={12} className="mx-2" />
+                    <span className="text-gray-700 font-medium">Edit</span>
+                </nav>
+
+                <h2 className="text-xl font-semibold mt-2">Edit Contact</h2>
+
+                {/* LOGO */}
+                <div className="flex flex-col items-center my-6">
+                    <label className="flex items-center justify-center w-20 h-20 rounded-full border-2 border-black cursor-pointer">
+                        <input
+                            type="file"
+                            hidden
+                            accept=".jpg,.jpeg,.png"
+                            onChange={handleLogoChange}
+                        />
+                        {companyLogo ? (
+                            <img
+                                src={URL.createObjectURL(companyLogo)}
+                                alt="Company Logo"
+                                className="w-full h-full object-cover rounded-full"
+                            />
+                        ) : existingLogo ? (
+                            <img
+                                src={existingLogo}
+                                alt="Company Logo"
+                                className="w-full h-full object-cover rounded-full"
+                            />
+                        ) : (
+                            <Upload className="w-6 h-6 text-gray-500" />
+                        )}
+                    </label>
+                    <span className="text-xs mt-1">
+                        {companyLogo ? "New logo selected" : existingLogo ? "Click to change logo" : "Upload logo"}
+                    </span>
+                </div>
+            </div>
+
+            {/* ---------- FORM ---------- */}
+            <div className="p-6">
+                <div className="bg-white rounded-lg shadow p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                        <Input
+                            label="Company Name"
+                            name="company_name"
+                            value={formData.company_name}
+                            onChange={handleChange}
+                        />
+                        <Input
+                            label="Contact Person"
+                            name="contact_person_name"
+                            value={formData.contact_person_name}
+                            onChange={handleChange}
+                        />
+                        <Input
+                            label="Mobile"
+                            name="mobile"
+                            value={formData.mobile}
+                            onChange={handleChange}
+                            maxLength={10}
+                        />
+                        <Input
+                            label="Landline"
+                            name="landline_no"
+                            value={formData.landline_no}
+                            onChange={handleChange}
+                        />
+                        <Input
+                            label="Primary Email"
+                            name="primary_email"
+                            value={formData.primary_email}
+                            onChange={handleChange}
+                        />
+                        <Input
+                            label="Secondary Email"
+                            name="secondary_email"
+                            value={formData.secondary_email}
+                            onChange={handleChange}
+                        />
+                        <Input
+                            label="Website"
+                            name="website"
+                            value={formData.website}
+                            onChange={handleChange}
+                        />
+                        <Select
+                            label="Category"
+                            name="generic_info_name"
+                            value={formData.generic_info_name}
+                            onChange={handleChange}
+                            options={categories.map((c) => ({
+                                value: c.id.toString(),
+                                label: c.name,
+                            }))}
+                        />
+                        <Select
+                            label="Sub Category"
+                            name="generic_sub_info_id"
+                            value={formData.generic_sub_info_id}
+                            onChange={handleChange}
+                            options={subCategories.map((sc) => ({
+                                value: sc.id.toString(),
+                                label: sc.name,
+                            }))}
+                            disabled={!formData.generic_info_name}
+                        />
+                        <Input
+                            label="Key Offering"
+                            name="key_offering"
+                            value={formData.key_offering}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <TextArea
+                        label="Address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                    />
+                    <TextArea
+                        label="Profile"
+                        name="profile"
+                        value={formData.profile}
+                        onChange={handleChange}
+                    />
+                    <TextArea
+                        label="Description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                    />
+
+                    {/* ATTACHMENT */}
+                    <div className="mt-4">
+                        <label className="block text-xs font-semibold mb-1">Attachments</label>
+                        <label className="flex flex-col items-center justify-center h-24 border border-dashed border-gray-300 rounded-md text-xs cursor-pointer hover:bg-gray-50">
+                            <input
+                                type="file"
+                                hidden
+                                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+                                onChange={handleAttachmentChange}
+                            />
+                            <Upload className="w-5 h-5 text-gray-500 mb-1" />
+                            <span className="text-gray-600">Click to upload</span>
+                            {attachment && (
+                                <span className="text-[10px] mt-1 text-green-600">{attachment.name}</span>
+                            )}
+                            {!attachment && existingAttachment && (
+                                <span className="text-[10px] mt-1 text-gray-500">
+                                    Current file attached
+                                </span>
+                            )}
+
+                        </label>
+                    </div>
+
+                    {/* ---------- BUTTONS ---------- */}
+                    <div className="flex  gap-4 mt-8 justify-end">
+                        <button
+                            onClick={() => navigate("/contact-book")}
+                            className="bg-white-500 text-black px-6 py-2 rounded-md hover:bg-gray-600 border border-black-900"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={loading}
+                            className="bg-purple-600 text-white px-8 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                        >
+                            {loading ? "Saving..." : "Update Contact"}
+                        </button>
+
+                    </div>
+                </div>
+            </div>
         </div>
-
-        {/* LOGO */}
-        <div className="flex justify-center mb-6">
-          <img
-            src={formData.logo}
-            className="w-24 h-24 rounded-full object-cover border"
-          />
-        </div>
-
-        {/* DETAILS */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-            <Field
-              label="Company Name"
-              name="companyName"
-              value={formData.companyName}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <Field
-              label="Contact Person"
-              name="contactPerson"
-              value={formData.contactPerson}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <Field
-              label="Mobile"
-              name="mobile"
-              value={formData.mobile}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-
-            <Field
-              label="Landline"
-              name="landline"
-              value={formData.landline}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <Field
-              label="Primary Email"
-              name="primaryEmail"
-              value={formData.primaryEmail}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <Field
-              label="Secondary Email"
-              name="secondaryEmail"
-              value={formData.secondaryEmail}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-
-            <Field
-              label="Website"
-              name="website"
-              value={formData.website}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <Field
-              label="Category"
-              name="category"
-              value={formData.category}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <Field
-              label="Sub Category"
-              name="subCategory"
-              value={formData.subCategory}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-
-            <Field
-              label="Key Offering"
-              name="keyOffering"
-              value={formData.keyOffering}
-              isEdit={isEditMode}
-              onChange={handleChange}
-            />
-            <StaticField label="Created On" value={formData.createdOn} />
-            <StaticField label="Updated On" value={formData.updatedOn} />
-          </div>
-
-          <TextArea
-            title="Address"
-            name="address"
-            value={formData.address}
-            isEdit={isEditMode}
-            onChange={handleChange}
-          />
-
-          <TextArea
-            title="Description"
-            name="description"
-            value={formData.description}
-            isEdit={isEditMode}
-            onChange={handleChange}
-          />
-
-          <TextArea
-            title="Profile"
-            name="profile"
-            value={formData.profile}
-            isEdit={isEditMode}
-            onChange={handleChange}
-          />
-
-          {/* ATTACHMENT */}
-          <div className="mt-6">
-            <h4 className="font-semibold text-sm mb-2">Attachments</h4>
-            <img
-              src={formData.attachment}
-              className="w-24 h-24 rounded border object-cover"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
-/* ---------- SMALL COMPONENTS ---------- */
-const Field = ({
-  label,
-  name,
-  value,
-  isEdit,
-  onChange,
-}: any) => (
-  <div>
-    <label className="font-semibold">{label} :</label>
-    {isEdit ? (
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="mt-1 w-full border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-purple-500"
-      />
-    ) : (
-      <div className="text-gray-700 mt-1">{value || "-"}</div>
-    )}
-  </div>
+/* ---------- REUSABLE COMPONENTS ---------- */
+const Input = ({ label, ...props }: any) => (
+    <div>
+        <label className="block text-xs font-semibold mb-1">{label}</label>
+        <input {...props} className="w-full border rounded px-2 py-1 text-sm" />
+    </div>
 );
 
-const StaticField = ({ label, value }: any) => (
-  <div>
-    <label className="font-semibold">{label} :</label>
-    <div className="text-gray-700 mt-1">{value}</div>
-  </div>
+const Select = ({ label, options, disabled, ...props }: any) => (
+    <div>
+        <label className="block text-xs font-semibold mb-1">{label}</label>
+        <select
+            {...props}
+            disabled={disabled}
+            className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+        >
+            <option value="">Select {label}</option>
+            {options.map((opt: any) => (
+                <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                </option>
+            ))}
+        </select>
+    </div>
 );
 
-const TextArea = ({
-  title,
-  name,
-  value,
-  isEdit,
-  onChange,
-}: any) => (
-  <div className="mt-4">
-    <h4 className="font-semibold text-sm mb-1">{title} :</h4>
-    {isEdit ? (
-      <textarea
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="w-full border rounded px-2 py-2 text-sm focus:ring-1 focus:ring-purple-500"
-      />
-    ) : (
-      <div className="border-b h-10 text-gray-600">
-        {value || ""}
-      </div>
-    )}
-  </div>
+const TextArea = ({ label, ...props }: any) => (
+    <div className="mt-4">
+        <label className="block text-xs font-semibold mb-1">{label}</label>
+        <textarea {...props} rows={3} className="w-full border rounded px-2 py-2 text-sm" />
+    </div>
 );
 
 export default ContactBookEdit;
