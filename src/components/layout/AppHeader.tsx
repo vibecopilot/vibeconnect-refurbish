@@ -37,9 +37,30 @@ const featureToModuleMap: Record<string, string[]> = {
   'survey': ['survey'],
 };
 
+// Type definitions for navigation structure
+interface NavChild {
+  name: string;
+  path: string;
+  children?: NavChild[];
+}
+
+interface SubModule {
+  id: string;
+  name: string;
+  path: string;
+  children?: NavChild[];
+}
+
+interface Module {
+  id: string;
+  name: string;
+  path?: string;
+  subModules: SubModule[];
+}
+
 // Module configuration with sub-modules
 // Navigation Order: SAFETY | FM MODULE | SECURITY | BOOKING MANAGEMENT | DOCUMENTS | FINANCE | CRM | FITOUT | CALENDAR
-const modules = [
+const modules: Module[] = [
   {
     id: 'safety',
     name: 'Safety',
@@ -91,6 +112,25 @@ const modules = [
       { id: 'supplier', name: 'Supplier/Vendor', path: '/supplier' },
       {
         id: 'audit', name: 'Audit', path: '/audit/operational/scheduled',
+        children: [
+          { 
+            name: 'Operational', 
+            path: '/audit/operational/scheduled',
+            children: [
+              { name: 'Scheduled', path: '/audit/operational/scheduled' },
+              { name: 'Conducted', path: '/audit/operational/conducted' },
+              { name: 'Checklists', path: '/audit/operational/checklists' },
+            ]
+          },
+          { 
+            name: 'Vendor', 
+            path: '/audit/vendor/scheduled',
+            children: [
+              { name: 'Scheduled', path: '/audit/vendor/scheduled' },
+              { name: 'Conducted', path: '/audit/vendor/conducted' },
+            ]
+          },
+        ]
       },
       { id: 'mail-room', name: 'Mail Room', path: '/mail-room' },
       { id: 'contact-book', name: 'Contact Book', path: '/contact-book' },
@@ -342,6 +382,14 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             if (pathname === child.path) {
               return { moduleId: mod.id, subModuleId: subMod.id };
             }
+            // Check nested children (Level 4 items like Scheduled/Conducted/Checklists)
+            if (child.children && child.children.length > 0) {
+              for (const nestedChild of child.children) {
+                if (pathname === nestedChild.path || pathname.startsWith(nestedChild.path + '/')) {
+                  return { moduleId: mod.id, subModuleId: subMod.id };
+                }
+              }
+            }
           }
 
           // SECOND: If no exact match found, check startsWith for nested routes
@@ -432,6 +480,34 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     console.log('  Returning reordered list with active item first');
     return [activeItem, ...rest];
   }, [currentSubModule, location.pathname]);
+
+  // Find active Level 3 item and its children for Level 4
+  const activeLevel3Item = useMemo(() => {
+    if (!currentSubModule?.children) return null;
+    const activePath = location.pathname;
+    
+    // Find the Level 3 item that matches current path or contains it
+    return currentSubModule.children.find(c => {
+      if (activePath === c.path) return true;
+      if (c.children) {
+        return c.children.some(child => activePath === child.path || activePath.startsWith(child.path + '/'));
+      }
+      return activePath.startsWith(c.path.replace(/\/scheduled$/, ''));
+    });
+  }, [currentSubModule, location.pathname]);
+
+  // Get Level 4 items (children of active Level 3 item)
+  const sortedLevel4 = useMemo(() => {
+    if (!activeLevel3Item?.children) return [];
+    
+    const activePath = location.pathname;
+    const activeItem = activeLevel3Item.children.find(c => activePath === c.path);
+    
+    if (!activeItem) return activeLevel3Item.children;
+    
+    const rest = activeLevel3Item.children.filter(c => c.path !== activeItem.path);
+    return [activeItem, ...rest];
+  }, [activeLevel3Item, location.pathname]);
 
   // Don't auto-collapse - let user control it
   // useEffect(() => {
@@ -711,6 +787,28 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
         <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
           {sortedLevel3.map((item, idx) => (
+            <Link
+              key={idx}
+              to={item.path}
+              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 relative uppercase
+                ${activeLevel3Item?.path === item.path || (item.children && location.pathname.startsWith(item.path.replace(/\/scheduled$/, '')))
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              {item.name}
+              {(activeLevel3Item?.path === item.path || (item.children && location.pathname.startsWith(item.path.replace(/\/scheduled$/, '')))) && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+              )}
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      {/* Quaternary Navigation - Level 4 */}
+      {sortedLevel4.length > 0 && (
+        <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/30 animate-fade-in">
+          {sortedLevel4.map((item, idx) => (
             <Link
               key={idx}
               to={item.path}
