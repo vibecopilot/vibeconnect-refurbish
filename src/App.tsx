@@ -111,7 +111,7 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
 // Import ProtectedRoute
 import { ProtectedRoute } from './routes';
 import { ContactBook, ContactBookCreate, ContactBookEdit, ContactBookView } from "./pages/ContactBook";
-import ScheduleAuditDetails from "./pages/Audit/Operational/ScheduledListView";
+import ScheduledListView from "./pages/Audit/Operational/ScheduledListView";
 import ScheduledListEdit from "./pages/Audit/Operational/ScheduledListEdit";
 
 // Layout wrapper for authenticated pages - now includes protection
@@ -263,7 +263,7 @@ function App() {
 
        {/* Contact Book */}
         <Route path="/contact-book" element={<AuthenticatedLayout><ContactBook /></AuthenticatedLayout>} />
-        <Route path="//contact-book/create" element={<AuthenticatedLayout><ContactBookCreate /></AuthenticatedLayout>} />
+        <Route path="/contact-book/create" element={<AuthenticatedLayout><ContactBookCreate /></AuthenticatedLayout>} />
         <Route path="/contact-book/view/:id" element={<AuthenticatedLayout><ContactBookView /></AuthenticatedLayout>} />
         <Route path="/contact-book/edit/:id" element={<AuthenticatedLayout><ContactBookEdit /></AuthenticatedLayout>} />
 
@@ -353,7 +353,7 @@ function App() {
           <Route path="vendor/conducted" element={<VendorConducted />} />
         </Route>
         <Route path="/audit/operational/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
-         <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduleAuditDetails /></AuthenticatedLayout>} />
+         <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduledListView /></AuthenticatedLayout>} />
          <Route path="/audit/operational/scheduled/edit/:id" element={<AuthenticatedLayout><ScheduledListEdit /></AuthenticatedLayout>} />
           <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/vendor/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />

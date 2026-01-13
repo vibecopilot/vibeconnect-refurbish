@@ -4,7 +4,8 @@ import { ClipboardList, Plus, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
-import { getAssignedTo, getVendors, getVendorCategory } from '../../api';
+import { getAssignedTo, getVendors, getVendorCategory, postAuditScheduled } from '../../api';
+import { getItemInLocalStorage } from '../../utils/localStorage';
 
 const scheduleTypes = ['Asset', 'Services', 'Vendor', 'Training', 'Compliance'];
 const checklistTypes = ['Individual', 'Asset Group'];
@@ -12,12 +13,19 @@ const frequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'One T
 const priorities = ['Low', 'Medium', 'High', 'Critical'];
 const scanTypes = ['QR Code', 'NFC', 'Manual'];
 
+  const API_BASE = "https://admin.vibecopilot.ai";
+  const API_TOKEN = localStorage.getItem("TOKEN");
+
 interface FormData {
-  schedule_for: string;
+  audit_for: string;
   activity_name: string;
   description: string;
   allow_observations: boolean;
   checklist_type: string;
+  asset_name:String;
+  service_name:String;
+  vendor_name:String;
+  training_name:String;
   assign_to: string;
   scan_type: string;
   plan_duration: string;
@@ -39,7 +47,7 @@ const ScheduleAuditForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    schedule_for: 'Asset',
+    audit_for: 'Asset',
     activity_name: '',
     description: '',
     allow_observations: false,
@@ -95,7 +103,7 @@ const ScheduleAuditForm: React.FC = () => {
   };
 
   const handleScheduleTypeChange = (type: string) => {
-    setFormData(prev => ({ ...prev, schedule_for: type }));
+    setFormData(prev => ({ ...prev, audit_for: type }));
   };
 
   const handleChecklistTypeChange = (type: string) => {
@@ -116,12 +124,37 @@ const ScheduleAuditForm: React.FC = () => {
 
     setLoading(true);
     try {
-      // API call would go here
-      toast.success('Audit scheduled successfully');
-      navigate('/audit/operational/scheduled');
-    } catch (error) {
+      const payload = new FormData();
+
+      // Append simple fields under audit[...]
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+        if (typeof value === 'boolean') {
+          payload.append(`audit[${key}]`, String(value));
+        } else {
+          payload.append(`audit[${key}]`, String(value));
+        }
+      });
+
+      // Append tasks as repeated fields: audit[tasks][] = name
+      tasks.forEach((t) => {
+        if (t.name && t.name.trim()) {
+          payload.append('audit[tasks][]', t.name.trim());
+        }
+      });
+
+      const res = await postAuditScheduled(payload);
+
+      if (res && res.data) {
+        toast.success('Audit scheduled successfully');
+        navigate('/audit/operational/scheduled');
+      } else {
+        toast.error('Failed to schedule audit');
+      }
+    } catch (error: any) {
       console.error('Error scheduling audit:', error);
-      toast.error('Failed to schedule audit');
+      const msg = error?.response?.data?.message || 'Failed to schedule audit';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -189,7 +222,7 @@ const ScheduleAuditForm: React.FC = () => {
                   type="button"
                   onClick={() => handleScheduleTypeChange(type)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    formData.schedule_for === type
+                    formData.audit_for=== type
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-muted-foreground hover:bg-accent'
                   }`}
@@ -263,9 +296,15 @@ const ScheduleAuditForm: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {tasks.map((task, index) => (
-                <div key={task.id} className="p-4 border border-border rounded-lg">
+                <div key={task.id} className="p-4 border border-border rounded-lg flex items-center gap-2">
                   <input
                     type="text"
+                    name={`task_${task.id}`}
+                    value={task.name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setTasks(prev => prev.map((t, i) => i === index ? { ...t, name } : t));
+                    }}
                     placeholder={`Task ${index + 1}`}
                     className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
