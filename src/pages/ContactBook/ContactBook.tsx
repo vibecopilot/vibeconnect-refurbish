@@ -37,7 +37,7 @@ interface Contact {
     address?: string;
     description?: string;
     profile?: string;
-    logo?: string;
+    logo?: any;
     attachment?: string;
     status: boolean;
     generic_info_name?: string;
@@ -48,7 +48,6 @@ const ContactBookList: React.FC = () => {
     const navigate = useNavigate();
 
     const [rows, setRows] = useState<Contact[]>([]);
-    // const [allRows, setAllRows] = useState<Contact[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [view, setView] = useState<"grid" | "table">("grid");
@@ -402,15 +401,17 @@ const ContactBookList: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-3 py-2">
-                                        <img
-                                            src={
-                                                r.logo?.startsWith("http")
-                                                    ? r.logo
-                                                    : `${API_BASE}${r.logo}`
-                                            }
-                                            alt="Logo"
-                                            className="w-8 h-8 rounded object-cover"
-                                        />
+                                        {typeof r.logo === "string" && r.logo.length > 0 ? (
+                                            <img
+                                                src={r.logo.startsWith("http") ? r.logo : `${API_BASE}${r.logo}`}
+                                                alt="Logo"
+                                                className="w-8 h-8 rounded object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                                                N/A
+                                            </div>
+                                        )}
 
                                     </td>
                                     <td className="px-3 py-2 font-medium">{r.company_name || "-"}</td>
@@ -436,92 +437,95 @@ const ContactBookList: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )
+            }
 
-            {!loading && rows.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white border rounded-md mt-4">
+            {
+                !loading && rows.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white border rounded-md mt-4">
 
-                    {/* Records info */}
-                    <div className="text-sm text-gray-600">
-                        Showing {(pagination.page - 1) * pagination.perPage + 1}{" "}
-                        to {Math.min(pagination.page * pagination.perPage, pagination.total)}{" "}
-                        of {pagination.total} records
+                        {/* Records info */}
+                        <div className="text-sm text-gray-600">
+                            Showing {(pagination.page - 1) * pagination.perPage + 1}{" "}
+                            to {Math.min(pagination.page * pagination.perPage, pagination.total)}{" "}
+                            of {pagination.total} records
 
-                    </div>
+                        </div>
 
-                    {/* Pagination buttons */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
-                            disabled={pagination.page === 1}
-                            className="px-3 py-1 border rounded disabled:opacity-40"
-                        >
-                            «
-                        </button>
+                        {/* Pagination buttons */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+                                disabled={pagination.page === 1}
+                                className="px-3 py-1 border rounded disabled:opacity-40"
+                            >
+                                «
+                            </button>
 
-                        <button
-                            onClick={() =>
-                                setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
-                            }
-                            disabled={pagination.page === 1}
-                            className="px-3 py-1 border rounded disabled:opacity-40"
-                        >
-                            ‹ Prev
-                        </button>
+                            <button
+                                onClick={() =>
+                                    setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
+                                }
+                                disabled={pagination.page === 1}
+                                className="px-3 py-1 border rounded disabled:opacity-40"
+                            >
+                                ‹ Prev
+                            </button>
 
-                        <span className="px-3 py-1 border rounded bg-purple-600 text-white">
-                            {pagination.page}
-                        </span>
+                            <span className="px-3 py-1 border rounded bg-purple-600 text-white">
+                                {pagination.page}
+                            </span>
 
-                        <button
-                            onClick={() =>
+                            <button
+                                onClick={() =>
+                                    setPagination((prev) => ({
+                                        ...prev,
+                                        page: Math.min(pagination.totalPages, prev.page + 1)
+                                    }))
+                                }
+                                disabled={pagination.page >= pagination.totalPages}
+                                className="px-3 py-1 border rounded disabled:opacity-40"
+                            >
+                                Next ›
+                            </button>
+
+                            <button
+                                onClick={() =>
+                                    setPagination((prev) => ({
+                                        ...prev,
+                                        page: pagination.totalPages
+                                    }))
+                                }
+                                disabled={pagination.page >= pagination.totalPages}
+                                className="px-3 py-1 border rounded disabled:opacity-40"
+                            >
+                                »
+                            </button>
+                        </div>
+
+                        {/* Items per page */}
+                        <select
+                            value={pagination.perPage}
+                            onChange={(e) => {
                                 setPagination((prev) => ({
                                     ...prev,
-                                    page: Math.min(pagination.totalPages, prev.page + 1)
-                                }))
-                            }
-                            disabled={pagination.page >= pagination.totalPages}
-                            className="px-3 py-1 border rounded disabled:opacity-40"
+                                    perPage: Number(e.target.value),
+                                    page: 1,
+                                }));
+                            }}
+                            className="px-3 py-1 border rounded"
                         >
-                            Next ›
-                        </button>
+                            <option value={10}>10 / page</option>
+                            <option value={12}>12 / page</option>
+                            <option value={25}>25 / page</option>
+                            <option value={50}>50 / page</option>
+                        </select>
 
-                        <button
-                            onClick={() =>
-                                setPagination((prev) => ({
-                                    ...prev,
-                                    page: pagination.totalPages
-                                }))
-                            }
-                            disabled={pagination.page >= pagination.totalPages}
-                            className="px-3 py-1 border rounded disabled:opacity-40"
-                        >
-                            »
-                        </button>
                     </div>
+                )
+            }
 
-                    {/* Items per page */}
-                    <select
-                        value={pagination.perPage}
-                        onChange={(e) => {
-                            setPagination((prev) => ({
-                                ...prev,
-                                perPage: Number(e.target.value),
-                                page: 1,
-                            }));
-                        }}
-                        className="px-3 py-1 border rounded"
-                    >
-                        <option value={10}>10 / page</option>
-                        <option value={12}>12 / page</option>
-                        <option value={25}>25 / page</option>
-                        <option value={50}>50 / page</option>
-                    </select>
-
-                </div>
-            )}
-
-        </div>
+        </div >
 
     );
 };

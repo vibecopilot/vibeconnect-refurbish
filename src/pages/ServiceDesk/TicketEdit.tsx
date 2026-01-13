@@ -546,7 +546,7 @@ const TicketEdit: React.FC = () => {
               className="px-6 py-2.5 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
             >
               Cancel
-            </button>
+            </button>            
             <button
               type="submit"
               disabled={saving}

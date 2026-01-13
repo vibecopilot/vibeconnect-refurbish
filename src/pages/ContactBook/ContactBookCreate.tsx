@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Upload, ChevronRight, CheckCircle } from "lucide-react";
+import { Upload, ChevronRight, CheckCircle, X, RotateCcw, Save } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 // import { postContactBook } from "../../@api"; // adjust path if needed
@@ -236,6 +236,11 @@ const ContactBookCreate: React.FC = () => {
     navigate("/contact-book");
   };
 
+  const handleReset = () => {
+    setForm(initialFormState);
+    setAttachment(null);
+    setCompanyLogo(null);
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer position="top-right" />
@@ -420,8 +425,8 @@ const ContactBookCreate: React.FC = () => {
               onChange={handleFileChange}
             />
             <Upload className="w-6 h-6 text-gray-500 mb-2" />
-            <span className="text-gray-600 font-medium">Click to upload file</span>
-            <span className="text-xs text-gray-400">JPG, PNG, PDF, DOC, XLS</span>
+            <span className="inline-flex items-center gap-2 px-8 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer hover:bg-primary/90 transition-colors text-sm font-medium">Click to upload file</span>
+            <span className="text-xs text-gray-800 mt-2">JPG, PNG, PDF, DOC, XLS</span>
             {attachment && (
               <span className="text-xs mt-2 px-2 py-1 bg-green-100 text-green-700 rounded-full">
                 ✓ {attachment.name}
@@ -432,29 +437,57 @@ const ContactBookCreate: React.FC = () => {
 
         {/* BUTTONS */}
         <div className="mt-8 flex justify-end gap-4">
+          {/* Cancel */}
           <button
             type="button"
             onClick={handleCancel}
-            className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-xs px-8 py-3 rounded-lg font-medium transition-colors"
             disabled={submitLoading}
+            className="flex items-center gap-2 h-10 px-4 text-sm font-medium
+               bg-gray-100 hover:bg-gray-200
+               border border-gray-300 text-gray-700
+               rounded-lg transition-colors disabled:opacity-60"
           >
+            <X className="w-4 h-4" />
             Cancel
           </button>
+
+          {/* Reset */}
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={submitLoading}
+            className="flex items-center gap-2 h-10 px-4 text-sm font-semibold
+               bg-purple-600 hover:bg-purple-700
+               text-white rounded-lg transition-all
+               disabled:bg-purple-400 disabled:cursor-not-allowed"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </button>
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={submitLoading}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-xs px-8 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 h-10 px-4 text-sm font-semibold
+               bg-purple-600 hover:bg-purple-700
+               text-white rounded-lg transition-all
+               disabled:bg-purple-400 disabled:cursor-not-allowed"
           >
             {submitLoading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 Creating...
               </>
             ) : (
-              "Create Contact"
+              <>
+                <Save className="w-4 h-4" />
+                Submit
+              </>
             )}
           </button>
         </div>
+
       </form>
     </div>
   );

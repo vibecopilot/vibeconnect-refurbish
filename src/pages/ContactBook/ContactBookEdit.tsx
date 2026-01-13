@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronRight, Upload } from "lucide-react";
+import { ChevronRight, Upload, X, Save } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getItemInLocalStorage } from "../../utils/localStorage";
@@ -24,6 +24,7 @@ interface GenericSubInfo {
     generic_info_name: number;
 }
 
+
 interface ContactFormData {
     company_name: string;
     contact_person_name: string;
@@ -36,7 +37,7 @@ interface ContactFormData {
     key_offering: string;
     description: string;
     profile: string;
-    generic_info_name: string;
+    generic_info_id: string;
     generic_sub_info_id: string;
     site_id?: string;
     status: boolean;
@@ -54,6 +55,8 @@ const ContactBookEdit: React.FC = () => {
     const [attachment, setAttachment] = useState<File | null>(null);
     const [existingLogo, setExistingLogo] = useState<string | null>(null);
     const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
+    const [removeLogo, setRemoveLogo] = useState(false);
+    const [removeAttachment, setRemoveAttachment] = useState(false);
 
 
     const [formData, setFormData] = useState<ContactFormData>({
@@ -68,7 +71,7 @@ const ContactBookEdit: React.FC = () => {
         key_offering: "",
         description: "",
         profile: "",
-        generic_info_name: "",
+        generic_info_id: "",
         generic_sub_info_id: "",
         status: true,
     });
@@ -87,12 +90,12 @@ const ContactBookEdit: React.FC = () => {
 
     /* ---------- FETCH SUBCATEGORIES WHEN CATEGORY CHANGES ---------- */
     useEffect(() => {
-        if (formData.generic_info_name) {
-            fetchSubCategories(formData.generic_info_name);
+        if (formData.generic_info_id) {
+            fetchSubCategories(formData.generic_info_id);
         } else {
             setSubCategories([]);
         }
-    }, [formData.generic_info_name]);
+    }, [formData.generic_info_id]);
 
     /* ---------- API CALLS ---------- */
     const fetchCategories = async () => {
@@ -146,7 +149,7 @@ const ContactBookEdit: React.FC = () => {
                 key_offering: data.key_offering || "",
                 description: data.description || "",
                 profile: data.profile || "",
-                generic_info_name: data.generic_info_id?.toString() || "",
+                generic_info_id: data.generic_info_id?.toString() || "",
                 generic_sub_info_id: data.generic_sub_info_id?.toString() || "",
                 site_id: data.site_id?.toString() || "",
                 status: data.status ?? true,
@@ -178,12 +181,19 @@ const ContactBookEdit: React.FC = () => {
 
     /* ---------- HANDLERS ---------- */
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) setCompanyLogo(e.target.files[0]);
+        if (e.target.files?.[0]) {
+            setCompanyLogo(e.target.files[0]);
+            setRemoveLogo(true);
+        }
     };
 
     const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) setAttachment(e.target.files[0]);
+        if (e.target.files?.[0]) {
+            setAttachment(e.target.files[0]);
+            setRemoveAttachment(true);
+        }
     };
+
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -197,7 +207,7 @@ const ContactBookEdit: React.FC = () => {
         setFormData((prev) => ({
             ...prev,
             [name]: value,
-            ...(name === "generic_info_name" ? { generic_sub_info_id: "" } : {}),
+            ...(name === "generic_info_id" ? { generic_sub_info_id: "" } : {}),
         }));
     };
 
@@ -215,7 +225,9 @@ const ContactBookEdit: React.FC = () => {
         // if (formData.secondary_email && !emailRegex.test(formData.secondary_email)) {
         //     return toast.error("Please Enter Valid Secondary Email");
         // }
-        if (!formData.generic_info_name) return toast.error("Please Select Category");
+        if (formData.generic_info_id) {
+            fetchSubCategories(formData.generic_info_id);
+        }
         if (!formData.generic_sub_info_id) return toast.error("Please Select Sub Category");
 
 
@@ -223,7 +235,7 @@ const ContactBookEdit: React.FC = () => {
             setLoading(true);
 
             const selectedCategory = categories.find(
-                (c) => c.id.toString() === formData.generic_info_name
+                (c) => c.id.toString() === formData.generic_info_id
             );
 
             const submitData = new FormData();
@@ -240,7 +252,7 @@ const ContactBookEdit: React.FC = () => {
             submitData.append("contact_book[address]", formData.address);
             submitData.append("contact_book[description]", formData.description);
             submitData.append("contact_book[profile]", formData.profile);
-            submitData.append("contact_book[generic_info_name]", formData.generic_info_name);
+            submitData.append("contact_book[generic_info_id]", formData.generic_info_id);
             submitData.append("contact_book[generic_sub_info_id]", formData.generic_sub_info_id);
 
             if (selectedCategory?.site_id) {
@@ -249,12 +261,21 @@ const ContactBookEdit: React.FC = () => {
 
             // files (ONLY IF SELECTED)
             if (companyLogo) {
-                submitData.append("contact_book[logo]", companyLogo);
+                submitData.append("contact_book[logo][]", companyLogo);
             }
 
             if (attachment) {
-                submitData.append("contact_book[contact_books_attachment]", attachment);
+                submitData.append("contact_book[contact_books_attachment][]", attachment);
             }
+
+            if (removeLogo) {
+                submitData.append("contact_book[remove_logo]", "true");
+            }
+
+            if (removeAttachment) {
+                submitData.append("contact_book[remove_contact_books_attachment]", "true");
+            }
+
 
 
             const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`, {
@@ -393,25 +414,27 @@ const ContactBookEdit: React.FC = () => {
                         />
                         <Select
                             label="Category"
-                            name="generic_info_name"
-                            value={formData.generic_info_name}
+                            name="generic_info_id"
+                            value={formData.generic_info_id}
                             onChange={handleChange}
-                            options={categories.map((c) => ({
+                            options={categories.map(c => ({
                                 value: c.id.toString(),
                                 label: c.name,
                             }))}
                         />
+
                         <Select
                             label="Sub Category"
                             name="generic_sub_info_id"
                             value={formData.generic_sub_info_id}
                             onChange={handleChange}
-                            options={subCategories.map((sc) => ({
+                            options={subCategories.map(sc => ({
                                 value: sc.id.toString(),
                                 label: sc.name,
                             }))}
-                            disabled={!formData.generic_info_name}
+                            disabled={!formData.generic_info_id}
                         />
+
                         <Input
                             label="Key Offering"
                             name="key_offering"
@@ -450,36 +473,55 @@ const ContactBookEdit: React.FC = () => {
                                 onChange={handleAttachmentChange}
                             />
                             <Upload className="w-5 h-5 text-gray-500 mb-1" />
-                            <span className="text-gray-600">Click to upload</span>
+                            <span className="nline-flex items-center gap-2 px-8 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer hover:bg-primary/90 transition-colors text-sm font-medium">Click to upload</span>
                             {attachment && (
                                 <span className="text-[10px] mt-1 text-green-600">{attachment.name}</span>
                             )}
-                            {!attachment && existingAttachment && (
-                                <span className="text-[10px] mt-1 text-gray-500">
+                            {/* {!attachment && existingAttachment && (
+                                <span className="text-[15px] mt-1 text-gray-500">
                                     Current file attached
                                 </span>
-                            )}
+                            )} */}
 
                         </label>
                     </div>
 
                     {/* ---------- BUTTONS ---------- */}
-                    <div className="flex  gap-4 mt-8 justify-end">
+                    <div className="flex gap-4 mt-8 justify-end">
+                        {/* Cancel Button */}
                         <button
                             onClick={() => navigate("/contact-book")}
-                            className="bg-white-500 text-black px-6 py-2 rounded-md hover:bg-gray-600 border border-black-900"
+                            className="flex items-center gap-2 px-4 py-1.5 rounded-md
+               border border-gray-400 text-gray-900
+               bg-white hover:bg-gray-100 transition-colors"
                         >
+                            <X className="w-4 h-4" />
                             Cancel
                         </button>
+
+                        {/* Save Button */}
                         <button
                             onClick={handleSave}
                             disabled={loading}
-                            className="bg-purple-600 text-white px-8 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                            className="flex items-center gap-2 px-4 py-1.5 rounded-md
+               bg-purple-600 text-white hover:bg-purple-700
+               disabled:opacity-50 disabled:cursor-not-allowed
+               transition-colors"
                         >
-                            {loading ? "Saving..." : "Update Contact"}
+                            {loading ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    Save Changes
+                                </>
+                            )}
                         </button>
-
                     </div>
+
                 </div>
             </div>
         </div>

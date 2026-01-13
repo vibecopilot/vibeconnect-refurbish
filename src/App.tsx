@@ -111,6 +111,8 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
 // Import ProtectedRoute
 import { ProtectedRoute } from './routes';
 import { ContactBook, ContactBookCreate, ContactBookEdit, ContactBookView } from "./pages/ContactBook";
+import ScheduleAuditDetails from "./pages/Audit/Operational/ScheduledListView";
+import ScheduledListEdit from "./pages/Audit/Operational/ScheduledListEdit";
 
 // Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -351,7 +353,9 @@ function App() {
           <Route path="vendor/conducted" element={<VendorConducted />} />
         </Route>
         <Route path="/audit/operational/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
-        <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
+         <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduleAuditDetails /></AuthenticatedLayout>} />
+         <Route path="/audit/operational/scheduled/edit/:id" element={<AuthenticatedLayout><ScheduledListEdit /></AuthenticatedLayout>} />
+          <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/vendor/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
 
         {/* Compliance - FM Module */}
