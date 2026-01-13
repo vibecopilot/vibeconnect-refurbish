@@ -4,7 +4,7 @@ import { Eye, Edit2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../../components/list/ListToolbar';
 import DataTable from '../../../components/table/DataTable';
-import { getAuditScheduled } from '../../../api';
+import { getRoutineTask } from '../../../api';
 import { useViewMode } from '../../../hooks/useViewMode';
 
 interface ScheduledAudit {
@@ -16,12 +16,22 @@ interface ScheduledAudit {
   created_at: string;
   status: string;
 }
-// Data will be fetched from `getAuditScheduled()` and displayed in grid or list views.
+const tableData: ScheduledAudit[] = [
+  {
+    id: 1,
+    activity_name: "Fire Safety Inspection",
+    task_name: "Check Fire Extinguishers",
+    assigned_to: "U001",
+    assigned_to_name: "Kunal Patil",
+    created_at: "2023-12-10T10:30:00Z",
+    status: "Open",
+  },
+];
 
 
 const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
 
-const ScheduledList: React.FC = () => {
+const ScheduledListEdit: React.FC = () => {
   const navigate = useNavigate();
   const { viewMode, setViewMode, recordsPerPage } = useViewMode();
   const [data, setData] = useState<ScheduledAudit[]>([]);
@@ -33,23 +43,11 @@ const ScheduledList: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getAuditScheduled();
-      const raw = Array.isArray(response?.data) ? response.data : [];
-
-      const items: ScheduledAudit[] = raw.map((it: any) => ({
-        id: it.id,
-        activity_name: it.activity_name || it.activity || it.name || '',
-        task_name: (it.tasks && it.tasks.length > 0 && it.tasks[0].name) || it.task_name || it.task || '',
-        assigned_to: it.assigned_to || it.assign_to || (it.assigned && it.assigned.id) || '',
-        assigned_to_name: it.assigned_to_name || (it.assigned && (it.assigned.firstname || it.assigned.name)) || it.assigned_name || '',
-        created_at: it.created_at || it.created_on || '',
-        status: it.status || it.audit_status || '',
-      }));
-
+      const response = await getRoutineTask();
+      const items = Array.isArray(response?.data) ? response.data : [];
       setData(items);
       setFilteredData(items);
     } catch (error) {
-      console.error(error);
       toast.error('Failed to fetch scheduled audits');
       setData([]);
       setFilteredData([]);
@@ -146,12 +144,7 @@ const ScheduledList: React.FC = () => {
   ];
 
   const AuditCard = ({ item }: { item: ScheduledAudit }) => (
-    <div className="relative bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
-      {/* ID badge (visible in grid) */}
-      <div className="absolute top-3 right-3 text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md shadow-sm">
-        ID: {item.id ?? '-'}
-      </div>
-
+    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
@@ -194,39 +187,28 @@ const ScheduledList: React.FC = () => {
     </div>
   );
 
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(recordsPerPage || 12);
-
   const safeFilteredData = Array.isArray(filteredData) ? filteredData : [];
-  const totalItems = safeFilteredData.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const visibleData = safeFilteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchText, activeFilter, pageSize, filteredData]);
 
   return (
     <div>
-      {/* Status Filters - radio buttons */}
-      <div className="flex gap-4 mb-4 items-center flex-wrap">
+      {/* Status Filters */}
+      <div className="flex gap-2 mb-4 flex-wrap">
         {statusFilters.map((filter) => (
-          <label key={filter} className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="statusFilter"
-              value={filter}
-              checked={activeFilter === filter}
-              onChange={() => handleFilterChange(filter)}
-              className="w-4 h-4"
-            />
-            <span className={`transition-colors ${activeFilter === filter ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-              {filter}
-            </span>
-          </label>
+          <button
+            key={filter}
+            onClick={() => handleFilterChange(filter)}
+            className={`px-3 py-1.5 text-sm transition-colors relative ${activeFilter === filter
+              ? 'text-primary font-medium'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
+            {filter}
+            {activeFilter === filter && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+            )}
+          </button>
         ))}
       </div>
-
       <ListToolbar
         searchPlaceholder="Search audits..."
         searchValue={searchText}
@@ -242,109 +224,71 @@ const ScheduledList: React.FC = () => {
         onExportClick={handleExport}
       />
 
-      {/* Conditional render: grid or table depending on viewMode */}
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-          {safeFilteredData.length === 0 ? (
-            <div className="col-span-full text-center text-muted-foreground py-8">No audits found</div>
-          ) : (
-            visibleData.map((item) => (
-              <AuditCard key={item.id} item={item} />
-            ))
-          )}
-        </div>
-      ) : (
-        <table className="w-full border-collapse mt-4">
+
+
+        {/* TABLE */}
+        <table className="w-full border-collapse">
           <thead className="bg-gray-100 text-gray-500 uppercase text-[11px]">
-            <th className="px-4 py-3 text-left">Action</th>
-            <th className="px-4 py-3 text-left">ID</th>
-            <th className="px-4 py-3 text-left">Activity</th>
-            <th className="px-4 py-3 text-left">Task</th>
-            <th className="px-4 py-3 text-left">Assigned To</th>
-            <th className="px-4 py-3 text-left">Created On</th>
+              <th className="px-4 py-3 text-left">Action</th>
+              <th className="px-4 py-3 text-left">ID</th>
+              <th className="px-4 py-3 text-left">Activity</th>
+              <th className="px-4 py-3 text-left">Task</th>
+              <th className="px-4 py-3 text-left">Assigned To</th>
+              {/* <th className="px-4 py-3 text-left">Assigned To name</th> */}
+              <th className="px-4 py-3 text-left">Created On</th>
+            
           </thead>
 
           <tbody>
-            {safeFilteredData.length === 0 ? (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-6">No audits found</td></tr>
-            ) : (
-              visibleData.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b last:border-none hover:bg-muted/50"
-                >
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() =>
-                        navigate(`/audit/operational/scheduled/view/${row.id}`)
-                      }
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                      title="View"
-                    >
-                      <Eye size={16} />
-                    </button>
-                  </td>
+            {tableData.map((row) => (
+              <tr
+                key={row.id}
+                className="border-b last:border-none hover:bg-muted/50"
+              >
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() =>
+                      navigate(`/audit/operational/scheduled/view/${row.id}`)
+                    }
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    title="View"
+                  >
+                    <Eye size={16} />
+                  </button>
+                </td>
 
-                  <td className="px-4 py-3">{row.id}</td>
-                  <td className="px-4 py-3">{row.activity_name}</td>
-                  <td className="px-4 py-3">{row.task_name}</td>
-                  <td className="px-4 py-3">{row.assigned_to_name || row.assigned_to}</td>
-                  <td className="px-4 py-3">{row.created_at}</td>
-                </tr>
-              ))
-            )}
+                <td className="px-4 py-3">{row.id}</td>
+                <td className="px-4 py-3">{row.activity_name}</td>
+                <td className="px-4 py-3">{row.task_name}</td>
+                <td className="px-4 py-3">{row.assigned_to}</td>
+                {/* <td className="px-4 py-3">{row.assigned_to_name}</td> */}
+                <td className="px-4 py-3">{row.created_at}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
-      )}
 
-      {/* PAGINATION */}
-      <div className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-muted-foreground mt-4">
-        <div className="flex items-center gap-4">
-          <div>
-            {totalItems === 0 ? '0 entries' : `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalItems)} of ${totalItems}`}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm">Rows per page:</label>
-            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="border rounded px-2 py-0.5">
-              <option value={12}>12</option>
-              <option value={24}>24</option>
-              <option value={48}>48</option>
+        {/* PAGINATION */}
+        <div className="flex items-center justify-end gap-4 px-4 py-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            Rows per page:
+            <select className="border rounded px-1 py-0.5">
+              <option>10</option>
             </select>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-            className={`px-2 py-1 rounded ${currentPage === 1 ? 'opacity-50' : 'hover:bg-accent'}`}
-          >{"<<"}</button>
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className={`px-2 py-1 rounded ${currentPage === 1 ? 'opacity-50' : 'hover:bg-accent'}`}
-          >{"<"}</button>
+          <div>1–1 of 1</div>
 
-          <div className="px-3 py-1">
-            Page {currentPage} / {totalPages}
+          <div className="flex items-center gap-2">
+            <button disabled className="opacity-50">{"<<"}</button>
+            <button disabled className="opacity-50">{"<"}</button>
+            <button disabled className="opacity-50">{">"}</button>
+            <button disabled className="opacity-50">{">>"}</button>
           </div>
-
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className={`px-2 py-1 rounded ${currentPage === totalPages ? 'opacity-50' : 'hover:bg-accent'}`}
-          >{">"}</button>
-          <button
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-            className={`px-2 py-1 rounded ${currentPage === totalPages ? 'opacity-50' : 'hover:bg-accent'}`}
-          >{">>"}</button>
         </div>
-      </div>
     </div>
 
   );
 };
 
-export default ScheduledList;
+export default ScheduledListEdit;
