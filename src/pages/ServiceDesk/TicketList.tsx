@@ -1254,5 +1254,4 @@ const TicketList: React.FC = () => {
     </div>
   );
 };
-
 export default TicketList;

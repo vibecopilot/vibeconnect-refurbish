@@ -1,5 +1,3 @@
-
-
 import { data } from "autoprefixer";
 import { getItemInLocalStorage } from "../utils/localStorage";
 import axiosInstance from "./axiosInstance";
@@ -91,6 +89,33 @@ export const postSiteAsset = async (data) =>
       "Content-Type": "multipart/form-data",
     },
   });
+export const postAuditScheduled = async (data) =>
+  axiosInstance.post(`/audits.json`, data, {
+    params: {
+      token: token,
+    },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  export const getAuditScheduled = async () =>
+  axiosInstance.get(`/audits.json`, {
+    params: {
+      token: token,
+    },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+    export const putAuditScheduled = async (data,id) =>
+  axiosInstance.put(`/audits/${id}.json`, data, {
+    params: {
+      token: token,
+    },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 export const EditSiteAsset = async (data, id) =>
   axiosInstance.put(`/site_assets/${id}.json`, data, {
     params: {
@@ -154,11 +179,11 @@ export const getVendors = async () =>
     },
   });
 
-export const getVendorById= async (id) =>
+export const getVendorById = async (id) =>
   axiosInstance.get("/vendors.json", {
     params: {
       token: token,
-      "q[id_eq]":id,
+      "q[id_eq]": id,
     },
   });
 export const getVendorCategory = async () =>
@@ -336,7 +361,7 @@ export const getFitoutDocs = async () =>
     params: {
       token: token,
     },
-  });  
+  });
 export const getFitoutCategoriesSetupDetails = async (id) =>
   axiosInstance.get(`/fit_out_setup_categories/${id}.json`, {
     params: {
@@ -344,7 +369,7 @@ export const getFitoutCategoriesSetupDetails = async (id) =>
     },
   });
 
- export const postFitoutCategoriesSetup = async (data) =>
+export const postFitoutCategoriesSetup = async (data) =>
   axiosInstance.post(`/fit_out_setup_categories.json`, data, {
     params: {
       token: token,
@@ -364,28 +389,28 @@ export const destroyFitoutCategory = async (catId) =>
       token: token,
     },
   });
-  
- export const postFitOutSubCategoriesSetup = async (data) =>
+
+export const postFitOutSubCategoriesSetup = async (data) =>
   axiosInstance.post(`/fitout_subcategories.json`, data, {
     params: {
       token: token,
     },
   });
-  
-  export const getFitoutSubCategoriesSetupDetails = async (id) =>
+
+export const getFitoutSubCategoriesSetupDetails = async (id) =>
   axiosInstance.get(`/fitout_subcategories/${id}.json`, {
     params: {
       token: token,
     },
   });
 
-  export const getFitoutStatusSetup = async () =>
+export const getFitoutStatusSetup = async () =>
   axiosInstance.get(`/fitout_statuses.json`, {
     params: {
       token: getToken(),
     },
   });
-  export const getFitOutStatus = async (id) =>
+export const getFitOutStatus = async (id) =>
   axiosInstance.get(`/fitout_statuses/${id}.json`, {
     params: {
       token: token,
@@ -398,26 +423,26 @@ export const editFitOutStatus = async (id, data) =>
       token: token,
     },
   });
-  export const postFitOutStatus = async (data) =>
+export const postFitOutStatus = async (data) =>
   axiosInstance.post(`/fitout_statuses.json`, data, {
     params: {
       token: token,
     },
   });
-  export const getFitoutSubCategoriesSetup = async () =>
+export const getFitoutSubCategoriesSetup = async () =>
   axiosInstance.get(`/fitout_subcategories.json`, {
     params: {
       token: token,
     },
   });
-  export const getAllVendors = async () =>
+export const getAllVendors = async () =>
   axiosInstance.get("/vendors/all_vendors.json", {
     params: {
       token: token,
     },
   });
 
-  export const postSnagAnswer = async (data) =>
+export const postSnagAnswer = async (data) =>
   axiosInstance.post(`/snag_answers.json`, data, {
     params: {
       token: getToken(),
@@ -430,7 +455,7 @@ export const getSnagAnswer = async (data) =>
       token: token,
     },
   });
-  export const getSnagChecklistByCategory = async (categoryId) => {
+export const getSnagChecklistByCategory = async (categoryId) => {
   return axiosInstance.get("/snag_checklists.json", {
     params: {
       token: getToken(),
@@ -675,47 +700,47 @@ export const getFacilitySetup = async (data) =>
     },
   });
 export const getHotelSetup = async (isHotel, page, per_page) => {
-try {
-const response = await axiosInstance.get(`/amenities.json`, {
-params: {
-token: token,
-"q[is_hotel_eq]": isHotel,
-page,
-per_page,
-},
-headers: {
-"Cache-Control": "no-cache",
-Pragma: "no-cache",
-Expires: "0",
-},
-});
-return response;
-} catch (error) {
-console.error("Error fetching facility setup:", error);
-throw error;
-}
+  try {
+    const response = await axiosInstance.get(`/amenities.json`, {
+      params: {
+        token: token,
+        "q[is_hotel_eq]": isHotel,
+        page,
+        per_page,
+      },
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error("Error fetching facility setup:", error);
+    throw error;
+  }
 };
 
 export const getTurfSetup = async (type_of_facility, page, per_page) => {
-try {
-const response = await axiosInstance.get(`/amenities.json`, {
-params: {
-token: token,
-"q[type_of_facility_eq]": type_of_facility,
-page,
-per_page,
-},
-headers: {
-"Cache-Control": "no-cache",
-Pragma: "no-cache",
-Expires: "0",
-},
-});
-return response;
-} catch (error) {
-console.error("Error fetching turf setup:", error);
-throw error;
-}
+  try {
+    const response = await axiosInstance.get(`/amenities.json`, {
+      params: {
+        token: token,
+        "q[type_of_facility_eq]": type_of_facility,
+        page,
+        per_page,
+      },
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error("Error fetching turf setup:", error);
+    throw error;
+  }
 };
 
 
@@ -1231,14 +1256,14 @@ export const getAssetPPMs = async (assetId) =>
 
 export const getSoftServiceStatus = async (data, startDate = null, endDate = null) => {
   let url = `/activities.json?q[soft_service_id_null]=0&q[status_eq]=${data}`;
-  
+
   if (startDate) {
     url += `&q[start_time_gteq]=${startDate}`;
   }
   if (endDate) {
     url += `&q[start_time_lteq]=${endDate}`;
   }
-  
+
   return axiosInstance.get(url, {
     params: {
       token: token,
@@ -2052,24 +2077,24 @@ export const postServiceAssociation = async (data) =>
 
 
 export const getSoftServices = (page = 1, perPage = 10, searchValue = "") => {
-const params: any = {
-token: token,
-page: page,
-per_page: perPage,
-_t: Date.now() // Cache buster
-};
+  const params: any = {
+    token: token,
+    page: page,
+    per_page: perPage,
+    _t: Date.now() // Cache buster
+  };
 
-if (searchValue) {
-params['q[name_cont]'] = searchValue;
-}
- return axiosInstance.get('/soft_services.json', {
-params,
+  if (searchValue) {
+    params['q[name_cont]'] = searchValue;
+  }
+  return axiosInstance.get('/soft_services.json', {
+    params,
 
-headers: {
-'Cache-Control': 'no-cache',
-'Pragma': 'no-cache'
-}
-});
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  });
 };
 
 
@@ -2198,14 +2223,14 @@ export const getServicesPPMDetails = async (id) =>
 //
 export const getServicesRoutineList = async (page, perpage, startDate = null, endDate = null) => {
   let url = `/activities.json?q[soft_service_id_null]=0&per_page=${perpage}&page=${page}`;
-  
+
   if (startDate) {
     url += `&q[start_time_gteq]=${startDate}`;
   }
   if (endDate) {
     url += `&q[start_time_lteq]=${endDate}`;
   }
-  
+
   return axiosInstance.get(url, {
     params: {
       token: token,
@@ -2462,17 +2487,17 @@ export const getParkingSlots = async () =>
   });
 
 export const getBookParking = async (page = 1, perPage = 10, searchValue = "") => {
-const params = {
-token: token,
-page: page,
-per_page: perPage,
-};
+  const params = {
+    token: token,
+    page: page,
+    per_page: perPage,
+  };
 
-if (searchValue) {
-params['q[search_cont]'] = searchValue;
-}
+  if (searchValue) {
+    params['q[search_cont]'] = searchValue;
+  }
 
-return axiosInstance.get(`/booking_parkings.json`, { params });
+  return axiosInstance.get(`/booking_parkings.json`, { params });
 };
 
 
@@ -2616,7 +2641,7 @@ export const getExpectedVisitor = async (page = 1, perPage = 10, filters = {}) =
     page: page,
     per_page: perPage,
   };
-  
+
   // Add dynamic filters
   if (filters.visitorInOut) {
     params['q[visitor_in_out_eq]'] = filters.visitorInOut;
@@ -2627,7 +2652,7 @@ export const getExpectedVisitor = async (page = 1, perPage = 10, filters = {}) =
   if (filters.userTypeNotEq) {
     params['q[user_type_not_eq]'] = filters.userTypeNotEq;
   }
-  
+
   // Add date range filters
   if (filters.dateFrom) {
     params['q[expected_date_gteq]'] = filters.dateFrom; // greater than or equal
@@ -2635,17 +2660,17 @@ export const getExpectedVisitor = async (page = 1, perPage = 10, filters = {}) =
   if (filters.dateTo) {
     params['q[expected_date_lteq]'] = filters.dateTo; // less than or equal
   }
-  
+
   // Add mobile number filter
   if (filters.mobile) {
     params['q[contact_no_cont]'] = filters.mobile; // contains
   }
-  
+
   // Add host filter (searching through host.user relationship)
   if (filters.host) {
     params['q[host_user_firstname_or_host_user_lastname_cont]'] = filters.host;
   }
-  
+
   return axiosInstance.get(`/visitors.json`, { params });
 };
 export const getExpectedUserVisitor = async () =>

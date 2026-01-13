@@ -4,7 +4,7 @@ import Breadcrumb from "../../components/ui/Breadcrumb";
 import FormInput from '../../components/ui/FormInput';
 import { serviceDeskService } from '../../services/serviceDesk.service';
 import { getItemInLocalStorage } from '../../utils/localStorage';
-import { Loader2, Save, X, Upload, FileText } from 'lucide-react';
+import { Loader2, Save, X, Upload, FileText ,RotateCcw} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Category {
@@ -301,6 +301,10 @@ useEffect(() => {
   console.log('📝 Form Data Changed:', formData);
 }, [formData]);
 
+  const handleCancel = () => {
+    navigate("/service-desk");
+  }; 
+
   const handleReset = () => {
     setFormData({
       issue_type_id: '',
@@ -548,11 +552,27 @@ useEffect(() => {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-center gap-3 pt-6 border-t border-border">
+          <div className="flex items-center justify-end gap-3 pt-6 border-t border-border"> 
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-2 px-4 py-2  text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -565,14 +585,6 @@ useEffect(() => {
                   Submit
                 </>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-              Reset
             </button>
           </div>
         </form>
