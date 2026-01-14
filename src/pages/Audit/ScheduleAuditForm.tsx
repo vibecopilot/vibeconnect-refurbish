@@ -13,8 +13,8 @@ const frequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'One T
 const priorities = ['Low', 'Medium', 'High', 'Critical'];
 const scanTypes = ['QR Code', 'NFC', 'Manual'];
 
-  const API_BASE = "https://admin.vibecopilot.ai";
-  const API_TOKEN = localStorage.getItem("TOKEN");
+const API_BASE = "https://admin.vibecopilot.ai";
+const API_TOKEN = getItemInLocalStorage("TOKEN");
 
 interface FormData {
   audit_for: string;
@@ -22,10 +22,10 @@ interface FormData {
   description: string;
   allow_observations: boolean;
   checklist_type: string;
-  asset_name:String;
-  service_name:String;
-  vendor_name:String;
-  training_name:String;
+  asset_name: string;
+  service_name: string;
+  vendor_name: string;
+  training_name: string;
   assign_to: string;
   scan_type: string;
   plan_duration: string;
@@ -33,7 +33,7 @@ interface FormData {
   email_trigger_rule: string;
   supervisors: string;
   category_id: string;
-  lock_overdue_task: string;
+  look_overdue_task: string;
   frequency: string;
   start_from: string;
   end_at: string;
@@ -42,16 +42,34 @@ interface FormData {
   create_task: boolean;
   weightage: boolean;
 }
+interface TaskItem {
+  id: number;
+  group: string;
+  subgroup: string;
+  task: string;
+  input_type: string;
+  mandatory: boolean;
+  reading: boolean;
+  help_text: boolean;
+}
 
 const ScheduleAuditForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [formData, setFormData] = useState<FormData>({
     audit_for: 'Asset',
     activity_name: '',
     description: '',
     allow_observations: false,
+
     checklist_type: 'Individual',
+
+    asset_name: '',
+    service_name: '',
+    vendor_name: '',
+    training_name: '',
+
     assign_to: '',
     scan_type: '',
     plan_duration: '',
@@ -59,11 +77,12 @@ const ScheduleAuditForm: React.FC = () => {
     email_trigger_rule: '',
     supervisors: '',
     category_id: '',
-    lock_overdue_task: '',
+    look_overdue_task: '',
     frequency: 'Daily',
     start_from: '',
     end_at: '',
     supplier_id: '',
+
     create_new: true,
     create_task: false,
     weightage: false,
@@ -72,12 +91,13 @@ const ScheduleAuditForm: React.FC = () => {
   const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<{ id: number; name: string }[]>([]);
+  const forTypes = ['Asset', 'Services', 'Vendor', 'Training'];
+  const inputTypes = ['Text', 'Number', 'Dropdown', 'Checkbox', 'Date', 'File Upload', 'Rating'];
+
 
   useEffect(() => {
     fetchDropdownData();
   }, []);
-
   const fetchDropdownData = async () => {
     try {
       const [usersRes, categoriesRes, suppliersRes] = await Promise.all([
@@ -85,23 +105,63 @@ const ScheduleAuditForm: React.FC = () => {
         getVendorCategory(),
         getVendors()
       ]);
-      setAssignedUsers(Array.isArray(usersRes?.data) ? usersRes.data : []);
-      setCategories(Array.isArray(categoriesRes?.data) ? categoriesRes.data : []);
-      setSuppliers(Array.isArray(suppliersRes?.data) ? suppliersRes.data : []);
-    } catch (error) {
-      console.error('Error fetching dropdown data:', error);
+
+      setAssignedUsers(
+        Array.isArray(usersRes?.data) ? usersRes.data : usersRes?.data?.data || []
+      );
+
+      setCategories(
+        Array.isArray(categoriesRes?.data)
+          ? categoriesRes.data
+          : categoriesRes?.data?.data || []
+      );
+
+      setSuppliers(
+        Array.isArray(suppliersRes?.data)
+          ? suppliersRes.data
+          : suppliersRes?.data?.data || []
+      );
+    } catch (err) {
+      console.error(err);
+      setCategories([]); // safety fallback
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+
+  const addTask = () => {
+    setTasks(prev => [...prev, {
+      id: Date.now(),
+      group: '',
+      subgroup: '',
+      task: '',
+      input_type: 'Text',
+      mandatory: false,
+      reading: false,
+      help_text: false,
+    }]);
+  };
+
+  const updateTask = (id: number, field: keyof TaskItem, value: any) => {
+    setTasks(prev => prev.map(task =>
+      task.id === id ? { ...task, [field]: value } : task
+    ));
+  };
+
+  const removeTask = (id: number) => {
+    setTasks(prev => prev.filter(task => task.id !== id));
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
-
   const handleScheduleTypeChange = (type: string) => {
     setFormData(prev => ({ ...prev, audit_for: type }));
   };
@@ -110,63 +170,83 @@ const ScheduleAuditForm: React.FC = () => {
     setFormData(prev => ({ ...prev, checklist_type: type }));
   };
 
-  const addTask = () => {
-    setTasks(prev => [...prev, { id: Date.now(), name: '' }]);
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.activity_name) {
-      toast.error('Please enter activity name');
+  if (!formData.activity_name.trim()) {
+    toast.error('Activity Name is required');
+    return;
+  }
+
+  if (tasks.length === 0) {
+    toast.error('At least one task is required');
+    return;
+  }
+
+  for (const t of tasks) {
+    if (!t.group || !t.task || !t.input_type) {
+      toast.error('Task Group, Task Name and Input Type are required');
       return;
     }
+  }
 
-    setLoading(true);
-    try {
-      const payload = new FormData();
+  setLoading(true);
 
-      // Append simple fields under audit[...]
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value === null || value === undefined) return;
-        if (typeof value === 'boolean') {
-          payload.append(`audit[${key}]`, String(value));
-        } else {
-          payload.append(`audit[${key}]`, String(value));
-        }
-      });
+  try {
+    const payload = new FormData();
 
-      // Append tasks as repeated fields: audit[tasks][] = name
-      tasks.forEach((t) => {
-        if (t.name && t.name.trim()) {
-          payload.append('audit[tasks][]', t.name.trim());
-        }
-      });
+    // ----- AUDIT FIELDS -----
+    Object.entries(formData).forEach(([key, value]) => {
+      const mappedKey =
+        key === 'supplier_id' ? 'select_supplier' :
+        key === 'category_id' ? 'category' :
+        key;
 
-      const res = await postAuditScheduled(payload);
+      payload.append(
+        `audit[${mappedKey}]`,
+        typeof value === 'boolean' ? (value ? '1' : '0') : String(value ?? '')
+      );
+    });
 
-      if (res && res.data) {
-        toast.success('Audit scheduled successfully');
-        navigate('/audit/operational/scheduled');
-      } else {
-        toast.error('Failed to schedule audit');
-      }
-    } catch (error: any) {
-      console.error('Error scheduling audit:', error);
-      const msg = error?.response?.data?.message || 'Failed to schedule audit';
-      toast.error(msg);
-    } finally {
-      setLoading(false);
+    // ----- TASKS (ONLY THIS FORMAT) -----
+    tasks.forEach((task, index) => {
+      payload.append(`audit[tasks_attributes][${index}][group]`, task.group);
+      payload.append(`audit[tasks_attributes][${index}][subgroup]`, task.subgroup);
+      payload.append(`audit[tasks_attributes][${index}][task]`, task.task);
+      payload.append(`audit[tasks_attributes][${index}][input_type]`, task.input_type);
+      payload.append(`audit[tasks_attributes][${index}][mandatory]`, task.mandatory ? '1' : '0');
+      payload.append(`audit[tasks_attributes][${index}][reading]`, task.reading ? '1' : '0');
+      payload.append(`audit[tasks_attributes][${index}][help_text]`, task.help_text ? '1' : '0');
+    });
+
+    // 🔍 DEBUG (TEMPORARY)
+    for (const pair of payload.entries()) {
+      console.log(pair[0], pair[1]);
     }
-  };
+
+    const res = await postAuditScheduled(payload);
+
+    toast.success('Audit scheduled successfully');
+    navigate('/audit/operational/scheduled');
+
+  } catch (error: any) {
+    console.error('API Error:', error?.response?.data || error);
+    toast.error(error?.response?.data?.message || 'Something went wrong');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <div className="p-6">
       <Breadcrumb items={[
-  { label: 'FM Module', path: '/audit' },
-  { label: 'Audit', path: '/audit' },
-  { label: 'Schedule Audit' },
-]} />
+        { label: 'FM Module', path: '/audit' },
+        { label: 'Audit', },
+        { label: 'Schedule Audit' },
+        { label: 'Create' }
+      ]} />
 
       <form onSubmit={handleSubmit}>
         {/* Toggle Section */}
@@ -221,11 +301,10 @@ const ScheduleAuditForm: React.FC = () => {
                   key={type}
                   type="button"
                   onClick={() => handleScheduleTypeChange(type)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    formData.audit_for=== type
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-accent'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${formData.audit_for === type
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-accent'
+                    }`}
                 >
                   {type}
                 </button>
@@ -273,14 +352,10 @@ const ScheduleAuditForm: React.FC = () => {
         </div>
 
         {/* Task Section */}
+        {/* Task Section */}
         <div className="bg-card border border-border rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Plus className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">Task</h2>
-            </div>
+            <h2 className="text-lg font-semibold text-foreground">Task</h2>
             <button
               type="button"
               onClick={addTask}
@@ -294,20 +369,102 @@ const ScheduleAuditForm: React.FC = () => {
           {tasks.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No tasks added yet. Click "Add Section" to add tasks.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {tasks.map((task, index) => (
-                <div key={task.id} className="p-4 border border-border rounded-lg flex items-center gap-2">
-                  <input
-                    type="text"
-                    name={`task_${task.id}`}
-                    value={task.name}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setTasks(prev => prev.map((t, i) => i === index ? { ...t, name } : t));
-                    }}
-                    placeholder={`Task ${index + 1}`}
-                    className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                <div key={task.id} className="p-4 border border-border rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-medium text-foreground">Task {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeTask(task.id)}
+                      className="text-sm text-destructive hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Group</label>
+                      <select
+                        value={task.group}
+                        onChange={(e) => updateTask(task.id, 'group', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select Group</option>
+                        <option value="general">General</option>
+                        <option value="safety">Safety</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">SubGroup</label>
+                      <select
+                        value={task.subgroup}
+                        onChange={(e) => updateTask(task.id, 'subgroup', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select SubGroup</option>
+                        <option value="sub1">SubGroup 1</option>
+                        <option value="sub2">SubGroup 2</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Task</label>
+                      <input
+                        type="text"
+                        value={task.task}
+                        onChange={(e) => updateTask(task.id, 'task', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Enter Task"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Input Type</label>
+                      <select
+                        value={task.input_type}
+                        onChange={(e) => updateTask(task.id, 'input_type', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {inputTypes.map((type) => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={task.mandatory}
+                        onChange={(e) => updateTask(task.id, 'mandatory', e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-foreground">Mandatory</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={task.reading}
+                        onChange={(e) => updateTask(task.id, 'reading', e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-foreground">Reading</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={task.help_text}
+                        onChange={(e) => updateTask(task.id, 'help_text', e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-foreground">Help Text</span>
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>
@@ -452,7 +609,7 @@ const ScheduleAuditForm: React.FC = () => {
               <label className="block text-sm font-medium text-foreground mb-2">Lock Overdue Task</label>
               <select
                 name="lock_overdue_task"
-                value={formData.lock_overdue_task}
+                value={formData.look_overdue_task}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
