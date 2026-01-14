@@ -52,20 +52,22 @@ const customStyles: TableStyles = {
   },
   headRow: {
     style: {
-      backgroundColor: 'hsl(267, 62%, 49%)',
-      color: 'white',
+      // Set header to a neutral white background and darker text for better readability
+      backgroundColor: '#ffffff',
+      color: 'hsl(var(--foreground))',
       fontSize: '12px',
       fontWeight: '600',
       textTransform: 'uppercase' as const,
       borderRadius: '8px 8px 0 0',
       minHeight: '48px',
+      borderBottom: '1px solid hsl(var(--border))',
     },
   },
   headCells: {
     style: {
       paddingLeft: '16px',
       paddingRight: '16px',
-      color: 'white',
+      color: 'hsl(var(--foreground))',
     },
   },
   rows: {
@@ -182,7 +184,7 @@ function DataTable<T extends object>({
         fixedHeader={fixedHeader}
         fixedHeaderScrollHeight={fixedHeaderScrollHeight}
         responsive
-        sortIcon={<ChevronDown size={14} className="ml-1" />}
+        sortIcon={<ChevronDown size={14} className="ml-1" color={"hsl(var(--muted-foreground))"} />}
       />
     </div>
   );

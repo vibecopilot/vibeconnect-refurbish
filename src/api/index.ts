@@ -98,15 +98,21 @@ export const postAuditScheduled = async (data) =>
       "Content-Type": "multipart/form-data",
     },
   });
-  export const getAuditScheduled = async () =>
-  axiosInstance.get(`/audits.json`, {
+  // Accept optional pagination params (page, per_page) and any additional query params
+  export const getAuditScheduled = (
+  page: number = 1,
+  perPage: number = 12,
+  search: string = ""
+) => {
+  return axiosInstance.get("/audits.json", {
     params: {
-      token: token,
-    },
-    headers: {
-      "Content-Type": "multipart/form-data",
+      token,
+      page,
+      per_page: perPage,
+      ...(search ? { search } : {}),
     },
   });
+};
     export const putAuditScheduled = async (data,id) =>
   axiosInstance.put(`/audits/${id}.json`, data, {
     params: {

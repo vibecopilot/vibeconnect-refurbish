@@ -4,14 +4,14 @@ import { Printer, Trash2, FileCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../../components/list/ListToolbar';
 import DataTable from '../../../components/table/DataTable';
-import { getRoutineTask } from '../../../api';
+import { getRoutineTask, getAuditScheduled } from '../../../api';
 import { useViewMode } from '../../../hooks/useViewMode';
 
 interface ConductedAudit {
   id: number;
   audit_name: string;
   activity_name: string;
-  start_date: string;
+  start_from: string;
   conducted_by: string;
   conducted_by_name: string;
   status: string;
@@ -22,6 +22,17 @@ interface ConductedAudit {
 
 const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
 
+// Normalize various backend status values to canonical values for filtering
+const normalizeStatus = (raw: any) => {
+  const s = (raw || '').toString().toLowerCase().trim();
+  if (!s) return '';
+  if (s.includes('complete') || s.includes('done') || s.includes('success')) return 'completed';
+  if (s.includes('pend') || s.includes('waiting')) return 'pending';
+  if (s.includes('open')) return 'open';
+  if (s.includes('close')) return 'closed';
+  return s; // fallback to raw lowercase string
+};
+
 const ConductedList: React.FC = () => {
   const navigate = useNavigate();
   const { viewMode, setViewMode, recordsPerPage } = useViewMode();
@@ -31,22 +42,48 @@ const ConductedList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getRoutineTask();
-      const items = Array.isArray(response?.data) ? response.data : [];
-      setData(items);
-      setFilteredData(items);
-    } catch (error) {
-      console.error('Error fetching conducted audits:', error);
-      toast.error('Failed to fetch conducted audits');
-      setData([]);
-      setFilteredData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+ const fetchData = useCallback(async () => {
+  setLoading(true);
+  try {
+    const [routineRes, scheduledRes] = await Promise.all([
+      getRoutineTask(),
+      getAuditScheduled()
+    ]);
+
+    const routineItems = Array.isArray(routineRes?.data?.activities)
+      ? routineRes.data.activities
+      : [];
+
+    const scheduledItems = Array.isArray(scheduledRes?.data?.activities)
+      ? scheduledRes.data.activities
+      : [];
+
+    const combined = [...routineItems, ...scheduledItems];
+
+    const mapped: ConductedAudit[] = combined.map((item: any) => ({
+      id: item.id,
+      audit_name: item.audit_name || '',
+      activity_name: item.activity_name || '',
+      start_from: item.start_from || item.created_at || '',
+      conducted_by: item.conducted_by || '',
+      conducted_by_name: item.conducted_by_name || item.conducted_by || '',
+      status: item.status || item.audit_status || item.audit_status_name || item.audit_status_type || 'Pending',
+      site_name: item.site_name || '',
+      duration: item.duration || '',
+      percentage: Number(item.percentage) || 0,
+    }));
+
+    setData(mapped);
+    setFilteredData(mapped);
+  } catch (err) {
+    console.error(err);
+    toast.error('Failed to load audits');
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+
 
   useEffect(() => {
     fetchData();
@@ -63,23 +100,47 @@ const ConductedList: React.FC = () => {
   };
 
   const applyFilters = (search: string, filter: string) => {
-    let filtered = Array.isArray(data) ? data : [];
-    
-    if (search) {
-      filtered = filtered.filter((item) =>
-        item.audit_name?.toLowerCase().includes(search.toLowerCase()) ||
-        item.activity_name?.toLowerCase().includes(search.toLowerCase())
-      );
+    let filtered = [...data];
+
+    const lower = (search || '').toString().toLowerCase().trim();
+
+    if (lower) {
+      filtered = filtered.filter((item) => {
+        const id = String(item.id || '').toLowerCase();
+        const audit = (item.audit_name || '').toString().toLowerCase();
+        const activity = (item.activity_name || '').toString().toLowerCase();
+        const by = (item.conducted_by_name || item.conducted_by || '').toString().toLowerCase();
+        const site = (item.site_name || '').toString().toLowerCase();
+        const status = (item.status || '').toString().toLowerCase();
+
+        return (
+          id.includes(lower) ||
+          audit.includes(lower) ||
+          activity.includes(lower) ||
+          by.includes(lower) ||
+          site.includes(lower) ||
+          status.includes(lower)
+        );
+      });
     }
-    
-    if (filter !== 'All') {
-      filtered = filtered.filter((item) => 
-        item.status?.toLowerCase() === filter.toLowerCase()
-      );
+
+    if (filter && filter !== 'All') {
+      const tf = filter.toString().toLowerCase().trim();
+      // Use normalized status to match variants like 'Pending', 'pending_review', 'In Progress', 'completed_success', etc.
+      filtered = filtered.filter((item) => {
+        const ns = normalizeStatus(item.status);
+        return ns === tf || ns.includes(tf);
+      });
     }
-    
+
     setFilteredData(filtered);
   };
+
+  // Reapply filters when the source data changes (e.g., after fetch)
+  useEffect(() => {
+    applyFilters(searchText, activeFilter);
+  }, [data]);
+
 
   const handleExport = () => {
     const dataToExport = Array.isArray(filteredData) ? filteredData : [];
@@ -88,7 +149,7 @@ const ConductedList: React.FC = () => {
       ...dataToExport.map(item => [
         item.id,
         item.audit_name || item.activity_name || '',
-        item.start_date ? new Date(item.start_date).toLocaleString() : '',
+        item.start_from ? new Date(item.start_from).toLocaleString() : '',
         item.conducted_by_name || '',
         item.status || '',
         item.site_name || '',
@@ -133,20 +194,19 @@ const ConductedList: React.FC = () => {
     },
     { name: 'ID', selector: (row: ConductedAudit) => row.id, sortable: true, width: '80px' },
     { name: 'AUDIT NAME', selector: (row: ConductedAudit) => row.audit_name || row.activity_name || '-', sortable: true },
-    { name: 'START DATE & TIME', selector: (row: ConductedAudit) => row.start_date ? new Date(row.start_date).toLocaleString() : '-', sortable: true },
+    { name: 'START DATE & TIME', selector: (row: ConductedAudit) => row.start_from ? new Date(row.start_from).toLocaleString() : '-', sortable: true },
     { name: 'CONDUCTED BY', selector: (row: ConductedAudit) => row.conducted_by_name || '-', sortable: true },
-    { 
-      name: 'STATUS', 
+    {
+      name: 'STATUS',
       cell: (row: ConductedAudit) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          row.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+        <span className={`px-2 py-1 text-xs rounded-full ${row.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
           row.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-        }`}>
+            'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+          }`}>
           {row.status || 'N/A'}
         </span>
       ),
-      sortable: true 
+      sortable: true
     },
     { name: 'SITE', selector: (row: ConductedAudit) => row.site_name || '-', sortable: true },
     { name: 'DURATION', selector: (row: ConductedAudit) => row.duration || '-', sortable: true },
@@ -175,14 +235,13 @@ const ConductedList: React.FC = () => {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">{item.audit_name || item.activity_name || 'N/A'}</h3>
-            <p className="text-sm text-muted-foreground">ID: {item.id}</p>
+            <p className="text-sm text-muted-foreground">{item.id}</p>
           </div>
         </div>
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+        <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
           item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-        }`}>
+            'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+          }`}>
           {item.status || 'N/A'}
         </span>
       </div>
@@ -215,23 +274,23 @@ const ConductedList: React.FC = () => {
 
   return (
     <div>
-            {/* Status Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex  mb-4 flex-wrap">
         {statusFilters.map((filter) => (
-          <button
-            key={filter}
-            onClick={() => handleFilterChange(filter)}
-            className={`px-3 py-1.5 text-sm transition-colors relative ${
-              activeFilter === filter
-                ? 'text-primary font-medium'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {filter}
+          <label key={filter} className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-md cursor-pointer relative ${activeFilter === filter ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}>
+            <input
+              type="radio"
+              name="statusFilter"
+              value={filter}
+              checked={activeFilter === filter}
+              onChange={() => handleFilterChange(filter)}
+              className="w-4 h-4"
+              aria-checked={activeFilter === filter}
+            />
+            <span>{filter}</span>
             {activeFilter === filter && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
             )}
-          </button>
+          </label>
         ))}
       </div>
 
@@ -252,12 +311,16 @@ const ConductedList: React.FC = () => {
       {viewMode === 'grid' ? (
         <div className="mt-4">
           {loading ? (
-            <div className="text-center py-10 text-muted-foreground">Loading...</div>
-          ) : safeFilteredData.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">No conducted audits found</div>
+            <div className="text-center py-10 text-muted-foreground">
+              Loading...
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              No conducted audits found
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {safeFilteredData.slice(0, recordsPerPage).map((item) => (
+              {filteredData.slice(0, recordsPerPage).map((item) => (
                 <AuditCard key={item.id} item={item} />
               ))}
             </div>
@@ -265,13 +328,15 @@ const ConductedList: React.FC = () => {
         </div>
       ) : (
         <DataTable
+          key={`table-${searchText}-${activeFilter}`}
           columns={columns}
-          data={safeFilteredData}
+          data={filteredData}
           loading={loading}
           pagination
           paginationPerPage={recordsPerPage}
         />
       )}
+
     </div>
   );
 };
