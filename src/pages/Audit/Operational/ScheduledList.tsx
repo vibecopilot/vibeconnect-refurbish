@@ -4,14 +4,14 @@ import { Eye, Edit2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../../components/list/ListToolbar';
 import DataTable from '../../../components/table/DataTable';
-import { getAuditScheduled } from '../../../api';
+import { getAuditScheduled ,getChecklist} from '../../../api';
 import { useViewMode } from '../../../hooks/useViewMode';
 
 interface ScheduledAudit {
   id: number;
   activity_name: string;
-  task_name: string;
-  assigned_to: string;
+  task: string;
+  assign_to: string;
   assigned_to_name: string;
   created_at: string;
   status: string;
@@ -51,8 +51,8 @@ const ScheduledList: React.FC = () => {
       const items: ScheduledAudit[] = rawItems.map((it: any) => ({
         id: it.id,
         activity_name: it.activity_name || it.activity || it.name || '',
-        task_name: (it.tasks && it.tasks.length > 0 && it.tasks[0].name) || it.task_name || it.task || '',
-        assigned_to: it.assigned_to || it.assign_to || (it.assigned && it.assigned.id) || '',
+        task: (it.tasks && it.tasks.length > 0 && it.tasks[0].name)  || it.task || '',
+        assigned_to: it.assign_to || (it.assigned && it.assigned.id) || '',
         assigned_to_name: it.assigned_to_name || (it.assigned && (it.assigned.firstname || it.assigned.name)) || it.assigned_name || '',
         created_at: it.created_at || it.created_on || '',
         status: it.status || it.audit_status || '',
@@ -121,8 +121,8 @@ const handleFilterChange = (filter: string) => {
       const dataToExport = allItems.map((it: any) => ({
         id: it.id,
         activity_name: it.activity_name || it.activity || it.name || '',
-        task_name: (it.tasks && it.tasks.length > 0 && it.tasks[0].name) || it.task_name || it.task || '',
-        assigned_to_name: it.assigned_to_name || (it.assigned && (it.assigned.firstname || it.assigned.name)) || it.assigned_name || '',
+        task: (it.tasks && it.tasks.length > 0 && it.tasks[0].name) || it.task_name || it.task || '',
+        assigned_to: it.assign_to || (it.assigned && it.assigned.id) || '',
         created_at: it.created_at || it.created_on || '',
         status: it.status || it.audit_status || '',
       }));
@@ -132,8 +132,8 @@ const handleFilterChange = (filter: string) => {
         ...dataToExport.map(item=> [
           item.id,
           item.activity_name || '',
-          item.task_name || '',
-          item.assigned_to_name || '',
+          item.task || '',
+          item.assign_to || '',
           item.created_at ? new Date(item.created_at).toLocaleDateString() : '',
           item.status || ''
         ].join(','))
@@ -178,8 +178,8 @@ const handleFilterChange = (filter: string) => {
     },
     { name: 'ID', selector: (row: ScheduledAudit) => row.id, sortable: true, width: '80px' },
     { name: 'Activity', selector: (row: ScheduledAudit) => row.activity_name || '-', sortable: true },
-    { name: 'Task', selector: (row: ScheduledAudit) => row.task_name || '-', sortable: true },
-    { name: 'Assigned To', selector: (row: ScheduledAudit) => row.assigned_to_name || row.assigned_to || '-', sortable: true },
+    { name: 'Task', selector: (row: ScheduledAudit) => row.task || '-', sortable: true },
+    { name: 'Assigned To', selector: (row: ScheduledAudit) => row.assigned_to_name || row.assign_to || '-', sortable: true },
     { name: 'Created On', selector: (row: ScheduledAudit) => row.created_at ? new Date(row.created_at).toLocaleDateString() : '-', sortable: true },
   ];
 
@@ -209,13 +209,13 @@ const handleFilterChange = (filter: string) => {
       </div>
 
       <div className="space-y-1 text-sm text-muted-foreground mb-4 mt-4">
-        <p>Task: {item.task_name || '-'}</p>
-        <p>Assigned To: {item.assigned_to_name || '-'}</p>
+        <p>Task: {item.task || '-'}</p>
+        <p>Assigned To: {item.assign_to || '-'}</p>
         <p>Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</p>
       </div>
     <div className="flex items-center gap-2 pt-2 border-t border-border">
   <button
-    onClick={() => navigate(`/audit/operational/scheduled/${item.id}`)}
+    onClick={() => navigate(`/audit/operational/scheduled/view/${item.id}`)}
     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-accent 
                text-purple-700 hover:text-primary transition-colors text-xs font-medium"
     title="View"
@@ -225,7 +225,7 @@ const handleFilterChange = (filter: string) => {
   </button>
 
   <button
-    onClick={() => navigate(`/audit/operational/scheduled/${item.id}/edit`)}
+    onClick={() => navigate(`/audit/operational/scheduled/edit/${item.id}`)}
     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-accent 
                text-purple-700 hover:text-primary transition-colors text-xs font-medium"
     title="Edit"

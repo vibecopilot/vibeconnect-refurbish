@@ -66,7 +66,7 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
           </button>
         )}
 
-        {showFilter && (
+        {/* {showFilter && (
           <button
             onClick={onFilterClick}
             className="flex items-center gap-2 px-4 py-2 border border-border text-foreground rounded-lg hover:bg-accent transition-colors"
@@ -74,7 +74,7 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
             <Filter size={18} />
             <span className="text-sm font-medium">Filter</span>
           </button>
-        )}
+        )} */}
 
         {showExport && (
           <button
