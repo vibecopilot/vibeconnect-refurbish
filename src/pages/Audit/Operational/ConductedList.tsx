@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Printer, Trash2, FileCheck } from 'lucide-react';
+import { Printer, Trash2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../../components/list/ListToolbar';
 import DataTable from '../../../components/table/DataTable';
@@ -42,46 +42,46 @@ const ConductedList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
 
- const fetchData = useCallback(async () => {
-  setLoading(true);
-  try {
-    const [routineRes, scheduledRes] = await Promise.all([
-      getRoutineTask(),
-      getAuditScheduled()
-    ]);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [routineRes, scheduledRes] = await Promise.all([
+        getRoutineTask(),
+        getAuditScheduled()
+      ]);
 
-    const routineItems = Array.isArray(routineRes?.data?.activities)
-      ? routineRes.data.activities
-      : [];
+      const routineItems = Array.isArray(routineRes?.data?.activities)
+        ? routineRes.data.activities
+        : [];
 
-    const scheduledItems = Array.isArray(scheduledRes?.data?.activities)
-      ? scheduledRes.data.activities
-      : [];
+      const scheduledItems = Array.isArray(scheduledRes?.data?.activities)
+        ? scheduledRes.data.activities
+        : [];
 
-    const combined = [...routineItems, ...scheduledItems];
+      const combined = [...routineItems, ...scheduledItems];
 
-    const mapped: ConductedAudit[] = combined.map((item: any) => ({
-      id: item.id,
-      audit_name: item.audit_name || '',
-      activity_name: item.activity_name || '',
-      start_from: item.start_from || item.created_at || '',
-      conducted_by: item.conducted_by || '',
-      conducted_by_name: item.conducted_by_name || item.conducted_by || '',
-      status: item.status || item.audit_status || item.audit_status_name || item.audit_status_type || 'Pending',
-      site_name: item.site_name || '',
-      duration: item.duration || '',
-      percentage: Number(item.percentage) || 0,
-    }));
+      const mapped: ConductedAudit[] = combined.map((item: any) => ({
+        id: item.id,
+        audit_name: item.audit_name || '',
+        activity_name: item.activity_name || '',
+        start_from: item.start_from || item.created_at || '',
+        conducted_by: item.conducted_by || '',
+        conducted_by_name: item.conducted_by_name || item.conducted_by || '',
+        status: item.status || item.audit_status || item.audit_status_name || item.audit_status_type || 'Pending',
+        site_name: item.site_name || '',
+        duration: item.duration || '',
+        percentage: Number(item.percentage) || 0,
+      }));
 
-    setData(mapped);
-    setFilteredData(mapped);
-  } catch (err) {
-    console.error(err);
-    toast.error('Failed to load audits');
-  } finally {
-    setLoading(false);
-  }
-}, []);
+      setData(mapped);
+      setFilteredData(mapped);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load audits');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
 
 
@@ -231,7 +231,7 @@ const ConductedList: React.FC = () => {
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
-            <FileCheck className="w-5 h-5 text-primary" />
+            <ClipboardList className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h3 className="font-semibold text-foreground">{item.audit_name || item.activity_name || 'N/A'}</h3>
@@ -274,9 +274,16 @@ const ConductedList: React.FC = () => {
 
   return (
     <div>
-      <div className="flex  mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {statusFilters.map((filter) => (
-          <label key={filter} className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-md cursor-pointer relative ${activeFilter === filter ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}>
+          <label
+            key={filter}
+            className={`relative inline-flex items-center gap-2 px-3 pt-1.5 pb-2.5 text-sm cursor-pointer
+    ${activeFilter === filter
+                ? 'text-primary font-medium'
+                : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
             <input
               type="radio"
               name="statusFilter"
@@ -284,13 +291,12 @@ const ConductedList: React.FC = () => {
               checked={activeFilter === filter}
               onChange={() => handleFilterChange(filter)}
               className="w-4 h-4"
-              aria-checked={activeFilter === filter}
             />
+
             <span>{filter}</span>
-            {activeFilter === filter && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-            )}
+
           </label>
+
         ))}
       </div>
 

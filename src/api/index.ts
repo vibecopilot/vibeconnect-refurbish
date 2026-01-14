@@ -999,12 +999,15 @@ export const getInventoryDetails = async (id) =>
     },
   });
 
-export const getChecklist = async () =>
-  axiosInstance.get("/checklists.json?q[ctype_eq]=routine", {
+export const getChecklist = async () => {
+  return axiosInstance.get("/activities.json", {
     params: {
+      "q[checklist_ctype_eq]": "routine",
       token: token,
     },
   });
+};
+
 export const getChecklistTemplate = async () =>
   axiosInstance.get("/checklists/download_template", {
     params: {

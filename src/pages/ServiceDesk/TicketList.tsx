@@ -53,46 +53,34 @@ const TicketList: React.FC = () => {
     date_end?: string;
     search?: string; // Add search to filters for server-side search
   }>({});
+
   const colorOptions = [
-    { key: "Pending", bg: "bg-blue-500", border: "border-blue-500", text: "text-blue-600" },
-    { key: "Closed", bg: "bg-red-500", border: "border-red-500", text: "text-red-600" },
-    { key: "Complete", bg: "bg-green-500", border: "border-green-500", text: "text-green-600" },
-    { key: "Work Completed", bg: "bg-green-600", border: "border-green-600", text: "text-green-700" },
-    { key: "Reopened", bg: "bg-orange-500", border: "border-orange-500", text: "text-orange-600" },
-    { key: "Approved", bg: "bg-teal-500", border: "border-teal-500", text: "text-teal-600" },
-    { key: "Work In Process", bg: "bg-indigo-500", border: "border-indigo-500", text: "text-indigo-600" },
-    { key: "Approval Pending", bg: "bg-yellow-500", border: "border-yellow-500", text: "text-yellow-600" },
+    { key: "Pending", bg: "bg-blue-200", border: "border-blue-100", text: "text-blue-600" },
+    { key: "Closed", bg: "bg-red-200", border: "border-red-100", text: "text-red-600" },
+    { key: "Complete", bg: "bg-green-200", border: "border-green-100", text: "text-green-600" },
+    { key: "Work Completed", bg: "bg-green-300", border: "border-green-200", text: "text-green-700" },
+    { key: "Reopened", bg: "bg-orange-200", border: "border-orange-100", text: "text-orange-600" },
+    { key: "Approved", bg: "bg-teal-200", border: "border-teal-5100", text: "text-teal-600" },
+    { key: "Work In Process", bg: "bg-indigo-200", border: "border-indigo-100", text: "text-indigo-600" },
+    { key: "Approval Pending", bg: "bg-yellow-200", border: "border-yellow-100", text: "text-yellow-600" },
 
   ];
 
-  const typeColorMap: Record<string, { bg: string; border: string; text: string }> = {
-    Complaint: {
-      bg: "bg-red-500",
-      border: "border-red-500",
-      text: "text-red-600",
-    },
-    Request: {
-      bg: "bg-blue-500",
-      border: "border-blue-500",
-      text: "text-blue-600",
-    },
-    Suggestion: {
-      bg: "bg-green-500",
-      border: "border-green-500",
-      text: "text-green-600",
-    },
-    Req: {
-      bg: "bg-indigo-500",
-      border: "border-indigo-500",
-      text: "text-indigo-600",
-    },
+  const typeColorMap: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+    "Complaint": { bg: "bg-red-100", border: "border-red-200", text: "text-red-600", icon: "text-red-500" },
+    "Request": { bg: "bg-purple-100", border: "border-purple-200", text: "text-purple-600", icon: "text-purple-500" },
+    "Suggestion": { bg: "bg-pink-100", border: "border-pink-200", text: "text-pink-600", icon: "text-pink-500" },
+    "Req": { bg: "bg-violet-100", border: "border-violet-200", text: "text-violet-600", icon: "text-violet-500" },
   };
+
+
   const getTypeCardColor = (label: string) => {
     return (
       typeColorMap[label] || {
-        bg: "bg-purple-500",
-        border: "border-purple-500",
+        bg: "bg-purple-200",
+        border: "border-purple-100",
         text: "text-purple-600",
+        icon: "text-gray-500",
       }
     );
   };
@@ -128,16 +116,16 @@ const TicketList: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "Pending":
-        return <Clock className="w-7 h-7" />;
+        return <Clock className="w-5 h-5" />;
       case "Closed":
-        return <XCircle className="w-7 h-7" />;
+        return <XCircle className="w-5 h-5" />;
       case "Complete":
       case "Work Completed":
-        return <CheckCircle className="w-7 h-7" />;
+        return <CheckCircle className="w-5 h-5" />;
       case "Reopened":
-        return <RefreshCcw className="w-7 h-7" />;
+        return <RefreshCcw className="w-5 h-5" />;
       default:
-        return <FileCheck className="w-7 h-7" />;
+        return <FileCheck className="w-5 h-5" />;
     }
   };
 
@@ -145,15 +133,15 @@ const TicketList: React.FC = () => {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "Complaint":
-        return <AlertCircle className="w-7 h-7" />;
+        return <AlertCircle className="w-5 h-5" />;
       case "Request":
-        return <HelpCircle className="w-7 h-7" />;
+        return <HelpCircle className="w-5 h-5" />;
       case "Req":
-        return <HelpCircle className="w-7 h-7" />;
+        return <HelpCircle className="w-5 h-5" />;
       case "Suggestion":
-        return <MessageSquare className="w-7 h-7" />;
+        return <MessageSquare className="w-5 h-5" />;
       default:
-        return <FileText className="w-7 h-7" />;
+        return <FileText className="w-5 h-5" />;
     }
   };
 
@@ -693,7 +681,7 @@ const TicketList: React.FC = () => {
       {dashboard && (
         <div className="mb-6">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mt-8">
 
             {/* Status stats */}
             {[
@@ -717,19 +705,22 @@ const TicketList: React.FC = () => {
                     setQuickFilter("All");
                     setPagination((prev) => ({ ...prev, page: 1 }));
                   }}
-                  className={`rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg
-        ${isActive
-                      ? `${color.bg} text-white ${color.border}`
-                      : `bg-card ${color.text} ${color.border} hover:bg-muted`
-                    }`}
+                  className={`rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer
+  transition-all duration-200 hover:shadow-md
+  ${isActive
+                      ? `bg-transparent ${color.text} ${color.border}`
+                      : `${color.bg} ${color.text} ${color.border} `
+                    }
+`}
+
                 >
-                  <span className="text-xl p-2 mb-2">
+                  <span className="text-xl mb-2 mt-1">
                     {getStatusIcon(label)}
                   </span>
 
-                  <span className="text-md font-medium">{label}</span>
+                  <span className="text-[14px] font-medium">{label}</span>
 
-                  <span className={`p-2 text-[20px] font-bold mt-1 ${isActive ? "text-white" : "text-foreground"}`}>
+                  <span className={`mt-1 text-[15px] font-bold mt-1 ${isActive ? "text-black" : "text-foreground"}`}>
                     {getStatusCount(label)}
                   </span>
                 </div>
@@ -739,7 +730,8 @@ const TicketList: React.FC = () => {
 
             {/* Type stats */}
             {["Complaint", "Request", "Suggestion", "Req"].map((label) => {
-              const isActive = filters.category === (label === "Req" ? "Request" : label);
+              const isActive =
+                filters.category === (label === "Req" ? "Request" : label);
               const color = getTypeCardColor(label);
 
               return (
@@ -752,29 +744,32 @@ const TicketList: React.FC = () => {
                     }));
                     setPagination((prev) => ({ ...prev, page: 1 }));
                   }}
-                  className={`rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg
+                  className={`rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer
+        transition-all duration-200 hover:shadow-md
         ${isActive
-                      ? `${color.bg} text-white ${color.border}`
-                      : `bg-card ${color.text} ${color.border} hover:bg-muted`
-                    }`}
+                      ? `bg-transparent ${color.text} ${color.border}`
+                      : `${color.bg} ${color.text} ${color.border}`
+                    }
+      `}
                 >
                   {/* ICON */}
-                  <span className="text-xl mb-2">
+                  <span className={`text-xl mb-2 mt-1 ${color.icon}`}>
                     {getTypeIcon(label)}
                   </span>
 
-                  {/* NAME */}
-                  <span className="text-md font-medium">
+                  {/* LABEL */}
+                  <span className="text-[14px] font-medium">
                     {label === "Req" ? "Request" : label}
                   </span>
 
                   {/* COUNT */}
-                  <span className={`text-[20px] font-bold mt-1 ${isActive ? "text-white" : "text-foreground"}`}>
+                  <span className="mt-1 text-[15px] font-bold text-foreground">
                     {getTypeCount(label)}
                   </span>
                 </div>
               );
             })}
+
 
 
           </div>
