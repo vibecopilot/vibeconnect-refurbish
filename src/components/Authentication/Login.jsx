@@ -141,7 +141,7 @@ const Login = () => {
             setRoleAccess(accessRes[0]);
             setClientDashboardVisible(clientDashboardAccess);
             localStorage.setItem('CLIENT_DASHBOARD_VISIBLE', clientDashboardAccess);
-            
+
             console.log("Client Dashboard Visibility:", clientDashboardAccess);
             if (clientDashboardAccess) {
               toast.dismiss();
@@ -166,8 +166,8 @@ const Login = () => {
           selectedSiteId === 10
             ? "/employee/dashboard"
             : response.data.user.organization_id
-            ? "/employee-portal/attendance"
-            : "/mytickets"
+              ? "/employee-portal/attendance"
+              : "/mytickets"
         );
       }
       toast.dismiss();
@@ -192,7 +192,7 @@ const Login = () => {
         if (resp && resp.data && resp.data.length > 0) {
           const vibeBgImages = resp.data.filter(item => item.key === "VibeBg");
           console.log("Filtered VibeBg images:", vibeBgImages);
-          
+
           if (vibeBgImages.length > 0) {
             const imageUrls = vibeBgImages.map(img => img.image);
             setBgImages(imageUrls);
@@ -214,7 +214,7 @@ const Login = () => {
         setBgImage(loginCityscape);
       }
     };
-    
+
     fetchBackgroundImages();
   }, []);
 
@@ -229,7 +229,7 @@ const Login = () => {
         setBgImage(bgImages[nextIndex]);
         return nextIndex;
       });
-      
+
       setTimeout(() => setIsTransitioning(false), 700);
     }, 5000);
 
@@ -314,8 +314,8 @@ const Login = () => {
               />
               <span className="text-sm text-muted-foreground">Remember me</span>
             </label>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="text-sm text-primary hover:text-primary-dark transition-colors text-left sm:text-right"
             >
               Forgot Password?
@@ -355,25 +355,67 @@ const Login = () => {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-4 xl:p-6">
         <div className="relative w-full h-full rounded-2xl xl:rounded-3xl overflow-hidden shadow-2xl">
           {/* Background Image */}
-          <div 
+          <div
             className={`absolute inset-0 bg-cover bg-center transition-all duration-700 ${isTransitioning ? 'opacity-90 scale-105' : 'opacity-100 scale-100'}`}
             style={{ backgroundImage: `url(${bgImage})` }}
           />
-          
+
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/40 via-transparent to-primary/60" />
-          
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/70" />
+
           {/* Content */}
           <div className="relative z-10 flex flex-col justify-between h-full p-6 xl:p-10">
-            {/* Top Text */}
-            <div className="text-center pt-6 xl:pt-10">
-              <h2 className="text-xl xl:text-2xl 2xl:text-3xl font-medium text-white leading-relaxed drop-shadow-lg">
-                Browse thousands of properties to buy, sell,<br className="hidden xl:block" />
-                or rent with trusted agents.
-              </h2>
+            {/* Top Section - Marquee */}
+            <div className="pt-6 xl:pt-10">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 overflow-hidden">
+                <div className="animate-marquee whitespace-nowrap">
+                  <span className="text-lg xl:text-xl 2xl:text-2xl font-medium text-white leading-relaxed drop-shadow-lg">
+                    ✨ Browse thousands of properties to buy, sell, or rent with trusted agents. ✨
+                  </span>
+                </div>
+              </div>
+              <style>{`
+                  @keyframes marquee {
+                    0% { transform: translateX(100%); }
+                    100% { transform: translateX(-100%); }
+                  }
+                  .animate-marquee {
+                    display: inline-block;
+                    animation: marquee 15s linear infinite;
+                  }
+                  `}</style>
             </div>
-            
-            {/* Pagination Dots */}
+
+            {/* Center Section - Feature Highlights */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center space-y-6">
+                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <span className="text-white/90 text-sm font-medium">Live Properties Available</span>
+                </div>
+
+                <h3 className="text-2xl xl:text-3xl 2xl:text-4xl font-bold text-white drop-shadow-lg leading-tight">
+                  <span className="block">We Develop For</span>
+                  <span className="inline-block text-primary-foreground bg-primary px-4 py-2 rounded-lg mt-2">Your Comfort</span>
+                </h3>
+
+                <div className="flex justify-center gap-4 pt-4">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                    <p className="text-2xl font-bold text-white">50+</p>
+                    <p className="text-xs text-white/70">Sites</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                    <p className="text-2xl font-bold text-white">50+</p>
+                    <p className="text-xs text-white/70">Locations</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                    <p className="text-2xl font-bold text-white">1000+</p>
+                    <p className="text-xs text-white/70">Happy Clients</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Bottom Section - Image Selector */}
             {bgImages.length > 1 && (
               <div className="flex justify-center gap-2 pb-6">
                 {bgImages.map((_, index) => (
@@ -383,11 +425,10 @@ const Login = () => {
                       setCurrentImageIndex(index);
                       setBgImage(bgImages[index]);
                     }}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      index === currentImageIndex
-                        ? 'w-8 bg-white'
-                        : 'w-2 bg-white/50 hover:bg-white/70'
-                    }`}
+                    className={`h-2 rounded-full transition-all duration-300 ${index === currentImageIndex
+                      ? 'w-8 bg-white'
+                      : 'w-2 bg-white/50 hover:bg-white/70'
+                      }`}
                   />
                 ))}
               </div>
