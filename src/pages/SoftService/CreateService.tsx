@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import FormSection from '../../components/ui/FormSection';
 import FormInput from '../../components/ui/FormInput';
@@ -33,8 +33,10 @@ interface ServiceFormData {
 
 const CreateService: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const fromOverview = location.state?.from === 'soft-services-overview';
   
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -119,7 +121,7 @@ const CreateService: React.FC = () => {
       setExistingAttachments(data.attachments || []);
     } catch (error) {
       toast.error('Failed to fetch service details');
-      navigate('/soft-services');
+      navigate(fromOverview ? '/soft-services/overview' : '/soft-services');
     } finally {
       setLoading(false);
     }
@@ -198,8 +200,8 @@ const CreateService: React.FC = () => {
   };
 
   const handleSubmit = async (showDetails = false) => {
-    if (!formData.name) {
-      toast.error('Service name is required');
+    if (!formData.name || !formData.building_id || !formData.floor_id) {
+      toast.error('Service name, building, and floor are required');
       return;
     }
 
@@ -207,104 +209,58 @@ const CreateService: React.FC = () => {
     try {
       const payload = new FormData();
 
-// ✅ MUST match old project (scope + user)
-const siteId = localStorage.getItem("SITEID") || "";
-const userId = localStorage.getItem("UserId") || "";
+      // Site and user context
+      const siteId = localStorage.getItem("SITEID") || localStorage.getItem("siteId") || "";
+      const userId = localStorage.getItem("UserId") || localStorage.getItem("USER_ID") || "";
 
-payload.append("soft_service[site_id]", siteId);
-payload.append("soft_service[user_id]", userId);
+      payload.append("soft_service[site_id]", siteId);
+      payload.append("soft_service[user_id]", userId);
+      payload.append("soft_service[name]", formData.name);
 
-payload.append("soft_service[name]", formData.name);
-if (formData.building_id) payload.append("soft_service[building_id]", formData.building_id);
-if (formData.floor_id) payload.append("soft_service[floor_id]", formData.floor_id);
+      if (formData.building_id) payload.append("soft_service[building_id]", formData.building_id);
+      if (formData.floor_id) payload.append("soft_service[floor_id]", formData.floor_id);
 
-// ✅ Multi unit (same as old)
-if (formData.unit_id && Array.isArray(formData.unit_id)) {
-  formData.unit_id.forEach((unit: any) => {
-    payload.append("soft_service[unit_id][]", unit.value || unit);
-  });
-}
-
-// ✅ IMPORTANT: old backend uses generic_info_id naming
-if (formData.group_id) payload.append("soft_service[generic_info_id]", formData.group_id);
-if (formData.sub_group_id) payload.append("soft_service[generic_sub_info_id]", formData.sub_group_id);
-
-if (formData.latitude) payload.append("soft_service[latitude]", formData.latitude);
-if (formData.longitude) payload.append("soft_service[longitude]", formData.longitude);
-
-payload.append("soft_service[cron_expression]", cronExpression);
-
-// ✅ attachments key must match old project
-formData.attachments.forEach((file) => {
-  payload.append("attachfiles[]", file);
-});
-
-// ✅ DEBUG (see what exactly goes)
-console.log("CREATE payload keys:");
-for (const pair of payload.entries()) console.log(pair[0], pair[1]);
-
-      if (formData.building_id) payload.append('soft_service[building_id]', formData.building_id);
-      if (formData.floor_id) payload.append('soft_service[floor_id]', formData.floor_id);
-      
       // Multi-unit support
       if (formData.unit_id && Array.isArray(formData.unit_id)) {
         formData.unit_id.forEach((unit: any) => {
-          payload.append('soft_service[unit_id][]', unit.value || unit);
+          payload.append("soft_service[unit_id][]", unit.value || unit);
         });
       }
-      
-      if (formData.group_id) payload.append('soft_service[group_id]', formData.group_id);
-      if (formData.sub_group_id) payload.append('soft_service[sub_group_id]', formData.sub_group_id);
-      if (formData.latitude) payload.append('soft_service[latitude]', formData.latitude);
-      if (formData.longitude) payload.append('soft_service[longitude]', formData.longitude);
-      
-      // Add cron expression
-      payload.append('soft_service[cron_expression]', cronExpression);
-      
+
+      // Groups (match old EditServices.jsx - no generic_info_id, just group_id)
+      if (formData.group_id) payload.append("soft_service[group_id]", formData.group_id);
+      if (formData.sub_group_id) payload.append("soft_service[sub_group_id]", formData.sub_group_id);
+
+      if (formData.latitude) payload.append("soft_service[latitude]", formData.latitude);
+      if (formData.longitude) payload.append("soft_service[longitude]", formData.longitude);
+
+      // Cron expression
+      payload.append("soft_service[cron_expression]", cronExpression);
+
+      // Attachments (match old EditServices.jsx format)
       formData.attachments.forEach((file) => {
-        payload.append(`soft_service[attachments][]`, file);
+        payload.append("attachments[]", file);
       });
 
       if (isEdit && id) {
         await EditSoftServices(payload, id);
         toast.success('Service updated successfully');
+        if (showDetails) {
+          navigate(`/soft-services/${id}`, { state: { from: fromOverview ? 'soft-services-overview' : undefined } });
+        } else {
+          navigate(fromOverview ? '/soft-services/overview' : '/soft-services');
+        }
       } else {
-       const response = await postSoftServices(payload);
-console.log("CREATE response:", response.data);
-
-toast.success("Service created successfully");
-
-// ✅ DEBUG: confirm it appears in list API immediately
-try {
-  const listResp = await getSoftServices();
-  const listData = listResp.data;
-  const list =
-    (Array.isArray(listData) && listData) ||
-    listData?.results ||
-    listData?.soft_services ||
-    listData?.data ||
-    [];
-
-  const newId = String(response.data?.id);
-  const found = list.find((x: any) => String(x.id) === newId);
-
-  console.log("AFTER CREATE - is new record in list API?", !!found, found);
-} catch (e) {
-  console.log("AFTER CREATE list check failed:", e);
-}
-
+        const response = await postSoftServices(payload);
+        toast.success('Service created successfully');
         if (showDetails && response.data?.id) {
-          navigate(`/soft-services/${response.data.id}`);
-          return;
+          navigate(`/soft-services/${response.data.id}`, { state: { from: fromOverview ? 'soft-services-overview' : undefined } });
+        } else {
+          navigate(fromOverview ? '/soft-services/overview' : '/soft-services');
         }
       }
-      
-      if (showDetails && id) {
-        navigate(`/soft-services/${id}`);
-      } else {
-        navigate('/soft-services');
-      }
     } catch (error) {
+      console.error('Error saving service:', error);
       toast.error(isEdit ? 'Failed to update service' : 'Failed to create service');
     } finally {
       setSubmitting(false);
@@ -328,7 +284,7 @@ try {
         items={[
           { label: 'FM Module' }, 
           { label: 'Soft Services', path: '/soft-services' }, 
-          { label: 'Service', path: '/soft-services' },
+          { label: 'Overview', path: '/soft-services/overview' },
           { label: isEdit ? 'Edit Service' : 'Create Service' }
         ]} 
       />

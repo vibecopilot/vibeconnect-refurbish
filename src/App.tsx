@@ -45,12 +45,17 @@ import {
 } from "./pages/FoodsBeverage";
 import AssetList from "./pages/Asset/AssetList";
 import CreateAsset from "./pages/Asset/CreateAsset";
-import CreateAMC from "./pages/Asset/CreateAMC";
+import AddAMC from "./pages/SubPages/AddAMC";
 import CreateChecklist from "./pages/Asset/CreateChecklist";
 import EditChecklist from "./pages/Asset/EditChecklist";
 import CreatePPMActivity from "./pages/Asset/CreatePPMActivity";
 import CreatePPMChecklist from "./pages/Asset/CreatePPMChecklist";
+import EditPPMChecklist from "./pages/SubPages/EditPPMChecklist";
 import CopyChecklist from "./pages/SubPages/CopyChecklist";
+import CopyChecklistPPM from "./pages/SubPages/CopyChecklistPPM";
+import CopyChecklistService from "./pages/SubPages/CopyChecklistService";
+import AssociateAssetChecklist from "./pages/SubPages/AssociateAssetChecklist";
+import AssociateServiceChecklist from "./pages/SubPages/AssociateServiceChecklist";
 import AssetDetails from "./pages/SubPages/details/AssetDetails";
 import EditAsset from "./pages/Asset/EditAsset";
 import EditStockItem from "./pages/Asset/EditStockItem";
@@ -86,6 +91,15 @@ import ParkingDetails from "./pages/SubPages/details/ParkingDetails";
 import Survey from "./pages/SubPages/survey/Survey";
 import AddSurvey from "./pages/SubPages/survey/AddSurvey";
 import SurveyDetails from "./pages/SubPages/survey/SurveyDetails";
+import EditSurvey from "./pages/SubPages/survey/EditSurvey";
+import CreateScratchSurvey from "./pages/SubPages/survey/CreateScratchSurvey";
+import CopySurvey from "./pages/SubPages/survey/CopySurvey";
+import CopySurveyViewPage from "./pages/SubPages/survey/CopySurveyViewPage.tsx";
+import TemplateDetailsSurvey from "./pages/SubPages/survey/TemplateDetailsSurvey.tsx";
+import SampleResultSurvey from "./pages/SubPages/survey/SampleResultSurvey.tsx";
+import EditTemplateSurvey from "./pages/SubPages/survey/EditTemplateSurvey.tsx";
+import CreateTemplateSurvey from "./pages/SubPages/survey/CreateTemplateSurvey.tsx";
+import SurveyResponseForm from "./pages/SubPages/survey/SurveyResponseForm";
 import SetupPage from "./pages/Setup/SetupPage";
 import AccountPage from "./pages/Setup/Account/AccountPage";
 import UsersPage from "./pages/Setup/users/UsersPage";
@@ -188,7 +202,7 @@ function App() {
         
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        <Route path="/asset/amc/create" element={<AuthenticatedLayout><CreateAMC /></AuthenticatedLayout>} />
+        <Route path="/asset/amc/create" element={<AuthenticatedLayout><AddAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id" element={<AuthenticatedLayout><ViewAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><EditAMC /></AuthenticatedLayout>} />
         
@@ -202,7 +216,9 @@ function App() {
         <Route path="/asset/checklist/create" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/:id" element={<AuthenticatedLayout><ViewAssetChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/:id/edit" element={<AuthenticatedLayout><EditChecklist /></AuthenticatedLayout>} />
-        
+        <Route path="/admin/copy-checklist/:id" element={<AuthenticatedLayout><CopyChecklist /></AuthenticatedLayout>} />
+        <Route path="/assets/associate-checklist/:id" element={<AuthenticatedLayout><AssociateAssetChecklist /></AuthenticatedLayout>} />
+
         {/* Routine Task */}
         <Route path="/asset/routine-task" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/routine-task/:assetId/:id" element={<AuthenticatedLayout><ViewRoutineTask /></AuthenticatedLayout>} />
@@ -211,7 +227,9 @@ function App() {
         <Route path="/asset/ppm-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-checklist/create" element={<AuthenticatedLayout><CreatePPMChecklist /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-checklist/:id" element={<AuthenticatedLayout><ViewPPMChecklist /></AuthenticatedLayout>} />
-        <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
+        <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><EditPPMChecklist /></AuthenticatedLayout>} />
+        <Route path="/admin/copy-ppm-checklist/:id" element={<AuthenticatedLayout><CopyChecklistPPM /></AuthenticatedLayout>} />
+        <Route path="/assets/associate-ppm-checklist/:id" element={<AuthenticatedLayout><AssociateAssetChecklist /></AuthenticatedLayout>} />
         
         {/* PPM Activity */}
         <Route path="/asset/ppm-activity" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
@@ -242,7 +260,9 @@ function App() {
         <Route path="/soft-services/checklist/create" element={<AuthenticatedLayout><SoftServiceCreateChecklist /></AuthenticatedLayout>} />
         <Route path="/soft-services/checklist/:id" element={<AuthenticatedLayout><ViewSoftServiceChecklist /></AuthenticatedLayout>} />
         <Route path="/soft-services/checklist/:id/edit" element={<AuthenticatedLayout><SoftServiceCreateChecklist /></AuthenticatedLayout>} />
-        
+        <Route path="/soft-services/associate-checklist/:id" element={<AuthenticatedLayout><AssociateServiceChecklist /></AuthenticatedLayout>} />
+        <Route path="/services/associate-checklist/:id" element={<AuthenticatedLayout><AssociateServiceChecklist /></AuthenticatedLayout>} />
+          
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
         <Route path="/soft-services/task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Task Details" /></AuthenticatedLayout>} />
@@ -251,7 +271,7 @@ function App() {
         <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} /></AuthenticatedLayout>} />
 
         {/* Soft Services - Copy Checklist */}
-        <Route path="/admin/copy-checklist/service/:id" element={<AuthenticatedLayout><CopyChecklist /></AuthenticatedLayout>} />
+        <Route path="/admin/copy-checklist/service/:id" element={<AuthenticatedLayout><CopyChecklistService /></AuthenticatedLayout>} />
 
         <Route path="/soft-service" element={<Navigate to="/soft-services" replace />} />
 
@@ -308,13 +328,14 @@ function App() {
         <Route path="/documents/shared" element={<AuthenticatedLayout><DocumentsList /></AuthenticatedLayout>} />
 
         {/* Fitout */}
-        <Route path="/fitout" element={<AuthenticatedLayout><FitoutHub /></AuthenticatedLayout>} />
-        <Route path="/fitout/setup/page" element={<AuthenticatedLayout><FitoutHub initialTab="setup" /></AuthenticatedLayout>} />
-        <Route path="/fitout/request/list" element={<AuthenticatedLayout><FitoutHub initialTab="requests" /></AuthenticatedLayout>} />
-        <Route path="/fitout/checklist/list" element={<AuthenticatedLayout><FitoutHub initialTab="checklist" /></AuthenticatedLayout>} />
-        <Route path="/fitout/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Fitout Request" /></AuthenticatedLayout>} />
-        <Route path="/fitout/:id" element={<AuthenticatedLayout><PlaceholderPage title="Fitout Details" /></AuthenticatedLayout>} />
-        <Route path="/fitout/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Fitout Request" /></AuthenticatedLayout>} />
+        {/* TEMP: Bypass AppHeader/ProtectedRoute for Fitout to debug hang */}
+        <Route path="/fitout" element={<FitoutHub />} />
+        <Route path="/fitout/setup/page" element={<FitoutHub initialTab="setup" />} />
+        <Route path="/fitout/request/list" element={<FitoutHub initialTab="requests" />} />
+        <Route path="/fitout/checklist/list" element={<FitoutHub initialTab="checklist" />} />
+        <Route path="/fitout/create" element={<PlaceholderPage title="Create Fitout Request" />} />
+        <Route path="/fitout/:id" element={<PlaceholderPage title="Fitout Details" />} />
+        <Route path="/fitout/:id/edit" element={<PlaceholderPage title="Edit Fitout Request" />} />
 
         {/* Calendar */}
         <Route path="/calendar" element={<AuthenticatedLayout><CalendarPage /></AuthenticatedLayout>} />
@@ -371,7 +392,18 @@ function App() {
         {/* Survey - FM Module */}
         <Route path="/survey" element={<AuthenticatedLayout><Survey /></AuthenticatedLayout>} />
         <Route path="/admin/add-survey" element={<AuthenticatedLayout><AddSurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/create-scratch-survey" element={<AuthenticatedLayout><CreateScratchSurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/copy-survey" element={<AuthenticatedLayout><CopySurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/copy-survey-view-page" element={<AuthenticatedLayout><CopySurveyViewPage /></AuthenticatedLayout>} />
+        <Route path="/admin/create-template-survey" element={<AuthenticatedLayout><CreateTemplateSurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/template-detail-survey" element={<AuthenticatedLayout><TemplateDetailsSurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/edit-template-survey" element={<AuthenticatedLayout><EditTemplateSurvey /></AuthenticatedLayout>} />
+        <Route path="/admin/sample-result-survey" element={<AuthenticatedLayout><SampleResultSurvey /></AuthenticatedLayout>} />
         <Route path="/admin/survey-details/:id" element={<AuthenticatedLayout><SurveyDetails /></AuthenticatedLayout>} />
+        <Route path="/survey/:id/edit" element={<AuthenticatedLayout><EditSurvey /></AuthenticatedLayout>} />
+
+        {/* Public Survey Response Form - No Auth Required */}
+        <Route path="/survey/:id/respond" element={<SurveyResponseForm />} />
 
         {/* Setup - System Configuration */}
         <Route path="/setup" element={<AuthenticatedLayout><SetupPage /></AuthenticatedLayout>} />

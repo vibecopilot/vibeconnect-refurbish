@@ -20,7 +20,7 @@ import { useSelector } from "react-redux";
 import { Table } from "lucide-react";
 import DataTable from "react-data-table-component";
 import SetupNavbar from "../../components/navbars/SetupNavbar";
-import FitOutList from "./FitOutList";
+import FitoutList from "./FitoutList";
 
 const RequestListPage = () => {
   const [searchText, setSearchText] = useState("");
@@ -245,7 +245,7 @@ const RequestListPage = () => {
 
   return (
     <section className="flex">
-      <FitOutList />
+      <FitoutList />
       <div className="w-full flex m-3 flex-col overflow-hidden">
         <div className="flex justify-center">
           <div className="sm:flex grid grid-cols-2 sm:flex-row gap-5 font-medium p-2 sm:rounded-full rounded-md opacity-90 bg-gray-200"></div>

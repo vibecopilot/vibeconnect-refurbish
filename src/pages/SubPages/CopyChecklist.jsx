@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import PageTitle from "../../components/ui/PageTitle";
 import ChecklistCreateForm from "../../components/forms/ChecklistCreateForm";
@@ -8,12 +8,12 @@ import { getChecklistDetails } from "../../api";
 const CopyChecklist = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [checklistData, setChecklistData] = useState(null);
+  const [prefillData, setPrefillData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchChecklistDetails = async () => {
+    const fetchDetails = async () => {
       if (!id) {
         setError("Checklist not found");
         setLoading(false);
@@ -22,16 +22,15 @@ const CopyChecklist = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await getChecklistDetails(id);
-        setChecklistData(response.data);
+        const resp = await getChecklistDetails(id);
+        setPrefillData(resp.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch checklist details");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchChecklistDetails();
+    fetchDetails();
   }, [id]);
 
   if (loading) {
@@ -43,14 +42,14 @@ const CopyChecklist = () => {
     );
   }
 
-  if (error || !checklistData) {
+  if (error || !prefillData) {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
         <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
         <h3 className="text-lg font-semibold mb-2">Failed to Load Checklist</h3>
         <p className="text-muted-foreground mb-4">{error || "Checklist not found"}</p>
         <button
-          onClick={() => navigate("/soft-services/checklist")}
+          onClick={() => navigate("/asset/checklist")}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
           Back to List
@@ -60,17 +59,18 @@ const CopyChecklist = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       <PageTitle
         title="Copy Checklist"
         breadcrumbs={[
-          { label: "Soft Services", path: "/soft-services" },
-          { label: "Checklist", path: "/soft-services/checklist" },
+          { label: "FM Module" },
+          { label: "Asset", path: "/asset" },
+          { label: "Checklist", path: "/asset/checklist" },
           { label: "Copy Checklist" },
         ]}
       />
 
-      <ChecklistCreateForm checklistType="routine" prefillData={checklistData} prefillMode="copy" />
+      <ChecklistCreateForm checklistType="routine" prefillData={prefillData} prefillMode="copy" />
     </div>
   );
 };

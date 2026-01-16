@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import DataTable, { TableColumn } from '../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../components/ui/StatusBadge';
+import DataCard from '../../components/ui/DataCard';
 import { getServicesRoutineList, getSoftServiceDownload } from '../../api';
-import { Loader2, ListTodo, AlertCircle, RefreshCw, Eye, Download, Search } from 'lucide-react';
+import { Loader2, ListTodo, AlertCircle, RefreshCw, Eye, Download, Search, LayoutList, LayoutGrid, EyeOff, Eye as EyeIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Task {
@@ -26,6 +27,7 @@ const TaskList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -33,40 +35,33 @@ const TaskList: React.FC = () => {
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   
   const [pagination, setPagination] = useState({ page: 1, perPage: 10, total: 0, totalPages: 0 });
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const statusParam = activeFilter === 'all' ? null : activeFilter;
       const response = await getServicesRoutineList(
         pagination.page, 
         pagination.perPage, 
         startDate, 
-        endDate
+        endDate,
+        statusParam,
+        debouncedSearch
       );
       const data = response.data;
-      let taskList = Array.isArray(data) ? data : data?.activities || data?.data || [];
-      
-      // Filter by status
-      if (activeFilter !== 'all') {
-        taskList = taskList.filter((t: Task) => {
-          const status = t.status?.toLowerCase();
-          if (activeFilter === 'pending') return status === 'pending' || status === 'open';
-          if (activeFilter === 'completed') return status === 'completed' || status === 'closed';
-          if (activeFilter === 'overdue') return status === 'overdue';
-          return true;
-        });
-      }
-      
-      // Filter by search
-      if (searchValue) {
-        taskList = taskList.filter((t: Task) => 
-          t.soft_service_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          t.service_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          t.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          t.checklist_name?.toLowerCase().includes(searchValue.toLowerCase())
-        );
-      }
+      const taskList = Array.isArray(data) ? data : data?.activities || data?.data || [];
       
       setTasks(taskList);
       setPagination(prev => ({
@@ -80,7 +75,7 @@ const TaskList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage, startDate, endDate, activeFilter, searchValue]);
+  }, [pagination.page, pagination.perPage, startDate, endDate, activeFilter, debouncedSearch]);
 
   useEffect(() => { 
     fetchTasks(); 
@@ -88,7 +83,6 @@ const TaskList: React.FC = () => {
 
   const handleApply = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
-    fetchTasks();
   };
 
   const handleClear = () => {
@@ -150,6 +144,8 @@ const TaskList: React.FC = () => {
     { key: 'assigned_to_name', header: 'ASSIGNED TO', render: (v) => v || '-' },
   ];
 
+  const visibleColumns = columns.filter(col => !hiddenColumns.has(col.key as string));
+
   const filterButtons: { key: FilterType; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'pending', label: 'Pending' },
@@ -190,7 +186,7 @@ const TaskList: React.FC = () => {
       <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Soft Services', path: '/soft-services' }, { label: 'Task' }]} />
 
       {/* Filters */}
-      <div className="bg-card rounded-xl border border-border p-4 mb-6">
+      <div className="bg-card rounded-xl border border-border p-4 mb-4 space-y-4">
         <div className="flex flex-wrap items-center gap-4">
           {/* Date Range */}
           <div className="flex items-center gap-2">
@@ -248,19 +244,71 @@ const TaskList: React.FC = () => {
               }`}
             >
               {btn.label}
-            </button>
-          ))}
+              </button>
+            ))}
 
-          {/* Search */}
-          <div className="relative ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search By name"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="pl-10 pr-4 py-2 w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <div className="flex rounded-md overflow-hidden border border-border">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-2 text-sm flex items-center gap-1 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                title="List view"
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-2 text-sm flex items-center gap-1 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                title="Grid view"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search tasks"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="pl-10 pr-4 py-2 w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                className="px-3 py-2 text-sm border border-border rounded-md hover:bg-accent"
+              >
+                Hide Columns
+              </button>
+              {isColumnMenuOpen && (
+                <div className="absolute right-0 mt-2 w-60 bg-card border border-border rounded-lg shadow-lg z-40 max-h-80 overflow-y-auto">
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                    Toggle Column Visibility
+                  </div>
+                  {columns.map((col) => (
+                    <label key={col.key as string} className="flex items-center gap-3 px-3 py-2 hover:bg-accent rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!hiddenColumns.has(col.key as string)}
+                        onChange={() => {
+                          setHiddenColumns(prev => {
+                            const next = new Set(prev);
+                            if (next.has(col.key as string)) next.delete(col.key as string); else next.add(col.key as string);
+                            return next;
+                          });
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="flex items-center gap-2 text-sm">
+                        {hiddenColumns.has(col.key as string) ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <EyeIcon className="w-4 h-4 text-primary" />}
+                        {col.header}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -276,7 +324,26 @@ const TaskList: React.FC = () => {
       )}
 
       {tasks.length > 0 && (
-        <DataTable columns={columns} data={tasks} />
+        viewMode === 'table' ? (
+          <DataTable columns={visibleColumns} data={tasks} />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {tasks.map((task) => (
+              <DataCard
+                key={task.id}
+                title={task.soft_service_name || task.service_name || task.name || 'Task'}
+                subtitle={task.checklist_name ? `Checklist: ${task.checklist_name}` : undefined}
+                status={task.status ? getStatusType(task.status) : undefined}
+                fields={[
+                  { label: 'Start Date', value: formatDate(task.start_time) },
+                  { label: 'Assigned To', value: task.assigned_to_name || '-' },
+                  { label: 'Status', value: task.status || '-' },
+                ]}
+                viewPath={`/soft-services/task/${task.id}`}
+              />
+            ))}
+          </div>
+        )
       )}
 
       {/* Pagination */}
@@ -286,19 +353,43 @@ const TaskList: React.FC = () => {
             Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records
           </div>
           <div className="flex items-center gap-1">
-            {[1, 2, 3].filter(p => p <= pagination.totalPages).map(page => (
-              <button
-                key={page}
-                onClick={() => setPagination(prev => ({ ...prev, page }))}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  pagination.page === page 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'border border-border hover:bg-accent'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+            <button
+              onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              {"<<"}
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+              }
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
+              {pagination.page}
+            </span>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              Next
+            </button>
+            <button
+              onClick={() =>
+                setPagination((prev) => ({ ...prev, page: prev.totalPages }))
+              }
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              {">>"}
+            </button>
           </div>
           <select 
             value={pagination.perPage} 

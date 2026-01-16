@@ -1,276 +1,261 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { AiFillQuestionCircle } from "react-icons/ai";
-import Chart from "react-apexcharts";
-import { FaChartBar, FaCheck, FaPaperPlane, FaPencilAlt } from "react-icons/fa";
-import { GrShare } from "react-icons/gr";
+import React, { useEffect, useState } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { Loader2, Edit, Calendar, FileText, AlertTriangle } from "lucide-react";
+import toast from "react-hot-toast";
 import Breadcrumb from "../../../components/ui/Breadcrumb";
+import { getSurveys } from "../../../api";
 
 function SurveyDetails() {
-  const options = {
-    chart: {
-      type: "donut",
-    },
-    labels: ["vote", "not vote"],
-    colors: ["#6366F1", "#F59E0B"], // Tailwind colors
-    legend: {
-      position: "bottom",
-      show: false,
-    },
-    dataLabels: {
-      enabled: false,
-    },
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [survey, setSurvey] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchSurveyDetails();
+  }, [id]);
+
+  const fetchSurveyDetails = async () => {
+    setLoading(true);
+    try {
+      const response = await getSurveys();
+      const surveysData = Array.isArray(response.data) ? response.data :
+                         Array.isArray(response.data.survey) ? response.data.survey :
+                         Array.isArray(response.data.surveys) ? response.data.surveys : [];
+
+      // Find the specific survey by ID
+      const foundSurvey = surveysData.find(s => String(s.id) === String(id));
+
+      if (foundSurvey) {
+        setSurvey(foundSurvey);
+      } else {
+        setError("Survey not found");
+      }
+    } catch (err) {
+      console.error("Error fetching survey details:", err);
+      setError("Failed to load survey details");
+      toast.error("Failed to load survey details");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const series = [100, 0];
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
 
-  const steps = [
-    {
-      id: 1,
-      label: "Add questions",
-      icon: <FaPencilAlt className="w-4 h-4" />,
-      status: "completed",
-    },
-    {
-      id: 2,
-      label: "Go to Collect",
-      icon: <FaPaperPlane className="w-4 h-4" />,
-      status: "completed",
-    },
-    {
-      id: 3,
-      label: "Analyze your results",
-      icon: <FaChartBar className="w-4 h-4" />,
-      status: "completed",
-    },
-  ];
+  const getStatusColor = (status) => {
+    const statusLower = (status || '').toLowerCase();
+    if (statusLower === 'active') return 'bg-green-100 text-green-700 border-green-200';
+    if (statusLower === 'draft') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (statusLower === 'closed') return 'bg-red-100 text-red-700 border-red-200';
+    return 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Loading survey details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !survey) {
+    return (
+      <div className="p-6">
+        <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Survey', path: '/survey' }, { label: 'Survey Details' }]} />
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Failed to Load Survey</h3>
+          <p className="text-muted-foreground mb-4">{error || 'Survey not found'}</p>
+          <button
+            onClick={() => navigate('/survey')}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Back to Survey List
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
-      <Breadcrumb items={[{ label: 'FM Module' }, { label: 'Survey', path: '/survey' }, { label: 'Survey Details' }]} />
-      
+      <Breadcrumb items={[
+        { label: 'FM Module' },
+        { label: 'Survey', path: '/survey' },
+        { label: survey.survey_title || 'Survey Details' }
+      ]} />
+
       <div className="mt-6 bg-card border border-border rounded-xl shadow-sm">
+        {/* Header Section */}
         <div className="p-6 border-b border-border">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <h1 className="text-2xl font-bold text-foreground">Survey Details</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">{survey.survey_title || 'Untitled Survey'}</h1>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getStatusColor(survey.status)}`}>
+                  {survey.status || 'Unknown'}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  Survey ID: #{survey.id}
+                </span>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2">
               <Link
-                to={`/admin/result-analyze-result`}
-                className="bg-primary text-primary-foreground p-2 px-4 flex items-center gap-2 rounded-md hover:bg-primary/90 transition-colors"
+                to={`/survey/${id}/edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <h2>Analyze Result</h2>
+                <Edit className="w-4 h-4" />
+                Edit Survey
               </Link>
-              <Link
-                to={`/admin/preview-survey`}
-                className="bg-primary text-primary-foreground p-2 px-4 flex items-center gap-2 rounded-md hover:bg-primary/90 transition-colors"
+              <button
+                onClick={() => navigate('/survey')}
+                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-accent transition-colors"
               >
-                <h2>Preview Survey</h2>
-                <span>
-                  <GrShare />
-                </span>
-              </Link>
+                Back to List
+              </button>
             </div>
           </div>
         </div>
-        
-        <div className="p-6 bg-muted rounded-t-lg">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative flex justify-between">
-              {/* Progress Line */}
-              <div className="absolute top-5 left-0 right-0 h-0.5">
-                <div className="absolute left-0 right-1/2 h-full bg-green-500 transition-all duration-500"></div>
-                <div className="absolute left-1/2 right-0 h-full bg-gray-200 transition-all duration-500"></div>
-              </div>
 
-              {/* Steps */}
-              {steps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className="relative flex flex-col items-center group"
-                >
-                  {/* Step Circle */}
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 
-                  ${
-                    step.status === "completed"
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background border-border"
-                  }`}
-                  >
-                    {step.status === "completed" ? (
-                      <FaCheck className="w-5 h-5 text-primary-foreground" />
-                    ) : (
-                      <div
-                        className={`w-5 h-5 flex items-center justify-center 
-                    ${
-                      step.status === "current"
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                      >
-                        {step.icon}
+        {/* Survey Information Section */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Survey Details Card */}
+            <div className="bg-muted/50 border border-border rounded-lg p-5 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Survey Information
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="text-sm text-muted-foreground">Description:</span>
+                  <span className="text-sm font-medium text-foreground text-right max-w-[60%]">
+                    {survey.description || 'No description provided'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(survey.status)}`}>
+                    {survey.status || 'Unknown'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Created:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {formatDate(survey.created_at)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Last Updated:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {formatDate(survey.updated_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Survey Duration Card */}
+            <div className="bg-muted/50 border border-border rounded-lg p-5 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                Survey Duration
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Start Date:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {formatDate(survey.start_date)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">End Date:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {formatDate(survey.end_date)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-border">
+                  <span className="text-sm text-muted-foreground">Duration:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {survey.start_date && survey.end_date
+                      ? `${Math.ceil((new Date(survey.end_date) - new Date(survey.start_date)) / (1000 * 60 * 60 * 24))} days`
+                      : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Questions Section */}
+          <div className="mt-6">
+            <h3 className="text-xl font-semibold text-foreground mb-4">
+              Survey Questions ({survey.survey_questions?.length || 0})
+            </h3>
+            {survey.survey_questions && survey.survey_questions.length > 0 ? (
+              <div className="space-y-4">
+                {survey.survey_questions.map((question, index) => (
+                  <div key={question.id} className="bg-muted/50 border border-border rounded-lg p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <span className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-semibold">
+                        Q{index + 1}
+                      </span>
+                      <div className="flex-1">
+                        <h4 className="text-base font-semibold text-foreground mb-2">
+                          {question.q_title || 'Untitled Question'}
+                        </h4>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="px-2 py-1 bg-background border border-border rounded text-xs font-medium">
+                            Type: {question.question_type?.replace('_', ' ') || 'Unknown'}
+                          </span>
+                          {question.required && (
+                            <span className="px-2 py-1 bg-red-100 text-red-700 border border-red-200 rounded text-xs font-medium">
+                              Required
+                            </span>
+                          )}
+                          {(question.question_type === 'rating' || question.question_type === 'scale') && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-medium">
+                              Range: {question.min_value || 1} - {question.max_value || 10}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Show options for choice-based questions */}
+                    {(question.question_type === 'single_choice' || question.question_type === 'multiple_choice') &&
+                     question.options && question.options.length > 0 && (
+                      <div className="mt-3 pl-16">
+                        <p className="text-sm text-muted-foreground mb-2">Options:</p>
+                        <ul className="space-y-1">
+                          {question.options.map((option, optIdx) => (
+                            <li key={optIdx} className="text-sm text-foreground flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                              {option.label || `Option ${optIdx + 1}`}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                   </div>
-
-                  {/* Label */}
-                  <span
-                    className={`mt-3 text-sm font-medium whitespace-nowrap
-                ${
-                  step.status === "completed"
-                    ? "text-primary"
-                    : step.status === "current"
-                    ? "text-foreground"
-                    : "text-muted-foreground"
-                }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <p>{step.icon}</p> <Link to={``}>{step.label}</Link>
-                    </div>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-12 gap-6">
-            <div className="flex justify-end gap-3 mx-5 col-span-12 border-b pb-4">
-              <Link
-                to={``}
-                className="text-primary border-r border-border pr-5 hover:underline"
-              >
-                Edit design
-              </Link>
-              <Link
-                to={``}
-                className="text-primary border-r border-border pr-5 hover:underline"
-              >
-                Send survey
-              </Link>
-              <Link to={``} className="text-primary hover:underline">
-                Analyze Results
-              </Link>
-            </div>
-            <div className="col-span-4 space-y-5">
-              <div className="border border-border rounded-lg p-6">
-                <div className="flex flex-col space-y-2 my-5">
-                  <h2 className="font-medium px-5 text-foreground">Survey</h2>
-                  <div className="w-full flex justify-center">
-                    <div className="w-[100px]">
-                      <Chart options={options} series={series} type="donut" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-5 mb-5">
-                  <div className="border-r border-border pr-5 flex flex-col space-y-3">
-                    <h3 className="text-muted-foreground items-center text-sm">
-                      ESTIMATED COMPLETION RATE
-                    </h3>
-                    <div>
-                      <h2 className="text-2xl text-foreground">61%</h2>
-                      <p className="text-sm text-muted-foreground">Completed</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-3">
-                    <h3 className="text-muted-foreground items-center text-sm">
-                      ESTIMATED TIME TO COMPLETE
-                    </h3>
-                    <div>
-                      <h2 className="text-2xl text-foreground">2</h2>
-                      <p className="text-sm text-muted-foreground">Minutes</p>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
-              <div className="border border-border rounded-lg p-6">
-                <div className="flex items-center justify-center">
-                  <h2 className="flex items-center gap-2 text-sm text-foreground">
-                    Survey Language: <span className="font-medium">English</span>
-                  </h2>
-                </div>
+            ) : (
+              <div className="bg-muted/50 border border-border rounded-lg p-8 text-center">
+                <p className="text-muted-foreground">No questions added to this survey yet.</p>
               </div>
-              <div className="border border-border rounded-lg p-6">
-                <div className="flex items-center justify-center">
-                  <h2 className="flex items-center gap-2 text-sm text-foreground">
-                    Theme: <span className="font-medium">Simple</span>
-                  </h2>
-                </div>
-              </div>
-            </div>
-            <div className="col-span-8 space-y-3">
-              <div className="border border-border rounded-lg grid grid-cols-3 gap-5 p-6">
-                <div className="flex flex-col items-start border-r border-border pr-5 space-y-4">
-                  <h2 className="text-muted-foreground text-sm">TOTAL RESPONSES</h2>
-                  <p className="text-2xl font-medium text-foreground">0</p>
-                </div>
-                <div className="flex flex-col items-start border-r border-border pr-5 space-y-4">
-                  <div className="flex justify-between items-center gap-x-2 w-full">
-                    <h2 className="text-muted-foreground text-sm">
-                      OVERALL SURVEY STATUS
-                    </h2>
-                    <span className="h-2 w-2 bg-green-600 rounded-full text-green-900"></span>
-                  </div>
-                  <Link
-                    to={`/admin/survey-collect-response`}
-                    className="text-green-600 text-2xl"
-                  >
-                    Open
-                  </Link>
-                </div>
-                <div className="flex flex-col items-start space-y-4">
-                  <div className="flex gap-2 items-center">
-                    <h2 className="text-muted-foreground text-sm">NOTIFICATIONS</h2>
-                    <span>
-                      <AiFillQuestionCircle size={15} />
-                    </span>
-                  </div>
-                  <p className="font-medium text-foreground">Only you</p>
-                </div>
-              </div>
-              <div>
-                <h2 className="text-2xl text-foreground mb-2">Collectors</h2>
-                <div className="border border-border rounded-lg">
-                  <h2 className="bg-primary text-primary-foreground text-sm px-5 w-fit p-1 rounded-b-md mx-5">
-                    DRAFT
-                  </h2>
-                  <div className="flex justify-between m-5">
-                    <div className="flex flex-col space-y-2">
-                      <h2 className="text-primary text-sm hover:underline">
-                        Target Audience 1
-                      </h2>
-                      <p className="text-muted-foreground text-sm flex gap-1">
-                        Created: <span>Created: 2/28/2025</span>
-                      </p>
-                      <p className="text-muted-foreground text-sm">
-                        Looks like your collector is not quite set up yet.{" "}
-                        <Link
-                          to={``}
-                          className="text-primary text-sm underline hover:text-primary/80"
-                        >
-                          Set up collector
-                        </Link>
-                      </p>
-                    </div>
-                    <h2 className="text-muted-foreground text-sm flex items-center gap-2">
-                      Invoice: <span className="font-medium">N/A</span>
-                    </h2>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h2 className="text-2xl text-foreground mb-2">Responses Volume</h2>
-                <div className="border border-border rounded-lg p-5 ">
-                  <h2 className="flex items-center justify-center gap-1">
-                    No survey responses yet{" "}
-                    <button className="text-primary hover:text-primary/80 hover:underline">
-                      What is this?
-                    </button>
-                  </h2>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

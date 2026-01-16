@@ -39,7 +39,7 @@ const AssetList: React.FC = () => {
   const handleSearch = (value: string) => setSearchValue(value);
 
   // Tabs with Add button
-  const submodulesWithCreate = ['asset', 'meter', 'checklist', 'ppm-checklist'];
+  const submodulesWithCreate = ['asset', 'amc', 'meter', 'checklist', 'ppm-checklist'];
 
   // Tabs with Filter button
   const tabsWithFilter = ['asset', 'meter'];
@@ -57,6 +57,7 @@ const AssetList: React.FC = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const paths: Record<string, string> = {
       'asset': '/asset/create',
+      'amc': '/asset/amc/create',
       'meter': '/asset/create',
       'checklist': '/asset/checklist/create',
       'ppm-checklist': '/asset/ppm-checklist/create',
@@ -68,6 +69,7 @@ const AssetList: React.FC = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const labels: Record<string, string> = {
       'asset': 'Add Asset',
+      'amc': 'Add AMC',
       'meter': 'Add Meter',
       'checklist': 'Add Checklist',
       'ppm-checklist': 'Add PPM Checklist',

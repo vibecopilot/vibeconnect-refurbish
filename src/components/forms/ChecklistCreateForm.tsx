@@ -43,7 +43,7 @@ interface Section {
 }
 
 interface ChecklistCreateFormProps {
-  checklistType?: "routine" | "ppm";
+  checklistType?: "routine" | "ppm" | "soft_service";
   isEditMode?: boolean;
   existingData?: any;
   checklistId?: string;
@@ -72,6 +72,7 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
   const [startDate, setStartDate] = useState(formattedDate);
   const [endDate, setEndDate] = useState(formattedDate);
   const [supplierId, setSupplierId] = useState("");
+  const [priorityLevel, setPriorityLevel] = useState("");
   const [catId, setCatId] = useState("");
   const [assignId, setAssignId] = useState("");
   const [lockOverdueTask, setLockOverdueTask] = useState("");
@@ -139,6 +140,14 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
           })) || []
         );
         setSites(sitesResp.data || []);
+        console.log("SITES RAW sitesResp.data:", sitesResp.data);
+console.log(
+  "SITES MAPPED siteOptions preview:",
+  (sitesResp.data || []).slice(0, 10).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+  }))
+);
         setSuppliers(suppliersResp.data || []);
         setMasters(
           mastersResp.data?.checklists?.map((check: any) => ({
@@ -151,6 +160,7 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
       }
     };
     fetchData();
+    
   }, []);
 
   // Populate form from master template
@@ -207,8 +217,11 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
     setFrequency(data.frequency || "");
     setStartDate(data.start_date || formattedDate);
     setEndDate(data.end_date || formattedDate);
-    setSupplierId(data.supplier_id || "");
-    setLockOverdueTask(String(data.lock_overdue));
+   setSupplierId(data.supplier_id === null || data.supplier_id === undefined ? "" : String(data.supplier_id));
+
+    setPriorityLevel(data.priority_level || "");
+    setLockOverdueTask(data.lock_overdue === true ? "true" : "false");
+
     setCreateTicket(Boolean(data.ticket_enabled));
     setCronExpression(data?.checklist_cron?.expression || "0 0 * * *");
     setWeightage(Boolean(data.weightage_enabled));
@@ -225,15 +238,19 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
       setCatId(data.category_id || "");
     }
 
-    const totalMinutes = data.grace_period || 0;
-    setSubmitDays(Math.floor(totalMinutes / (24 * 60)));
-    setSubmitHours(Math.floor((totalMinutes % (24 * 60)) / 60));
-    setSubmitMinutes(totalMinutes % 60);
+    const totalMinutesRaw = Number(data.grace_period);
+const totalMinutes = Number.isFinite(totalMinutesRaw) ? totalMinutesRaw : 0;
 
-    const totalExtensionMinutes = data.grace_period_unit || 0;
-    setExtensionDays(Math.floor(totalExtensionMinutes / (24 * 60)));
-    setExtensionHours(Math.floor((totalExtensionMinutes % (24 * 60)) / 60));
-    setExtensionMinutes(totalExtensionMinutes % 60);
+setSubmitDays(Math.floor(totalMinutes / (24 * 60)));
+setSubmitHours(Math.floor((totalMinutes % (24 * 60)) / 60));
+setSubmitMinutes(totalMinutes % 60);
+
+const totalExtensionRaw = Number(data.grace_period_unit);
+const totalExtensionMinutes = Number.isFinite(totalExtensionRaw) ? totalExtensionRaw : 0;
+
+setExtensionDays(Math.floor(totalExtensionMinutes / (24 * 60)));
+setExtensionHours(Math.floor((totalExtensionMinutes % (24 * 60)) / 60));
+setExtensionMinutes(totalExtensionMinutes % 60);
 
     if (data.supervisors) {
       const selected = data.supervisors.map((sup: any) => {
@@ -249,7 +266,7 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
     if (data.groups) {
       setSections(
         data.groups.map((group: any) => ({
-          group: group.group_id,
+          group: group.group_id === null || group.group_id === undefined ? "" : String(group.group_id),
           questions: group.questions.map((q: any) => ({
             id: q.id,
             name: q.name,
@@ -424,6 +441,9 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
       formData.append("checklist[grace_period_unit]", String(convertedExtensionMinutes));
       formData.append("checklist[supplier_id]", supplierId);
       formData.append("checklist[lock_overdue]", String(lockOverdueTask === "true"));
+      if (checklistType === "soft_service") {
+        formData.append("checklist[priority_level]", priorityLevel);
+      }
       formData.append("checklist[ctype]", checklistType);
       formData.append("checklist[ticket_enabled]", String(createTicket));
       formData.append("checklist[ticket_level_type]", ticketType);
@@ -466,7 +486,13 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
         toast.success("Checklist Created Successfully");
       }
 
-      navigate(checklistType === "ppm" ? "/asset/ppm-checklist" : "/asset/checklist");
+      const destination =
+        checklistType === "ppm"
+          ? "/asset/ppm-checklist"
+          : checklistType === "soft_service"
+          ? "/soft-services/checklist"
+          : "/asset/checklist";
+      navigate(destination);
     } catch (error) {
       console.error("Error:", error);
       toast.error(isEditMode ? "Failed to update checklist" : "Failed to create checklist");
@@ -600,6 +626,22 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
+          {checklistType === "soft_service" && (
+            <FormInput
+              label="Priority Level"
+              name="priority_level"
+              type="select"
+              value={priorityLevel}
+              onChange={(e) => setPriorityLevel(e.target.value)}
+              options={[
+                { value: "", label: "Select Priority level" },
+                { value: "High", label: "High" },
+                { value: "Medium", label: "Medium" },
+                { value: "Low", label: "Low" },
+              ]}
+              placeholder="Select Priority"
+            />
+          )}
         </FormGrid>
       </FormSection>
 

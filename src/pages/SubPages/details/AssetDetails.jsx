@@ -8,7 +8,7 @@ import {
   Readings,
 } from "./assetSubDetails";
 import { getSiteAssetDetails } from "../../../api";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Breadcrumb from "../../../components/ui/Breadcrumb";
 import AssetDetailsLogs from "./assetSubDetails/AssetDetailsLogs";
 import CostOfOwnership from "./assetSubDetails/CostOfOwnership";
@@ -29,6 +29,7 @@ const AssetDetails = () => {
   const [error, setError] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const getDetails = async () => {
@@ -82,12 +83,23 @@ const AssetDetails = () => {
     );
   }
 
+  // Determine breadcrumb path based on location state or asset type
+  const getBreadcrumbPath = () => {
+    if (location.state?.from === 'overview') {
+      return { label: 'Overview', path: '/asset/overview' };
+    }
+    if (asset.is_meter) {
+      return { label: 'Meter', path: '/asset/meter' };
+    }
+    return { label: 'Assets', path: '/asset' };
+  };
+
   return (
     <section className="p-6">
       <Breadcrumb
         items={[
           { label: "FM Module", path: "/asset" },
-          { label: "Assets", path: "/asset" },
+          getBreadcrumbPath(),
           { label: asset.name || `Asset #${id}` },
         ]}
       />

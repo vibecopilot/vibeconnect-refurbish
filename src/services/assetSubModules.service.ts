@@ -124,9 +124,15 @@ export const amcService = {
 
 // Meter Service
 export const meterService = {
-  getMeters: async (page = 1, perPage = 10) => {
-    return axiosInstance.get(`/site_assets.json?q[is_meter]=true&per_page=${perPage}&page=${page}`, {
-      params: { token: getToken() },
+  getMeters: async (page = 1, perPage = 10, search?: string) => {
+    return axiosInstance.get('/site_assets.json', {
+      params: {
+        token: getToken(),
+        page,
+        per_page: perPage,
+        'q[is_meter]': true,
+        ...(search ? { 'q[search_cont]': search } : {}),
+      },
     });
   },
   getMeterById: async (id: number | string) => {
@@ -162,25 +168,43 @@ export const checklistService = {
 
 // Routine Task Service
 export const routineTaskService = {
-  getRoutineTasks: async (page = 1, perPage = 10, filters?: { startDate?: string; endDate?: string; status?: string }) => {
-    let url = `/activities.json?q[checklist_ctype_eq]=routine&per_page=${perPage}&page=${page}`;
-    if (filters?.startDate) url += `&q[start_date_gteq]=${filters.startDate}`;
-    if (filters?.endDate) url += `&q[start_date_lteq]=${filters.endDate}`;
-    if (filters?.status && filters.status !== 'all') url += `&q[status_eq]=${filters.status}`;
-    return axiosInstance.get(url, { params: { token: getToken() } });
+  getRoutineTasks: async (
+    page = 1,
+    perPage = 10,
+    filters?: { startDate?: string; endDate?: string; status?: string; search?: string }
+  ) => {
+    return axiosInstance.get('/activities.json', {
+      params: {
+        token: getToken(),
+        per_page: perPage,
+        page,
+        'q[checklist_ctype_eq]': 'routine',
+        ...(filters?.startDate ? { 'q[start_date_gteq]': filters.startDate } : {}),
+        ...(filters?.endDate ? { 'q[start_date_lteq]': filters.endDate } : {}),
+        ...(filters?.status && filters.status !== 'all' ? { 'q[status_eq]': filters.status } : {}),
+        ...(filters?.search ? { 'q[asset_name_or_checklist_name_cont]': filters.search } : {}),
+      },
+    });
   },
   getRoutineTaskById: async (assetId: number | string, activityId: number | string) => {
-    return axiosInstance.get(`/submissions.json?q[checklist_id_is_not_null]=1&q[asset_id_eq]=${assetId}&q[activity_id_eq]=${activityId}`, {
-      params: { token: getToken() },
+    // Try direct activity lookup scoped by asset id
+    return axiosInstance.get(`/activities/${activityId}.json`, {
+      params: { token: getToken(), 'q[asset_id_eq]': assetId },
     });
   },
 };
 
 // PPM Checklist Service
 export const ppmChecklistService = {
-  getPPMChecklists: async (page = 1, perPage = 10) => {
-    return axiosInstance.get(`/checklists.json?q[ctype_eq]=ppm&per_page=${perPage}&page=${page}`, {
-      params: { token: getToken() },
+  getPPMChecklists: async (page = 1, perPage = 10, search?: string) => {
+    return axiosInstance.get('/checklists.json', {
+      params: {
+        token: getToken(),
+        per_page: perPage,
+        page,
+        'q[ctype_eq]': 'ppm',
+        ...(search ? { 'q[name_cont]': search } : {}),
+      },
     });
   },
   getPPMChecklistById: async (id: number | string) => {
@@ -192,9 +216,20 @@ export const ppmChecklistService = {
 
 // PPM Activity Service
 export const ppmActivityService = {
-  getPPMActivities: async (page = 1, perPage = 10) => {
-    return axiosInstance.get(`/activities.json?q[checklist_ctype_eq]=ppm&per_page=${perPage}&page=${page}`, {
-      params: { token: getToken() },
+  getPPMActivities: async (
+    page = 1,
+    perPage = 10,
+    filters?: { status?: string; search?: string }
+  ) => {
+    return axiosInstance.get('/activities.json', {
+      params: {
+        token: getToken(),
+        per_page: perPage,
+        page,
+        'q[checklist_ctype_eq]': 'ppm',
+        ...(filters?.status && filters.status !== 'all' ? { 'q[status_eq]': filters.status } : {}),
+        ...(filters?.search ? { 'q[search_cont]': filters.search } : {}),
+      },
     });
   },
   getPPMActivityByAsset: async (assetId: number | string) => {

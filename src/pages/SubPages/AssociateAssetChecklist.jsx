@@ -1,27 +1,21 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
 import {
   getAssignedTo,
   getAssociationList,
   getSiteAsset,
-  getSoftServices,
   postAssetAssociation,
   getAssetGroups,
   getAssetSubGroups,
-  getGenericGroupAssetChecklist,
-  getGenericSubGroupAssetChecklist,
   deleteAssetAssociation,
   updateActivity,
 } from "../../api";
 import Select from "react-select";
 import Table from "../../components/table/Table";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
-import { DNA } from "react-loader-spinner";
-import axios from "axios";
-import { PenSquareIcon, Trash } from "lucide-react";
-import { BsPencil, BsPencilSquare, BsTrash } from "react-icons/bs";
+import { Loader2, Edit, Trash2, Users, Package, ListChecks } from "lucide-react";
+import { BsPencilSquare, BsTrash } from "react-icons/bs";
+import Breadcrumb from "../../components/ui/Breadcrumb";
 
 const AssociateAssetChecklist = () => {
   const [assets, setAssets] = useState([]);
@@ -32,21 +26,40 @@ const AssociateAssetChecklist = () => {
   const [added, setAdded] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
-
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
   const { id } = useParams();
-  const [formData, setFormData] = useState({
-    assigned_to: [],
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const context = location.pathname.includes("associate-ppm-checklist")
+    ? "asset-ppm"
+    : "asset-routine";
+
+  const breadcrumbs =
+    context === "asset-ppm"
+      ? [
+          { label: "FM Module" },
+          { label: "Asset", path: "/asset" },
+          { label: "PPM Checklist", path: "/asset/ppm-checklist" },
+          { label: "Associate PPM Checklist" },
+        ]
+      : [
+          { label: "FM Module" },
+          { label: "Asset", path: "/asset" },
+          { label: "Checklist", path: "/asset/checklist" },
+          { label: "Associate Checklist" },
+        ];
+
+  const headerTitle =
+    context === "asset-ppm" ? "Associate PPM Checklist" : "Associate Checklist";
+
   const [checklistType, setChecklistType] = useState("individual");
-  const handleChecklistTypeChange = (e) => {
-    setChecklistType(e.target.value); // Update the checklist type state based on the selected value
-  };
   const [groupId, setGroupId] = useState("");
   const [subgroupId, setSubgroupId] = useState([]);
   const [groups, setGroups] = useState([]);
   const [subgroups, setSubgroups] = useState([]);
+
   useEffect(() => {
     const fetchChecklistGroup = async () => {
       try {
@@ -66,8 +79,8 @@ const AssociateAssetChecklist = () => {
           const subCatResp = await getAssetSubGroups(groupId);
           setSubgroups(
             subCatResp.map((subCat) => ({
-              label: subCat.name, // label for react-select
-              value: subCat.id, // value for react-select
+              label: subCat.name,
+              value: subCat.id,
             }))
           );
         } catch (error) {
@@ -78,32 +91,23 @@ const AssociateAssetChecklist = () => {
     }
   }, [groupId]);
 
-  // console.log("id:", id);
-
   const deleteActivity = async (activity) => {
     const confirmDelete = window.confirm("Please Confirm To Delete Activity?");
     if (!confirmDelete) return;
 
     const { asset_id } = activity;
-
-    // console.log("activity:", activity);
     const checklist_id = id;
-    console.log("checklist_id:", checklist_id);
-    console.log("asset_id:", asset_id);
 
     try {
-      const resp = await deleteAssetAssociation({
-        checklist_id,
-        asset_id,
-      });
-      console.log("Deleted successfully!", resp);
+      await deleteAssetAssociation({ checklist_id, asset_id });
       toast.success("Deleted successfully!");
       setAssociation((prev) => prev.filter((a) => a.id !== activity.id));
     } catch (err) {
       console.error("Delete failed:", err);
-      alert("Failed to delete.");
+      toast.error("Failed to delete.");
     }
   };
+
   const column = [
     {
       name: "Asset Name",
@@ -120,19 +124,19 @@ const AssociateAssetChecklist = () => {
       cell: (row) => (
         <div className="flex gap-2">
           <button
-            className="text-blue-500 hover:text-blue-700"
+            className="text-primary hover:text-primary/80"
             onClick={() => {
               setEditData(row);
               setShowEditModal(true);
             }}
           >
-            <BsPencilSquare className="text-black" />
+            <BsPencilSquare size={16} />
           </button>
           <button
             className="text-red-500 hover:text-red-700"
             onClick={() => deleteActivity(row)}
           >
-            <BsTrash />
+            <BsTrash size={16} />
           </button>
         </div>
       ),
@@ -141,24 +145,21 @@ const AssociateAssetChecklist = () => {
 
   useEffect(() => {
     const fetchAssetsList = async () => {
-      // getting all the services
       const assetListResp = await getSiteAsset();
       const asset = assetListResp.data.site_assets;
-      //   console.log(servicesListResp);
       const assetList = asset.map((a) => ({
         value: a.id,
         label: a.name,
       }));
       setAssets(assetList);
     };
+
     const fetchAssignedTo = async () => {
       const assignedToList = await getAssignedTo();
-      // console.log(assignedToList.data);
       const user = assignedToList.data.map((u) => ({
         value: u.id,
         label: `${u.firstname} ${u.lastname}`,
       }));
-      // console.log(user);
       setAssignedTo(user);
     };
 
@@ -186,69 +187,46 @@ const AssociateAssetChecklist = () => {
     fetchAssetsList();
     fetchAssignedTo();
     fetchAssociationList();
-  }, [added]);
+  }, [added, id]);
 
-  console.log("Assiciation - Response", association);
+  const associatedAssetIds = association.map((a) => a.asset_id);
+  const availableAssets = assets.filter(
+    (asset) => !associatedAssetIds.includes(asset.value)
+  );
 
-    const associatedAssetIds = association.map((a) => a.asset_id);
-    const availableAssets = assets.filter(
-      (asset) => !associatedAssetIds.includes(asset.value)
-    );
-    
-  var handleChangeSelect = (selectedOption) => {
+  const handleChangeSelect = (selectedOption) => {
     setSelectedOption(selectedOption);
   };
+
   const handleUserChangeSelect = (selectedUserOption) => {
     setSelectedUserOption(selectedUserOption);
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, assigned_to: e.target.value });
-  };
-  const navigate = useNavigate();
-
   const handleAddAssociate = async () => {
     const payload = {
       asset_ids: selectedOption.map((option) => option.value),
-
       activity: {
         checklist_id: id,
       },
       assigned_to: selectedUserOption.map((opt) => opt.value),
     };
+
     try {
+      setLoading(true);
       toast.loading("Associating Checklist");
-      console.log(payload);
-      const resp = await postAssetAssociation(payload);
-      console.log(resp);
+      await postAssetAssociation(payload);
       toast.dismiss();
-      // window.location.reload();
       toast.success("Checklist Associated");
       setAdded(true);
-
       setAssets([]);
       setSelectedOption([]);
       setSelectedUserOption([]);
     } catch (error) {
       console.error("Checklist creation failed:", error);
       toast.dismiss();
-      toast.error("Failed to create checklist", {
-        duration: 4000,
-        icon: "❌",
-        // Delay the tip to ensure it shows regardless of toast dismissal behavior
-        onClose: () => {
-          setTimeout(() => {
-            toast(
-              "💡 Tip: Association name, asset, and checklist must be unique for that time",
-              {
-                icon: "💡",
-                duration: 6000,
-              }
-            );
-          }, 100); // small delay to ensure UI stack is clear
-        },
-      });
+      toast.error("Failed to create checklist");
     } finally {
+      setLoading(false);
       setTimeout(() => {
         setAdded(false);
       }, 500);
@@ -265,12 +243,9 @@ const AssociateAssetChecklist = () => {
   }) => {
     const [selectedAssets, setSelectedAssets] = useState([]);
     const [selectedUsers, setSelectedUsers] = useState([]);
-    const { id } = useParams();
-    console.log("iddd", id);
 
     useEffect(() => {
       if (associationData) {
-        // Pre-fill selected assets and users based on associationData
         setSelectedAssets(
           associationData.asset_id
             ? [
@@ -292,10 +267,10 @@ const AssociateAssetChecklist = () => {
       }
     }, [associationData]);
 
-    const checklist_id = associationData?.checklist_id || id; // Use checklist_id from associationData or fallback to id
+    const checklist_id = associationData?.checklist_id || id;
 
     const validateForm = ({ asset_ids, assigned_to, checklist_id }) => {
-      toast.dismiss(); // Clear previous toasts
+      toast.dismiss();
 
       if (!asset_ids || asset_ids.length === 0) {
         toast.error("Please select at least one asset.");
@@ -312,7 +287,7 @@ const AssociateAssetChecklist = () => {
         return false;
       }
 
-      return true; // If everything passes
+      return true;
     };
 
     const handleSubmit = async () => {
@@ -322,7 +297,7 @@ const AssociateAssetChecklist = () => {
       const payload = {
         asset_ids: assetIds,
         assigned_to: userIds,
-        checklist_id: checklist_id, // Use checklist_id from associationData
+        checklist_id: checklist_id,
       };
 
       if (!validateForm(payload)) {
@@ -330,11 +305,10 @@ const AssociateAssetChecklist = () => {
       }
 
       try {
-        const update = await updateActivity(id, payload);
-        console.log("Update response:", update);
+        await updateActivity(id, payload);
         toast.success("Association updated successfully.");
-        onUpdate(); // Trigger data refresh
-        onClose(); // Close the modal
+        onUpdate();
+        onClose();
       } catch (err) {
         console.error("Failed to update association:", err);
         toast.error("Failed to update association.");
@@ -343,40 +317,54 @@ const AssociateAssetChecklist = () => {
 
     if (!show) return null;
 
-  
-
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-[400px]">
-          <h2 className="text-lg font-semibold mb-4">Edit Association</h2>
-          <div className="mb-4">
-            <label className="font-semibold">Asset</label>
-            <Select
-              isMulti
-              options={assets}
-              value={selectedAssets}
-              onChange={setSelectedAssets}
-            />
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-card border border-border rounded-2xl shadow-xl p-6 w-full max-w-md">
+          <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+            <Edit className="w-5 h-5 text-primary" />
+            Edit Association
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                Asset
+              </label>
+              <Select
+                isMulti
+                options={assets}
+                value={selectedAssets}
+                onChange={setSelectedAssets}
+                className="text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                Assigned To
+              </label>
+              <Select
+                isMulti
+                options={assignedTo}
+                value={selectedUsers}
+                onChange={setSelectedUsers}
+                className="text-sm"
+              />
+            </div>
           </div>
-          <div className="mb-4">
-            <label className="font-semibold">Assigned To</label>
-            <Select
-              isMulti
-              options={assignedTo}
-              value={selectedUsers}
-              onChange={setSelectedUsers}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
+
+          <div className="flex justify-end gap-3 mt-6">
             <button
               onClick={onClose}
-              className="bg-gray-400 text-white px-4 py-2 rounded"
+              className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-accent transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="bg-blue-600 text-white px-4 py-2 rounded"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               Update
             </button>
@@ -387,172 +375,171 @@ const AssociateAssetChecklist = () => {
   };
 
   return (
-    <section className="flex ">
-      <div className="hidden md:block">
-        <Navbar />
-      </div>
-      <div className="p-4 overflow-hidden w-full my-2 flex mx-3 flex-col">
-        <h2 className="text-lg font-medium border-b-2 border-gray-400 mb-2">
-          Associate Checklist
-        </h2>
-        <div className="flex flex-col">
-          <label className=" font-semibold">Checklist Type</label>
-          <div className="flex items-center space-x-4">
-            <label className="font-semibold">
-              <input
-                type="radio"
-                name="checklistType"
-                value="individual"
-                checked={checklistType === "individual"}
-                onChange={handleChecklistTypeChange}
-              />{" "}
-              Individual
-            </label>
-            <label className="font-semibold">
-              <input
-                type="radio"
-                name="checklistType"
-                value="assetGroup"
-                checked={checklistType === "assetGroup"}
-                onChange={handleChecklistTypeChange}
-              />{" "}
-              Asset Group
-            </label>
-          </div>
-        </div>
-        <div className="grid md:grid-cols-3 items-center gap-2">
-          {checklistType === "individual" ? (
-            <div className="flex flex-col z-20">
-              <label className="font-semibold">Asset </label>
-              <Select
-                isClearable={false}
-                closeMenuOnSelect={false}
-                isMulti
-                onChange={handleChangeSelect}
-                options={availableAssets} // Use filtered assets here
-                noOptionsMessage={() => "No Assets Available"}
-                placeholder="Select Assets"
-                value={selectedOption}
-              />
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-col">
-                <label className="font-semibold">Group *</label>
-                <select
-                  className="border p-1 px-4 border-gray-500 rounded-md"
-                  value={groupId}
-                  onChange={(e) => setGroupId(e.target.value)}
-                >
-                  <option>Select Group</option>
-                  {groups.map((group) => (
-                    <option value={group.id} key={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+    <div className="p-4 md:p-6 bg-background">
+      <div className="mx-auto max-w-[1400px] xl:max-w-[1600px] space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb items={breadcrumbs} />
 
-              <div className="flex flex-col z-50">
-                <label className="font-semibold">Subgroup</label>
+        {/* Page Header */}
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            <ListChecks className="w-6 h-6 text-primary" />
+            {headerTitle}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Associate assets and assign users to this checklist
+          </p>
+        </div>
+
+        {/* Form Section */}
+        <div className="bg-card border border-border rounded-2xl shadow-sm p-6 space-y-6">
+          {/* Checklist Type */}
+          <div>
+            <label className="text-sm font-medium text-foreground mb-3 block">
+              Checklist Type
+            </label>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="checklistType"
+                  value="individual"
+                  checked={checklistType === "individual"}
+                  onChange={(e) => setChecklistType(e.target.value)}
+                  className="w-4 h-4 text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">Individual</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="checklistType"
+                  value="assetGroup"
+                  checked={checklistType === "assetGroup"}
+                  onChange={(e) => setChecklistType(e.target.value)}
+                  className="w-4 h-4 text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">Asset Group</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {checklistType === "individual" ? (
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  Asset <span className="text-red-500">*</span>
+                </label>
                 <Select
+                  isClearable={false}
+                  closeMenuOnSelect={false}
                   isMulti
-                  isSearchable
-                  placeholder="Select Subgroup"
-                  options={subgroups}
-                  value={subgroupId}
-                  onChange={(selected) => setSubgroupId(selected)}
+                  onChange={handleChangeSelect}
+                  options={availableAssets}
+                  noOptionsMessage={() => "No Assets Available"}
+                  placeholder="Select Assets"
+                  value={selectedOption}
                 />
               </div>
-            </>
-          )}
-          {/* <div className="w-full z-20"> */}
-          {/* <label htmlFor="" className="font-medium my-2">
-              Services
-            </label> */}
-          {/* <Select
-              isClearable={false}
-              closeMenuOnSelect={false}
-              isMulti
-              onChange={handleChangeSelect}
-              options={assets}
-              noOptionsMessage={() => "No Assets Available"}
-              //   maxMenuHeight={90}
-              placeholder="Select Assets"
-             
-            /> */}
-          {/* </div> */}
-          <div className="w-full flex flex-col z-20">
-            {/* <label className="font-medium my-2">Assign To</label> */}
-            {/* <select
-              value={formData.assigned_to}
-              onChange={handleChange}
-              className="border border-gray-300 p-2 rounded-sm"
-            >
-              <option value="">Select Assign To</option>
-              {assignedTo.map((assign) => (
-                <option key={assign.id} value={assign.id}>
-                  {assign.firstname} {assign.lastname}
-                </option>
-              ))}
-            </select> */}
-            <label htmlFor="" className="font-semibold">
-              Assign to
-            </label>
-            <Select
-              closeMenuOnSelect={false}
-              isMulti
-              onChange={handleUserChangeSelect}
-              options={assignedTo}
-              noOptionsMessage={() => "No Users Available"}
-              placeholder="Select Users"
-              value={selectedUserOption}
-            />
+            ) : (
+              <>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-foreground mb-2">
+                    Group <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="border border-border p-2.5 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={groupId}
+                    onChange={(e) => setGroupId(e.target.value)}
+                  >
+                    <option>Select Group</option>
+                    {groups.map((group) => (
+                      <option value={group.id} key={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-foreground mb-2">
+                    Subgroup
+                  </label>
+                  <Select
+                    isMulti
+                    isSearchable
+                    placeholder="Select Subgroup"
+                    options={subgroups}
+                    value={subgroupId}
+                    onChange={(selected) => setSubgroupId(selected)}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                Assign to <span className="text-red-500">*</span>
+              </label>
+              <Select
+                closeMenuOnSelect={false}
+                isMulti
+                onChange={handleUserChangeSelect}
+                options={assignedTo}
+                noOptionsMessage={() => "No Users Available"}
+                placeholder="Select Users"
+                value={selectedUserOption}
+              />
+            </div>
           </div>
-          <div>
+
+          {/* Action Button */}
+          <div className="flex justify-end">
             <button
-              className="border-2 border-black mt-6 p-1 px-4 rounded-md"
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               onClick={handleAddAssociate}
               disabled={loading}
             >
-              {loading ? "Processing..." : "Create Activity"}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Create Activity"
+              )}
             </button>
-            {loading && (
-              <DNA
-                visible={true}
-                height={40}
-                width={40}
-                ariaLabel="dna-loading"
-                wrapperClass="dna-wrapper"
-              />
-            )}
           </div>
         </div>
-        <div className="my-4">
+
+        {/* Table Section */}
+        <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
+            Associated Assets
+          </h3>
+
           {listLoading ? (
-            <div className="flex justify-center items-center h-32">
-              <DNA
-                visible={true}
-                height={60}
-                width={60}
-                ariaLabel="dna-loading"
-                wrapperClass="dna-wrapper"
-              />
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
             <Table columns={column} data={association} />
           )}
         </div>
       </div>
+
       <EditAssociationModal
         show={showEditModal}
         onClose={() => setShowEditModal(false)}
         associationData={editData}
         assets={assets}
         assignedTo={assignedTo}
-        onUpdate={() => setAdded(true)} // triggers data refresh
+        onUpdate={() => setAdded(true)}
       />
-    </section>
+    </div>
   );
 };
 

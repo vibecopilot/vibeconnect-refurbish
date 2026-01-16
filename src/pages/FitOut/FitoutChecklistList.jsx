@@ -5,7 +5,6 @@ import SeatBooking from "../SubPages/SeatBooking";
 import DataTable from "react-data-table-component";
 import { IoAddCircleOutline } from "react-icons/io5";
 import { Link } from "react-router-dom";
-import FitOutList from "./FitOutList";
 import {
   getAllFloors,
   getAllUnits,
@@ -214,16 +213,9 @@ const FitoutChecklistList = ({ embedded = false }) => {
     </div>
   );
 
-  if (embedded) {
-    return <div className="w-full">{content}</div>;
-  }
-
-  return (
-    <section className="flex">
-      <FitOutList />
-      {content}
-    </section>
-  );
+  // FitoutChecklistList should only render the checklist content
+  // The FitoutHub component handles tab navigation and renders FitoutList separately
+  return <div className="w-full">{content}</div>;
 };
 
 export default FitoutChecklistList;

@@ -29,13 +29,18 @@ export const getTicketDashboard = async () =>
     },
   });
 //Assets
-export const getPerPageSiteAsset = async (page, perPage) =>
-  axiosInstance.get(`/site_assets.json?per_page=${perPage}&page=${page}`, {
+export const getPerPageSiteAsset = async (page:number, perPage:number, search = '', cardFilter = '') =>
+  axiosInstance.get('/site_assets.json', {
     params: {
       token: token,
+      per_page: perPage,
+      page,
+      ...(search ? { 'q[search_cont]': search } : {}),
+      ...(cardFilter ? { card_filter: cardFilter } : {}),
     },
   });
-export const downloadQrCode = async (ids) =>
+  
+export const downloadQrCode = async (ids:number) =>
   axiosInstance.get(`/site_assets/print_qr_codes?asset_ids=${ids}`, {
     responseType: "blob",
     params: {
@@ -1008,12 +1013,23 @@ export const getChecklist = async () => {
   });
 };
 
-export const getChecklistTemplate = async () =>
+export const getChecklistPaged = async (page = 1, perPage = 10, search = '') =>
+  axiosInstance.get('/checklists.json', {
+    params: {
+      token: token,
+      page,
+      per_page: perPage,
+      ...(search ? { 'q[name_cont]': search } : {}),
+    },
+  });
+
+export const getChecklistTemplate = async () => 
   axiosInstance.get("/checklists/download_template", {
     params: {
       token: token,
     },
   });
+
 export const getMasterChecklist = async () =>
   axiosInstance.get("/checklists/get_master_checklist.json", {
     params: {
@@ -2084,33 +2100,46 @@ export const postServiceAssociation = async (data) =>
     },
   });
 
-
-export const getSoftServices = (page = 1, perPage = 10, searchValue = "") => {
+export const getSoftServices = (page = 1, perPage = 10, searchValue = "", cardFilter = "") => {
   const params: any = {
     token: token,
-    page: page,
+    page,
     per_page: perPage,
-    _t: Date.now() // Cache buster
   };
 
   if (searchValue) {
-    params['q[name_cont]'] = searchValue;
+    params["q[name_cont]"] = searchValue;
   }
+
+  if (cardFilter) {
+    params["card_filter"] = cardFilter;
+  }
+
   return axiosInstance.get('/soft_services.json', {
     params,
 
     headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    }
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
   });
 };
 
 
-export const getServicesChecklist = async () =>
-  axiosInstance.get("/checklists.json?q[ctype_eq]=soft_service", {
+export const importSoftServices = (formData: FormData) =>
+  axiosInstance.post('/soft_services/import.json', formData, {
+    params: { token: token },
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const getServicesChecklist = async (page = 1, per_page = 10, search = "") =>
+  axiosInstance.get("/checklists.json", {
     params: {
       token: token,
+      "q[ctype_eq]": "soft_service",
+      page,
+      per_page,
+      ...(search ? { "q[name_cont]": search } : {}),
     },
   });
 export const postChecklist = async (data) =>
@@ -2230,7 +2259,7 @@ export const getServicesPPMDetails = async (id) =>
   });
 
 //
-export const getServicesRoutineList = async (page, perpage, startDate = null, endDate = null) => {
+export const getServicesRoutineList = async (page, perpage, startDate = null, endDate = null, status = null, search = null) => {
   let url = `/activities.json?q[soft_service_id_null]=0&per_page=${perpage}&page=${page}`;
 
   if (startDate) {
@@ -2243,11 +2272,18 @@ export const getServicesRoutineList = async (page, perpage, startDate = null, en
   return axiosInstance.get(url, {
     params: {
       token: token,
+      page: page,
+      per_page: perpage,
+      "q[soft_service_id_null]": 0,
+      ...(startDate ? { "q[start_time_gteq]": startDate } : {}),
+      ...(endDate ? { "q[start_time_lteq]": endDate } : {}),
+      ...(status ? { "q[status_eq]": status } : {}),
+      ...(search ? { "q[checklist_name_cont]": search } : {}),
     },
   });
 };
 export const getServicesTaskList = async () =>
-  axiosInstance.get(`/soft_services/soft_services_dashboard.json?`, {
+  axiosInstance.get(`/soft_services/overview_count.json?`, {
     params: {
       token: token,
     },
@@ -10474,6 +10510,49 @@ export const postLogoCamBillingSetup = async (data) =>
 
 export const postReceiptNumber = async (data) =>
   axiosInstance.post(`/receipt_setups.json`, data, {
+    params: {
+      token: token,
+    },
+  });
+
+// Survey APIs
+export const createSurvey = async (data) =>
+  axiosInstance.post("/surveys.json", data, {
+    params: {
+      token: token,
+    },
+  });
+
+export const getSurveys = async () =>
+  axiosInstance.get("/surveys.json", {
+    params: {
+      token: token,
+    },
+  });
+
+export const updateSurvey = async (id, data) =>
+  axiosInstance.patch(`/surveys/${id}.json`, data, {
+    params: {
+      token: token,
+    },
+  });
+
+export const createSurveyQuestion = async (surveyId, data) =>
+  axiosInstance.post(`/surveys/${surveyId}/survey_questions.json`, data, {
+    params: {
+      token: token,
+    },
+  });
+
+export const getSurveyResponses = async (surveyId) =>
+  axiosInstance.get(`/surveys/${surveyId}/survey_responses.json`, {
+    params: {
+      token: token,
+    },
+  });
+
+export const submitSurveyResponse = async (surveyId, data) =>
+  axiosInstance.post(`/surveys/${surveyId}/survey_responses.json`, data, {
     params: {
       token: token,
     },
