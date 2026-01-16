@@ -1,13 +1,25 @@
-import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from "react";
+import { ChevronDown } from "lucide-react";
 
 interface FormInputProps {
   label: string;
   name: string;
-  type?: 'text' | 'email' | 'tel' | 'number' | 'date' | 'time' | 'datetime-local' | 'textarea' | 'select' | 'file';
+  type?:
+    | "text"
+    | "email"
+    | "tel"
+    | "number"
+    | "date"
+    | "time"
+    | "datetime-local"
+    | "textarea"
+    | "select"
+    | "file";
   placeholder?: string;
-  value?: string | number;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  value?: string | number | null;
+  onChange?: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void;
   onFileChange?: (files: FileList | null) => void;
   required?: boolean;
   options?: { value: string; label: string }[];
@@ -23,7 +35,7 @@ interface FormInputProps {
 const FormInput: React.FC<FormInputProps> = ({
   label,
   name,
-  type = 'text',
+  type = "text",
   placeholder,
   value,
   onChange,
@@ -36,20 +48,26 @@ const FormInput: React.FC<FormInputProps> = ({
   readOnly = false,
   accept,
   multiple = false,
-  className = '',
+  className = "",
 }) => {
   const baseClasses = `w-full px-4 py-2.5 border rounded-lg bg-background text-foreground
     placeholder:text-muted-foreground
     focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
     transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-    ${readOnly ? 'bg-muted cursor-default' : ''}
-    ${error ? 'border-error' : 'border-border'}`;
+    ${readOnly ? "bg-muted cursor-default" : ""}
+    ${error ? "border-error" : "border-border"}`;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onFileChange) {
-      onFileChange(e.target.files);
-    }
+    onFileChange?.(e.target.files);
   };
+
+  // ✅ Always keep controlled components controlled
+  const normalizedStringValue =
+    value === null || value === undefined ? "" : String(value);
+
+  // For number input, allow "" but also allow 0 properly
+  const normalizedInputValue =
+    value === null || value === undefined ? "" : value;
 
   return (
     <div className={`flex flex-col ${className}`}>
@@ -57,23 +75,23 @@ const FormInput: React.FC<FormInputProps> = ({
         {label}
         {required && <span className="text-error ml-0.5">*</span>}
       </label>
-      
-      {type === 'textarea' ? (
+
+      {type === "textarea" ? (
         <textarea
           name={name}
           placeholder={placeholder}
-          value={value}
+          value={normalizedStringValue}
           onChange={onChange}
           rows={rows}
           disabled={disabled}
           readOnly={readOnly}
           className={`${baseClasses} resize-y`}
         />
-      ) : type === 'select' ? (
+      ) : type === "select" ? (
         <div className="relative">
           <select
             name={name}
-            value={value}
+            value={normalizedStringValue}   // ✅ string match with options
             onChange={onChange}
             disabled={disabled || readOnly}
             className={`${baseClasses} appearance-none pr-10`}
@@ -87,7 +105,7 @@ const FormInput: React.FC<FormInputProps> = ({
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         </div>
-      ) : type === 'file' ? (
+      ) : type === "file" ? (
         <input
           type="file"
           name={name}
@@ -102,17 +120,15 @@ const FormInput: React.FC<FormInputProps> = ({
           type={type}
           name={name}
           placeholder={placeholder}
-          value={value}
+          value={type === "number" ? normalizedInputValue : normalizedStringValue} // ✅ number supports 0
           onChange={onChange}
           disabled={disabled}
           readOnly={readOnly}
           className={baseClasses}
         />
       )}
-      
-      {error && (
-        <span className="text-xs text-error mt-1">{error}</span>
-      )}
+
+      {error && <span className="text-xs text-error mt-1">{error}</span>}
     </div>
   );
 };

@@ -25,9 +25,12 @@ const ViewRoutineTask: React.FC = () => {
     setLoading(true);
     try {
       const res = await routineTaskService.getRoutineTaskById(assetId, id);
-      const data = Array.isArray(res.data) ? res.data : [res.data];
-      if (data.length > 0) {
-        setTask({ ...data[0], submissions: data });
+      const data = res.data;
+      const activity = Array.isArray(data?.activities) ? data.activities[0] : data?.activity || data;
+      if (activity) {
+        setTask({ ...(activity as RoutineTask), submissions: (activity as any)?.submissions || [] });
+      } else {
+        setError('Task not found');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch task details');
@@ -76,7 +79,7 @@ const ViewRoutineTask: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 w-full max-w-none mx-auto">
       <Breadcrumb items={[
         { label: 'FM Module', path: '/asset' },
         { label: 'Asset', path: '/asset' },

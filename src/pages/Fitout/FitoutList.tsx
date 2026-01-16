@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import ListToolbar from '../../components/ui/ListToolbar';
@@ -30,28 +30,34 @@ const FitoutList: React.FC<FitoutListProps> = ({ embedded = false }) => {
     setPagination(prev => ({ ...prev, perPage: getPerPage(viewMode), page: 1 }));
   }, [viewMode]);
 
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fitoutService.getRequests(pagination.page, pagination.perPage);
-      const data = response.data;
-      const requestList = Array.isArray(data) ? data : data?.fitout_requests || data?.data || [];
-      setRequests(requestList);
-      setPagination(prev => ({
-        ...prev,
-        total: data.total || data.total_count || requestList.length,
-        totalPages: data.total_pages || Math.ceil((data.total || requestList.length) / prev.perPage),
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch fitout requests');
-      setRequests([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.page, pagination.perPage]);
+  useEffect(() => {
+    console.log('[FitoutList] useEffect triggered - page:', pagination.page, 'perPage:', pagination.perPage);
+    const fetchRequests = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        console.log('[FitoutList] Fetching requests...');
+        const response = await fitoutService.getRequests(pagination.page, pagination.perPage);
+        const data = response.data;
+        const requestList = Array.isArray(data) ? data : data?.fitout_requests || data?.data || [];
+        console.log('[FitoutList] Received', requestList.length, 'requests');
+        setRequests(requestList);
+        setPagination(prev => ({
+          ...prev,
+          total: data.total || data.total_count || requestList.length,
+          totalPages: data.total_pages || Math.ceil((data.total || requestList.length) / prev.perPage),
+        }));
+      } catch (err) {
+        console.error('[FitoutList] Error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch fitout requests');
+        setRequests([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+    fetchRequests();
+  }, [pagination.page, pagination.perPage]);
 
   const getRequestStatus = (request: FitoutRequest): StatusType => {
     const status = request.status?.toLowerCase() || request.fitout_status?.name?.toLowerCase();
@@ -89,7 +95,10 @@ const FitoutList: React.FC<FitoutListProps> = ({ embedded = false }) => {
           <AlertCircle className="w-12 h-12 text-error mb-4" />
           <h3 className="text-lg font-semibold mb-2">Failed to Load Requests</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <button onClick={fetchRequests} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+          <button
+            onClick={() => setPagination(prev => ({ ...prev, page: 1 }))}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+          >
             <RefreshCw className="w-4 h-4" /> Retry
           </button>
         </div>

@@ -51,12 +51,14 @@ interface StatusBadgeProps {
   status: StatusType;
   showDropdown?: boolean;
   size?: 'sm' | 'md';
+  label?: string;
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ 
   status, 
   showDropdown = false,
-  size = 'md'
+  size = 'md',
+  label,
 }) => {
   const config = statusConfigs[status] || statusConfigs['pending'];
   
@@ -68,7 +70,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({
     <span 
       className={`inline-flex items-center gap-1 rounded-full font-medium ${sizeClasses} ${config.className}`}
     >
-      {config.label}
+      {label || config.label}
       {showDropdown && <ChevronDown className="w-3 h-3" />}
     </span>
   );

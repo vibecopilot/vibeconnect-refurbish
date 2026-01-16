@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
-import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
+import StatusBadge from '../../../components/ui/StatusBadge';
 import { routineTaskService, RoutineTask } from '../../../services/assetSubModules.service';
 import { Loader2, ListTodo, AlertCircle, RefreshCw, Eye } from 'lucide-react';
 
@@ -17,24 +17,37 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Update perPage when prop changes
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
+  // Debounce search to reduce API calls and reset to first page on change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await routineTaskService.getRoutineTasks(pagination.page, pagination.perPage);
+      const response = await routineTaskService.getRoutineTasks(pagination.page, pagination.perPage, {
+        search: debouncedSearch || undefined,
+      });
       const data = response.data;
       const taskList = Array.isArray(data) ? data : data?.activities || data?.data || [];
+      const total = data.total || data.total_count || data.count || taskList.length;
       setTasks(taskList);
       setPagination(prev => ({
         ...prev,
-        total: data.total || data.total_count || taskList.length,
-        totalPages: data.total_pages || Math.ceil((data.total || taskList.length) / prev.perPage),
+        total,
+        totalPages: data.total_pages || Math.ceil(total / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
@@ -42,23 +55,17 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage]);
+  }, [pagination.page, pagination.perPage, debouncedSearch]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-  const getTaskStatus = (task: RoutineTask): StatusType => {
-    const status = task.status?.toLowerCase();
-    if (status === 'completed' || status === 'done') return 'checked-out';
-    if (status === 'in_progress' || status === 'ongoing') return 'maintenance';
-    if (status === 'overdue') return 'breakdown';
-    return 'pending';
+  const formatDateTime = (value?: string) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return date.toLocaleString();
   };
 
-  const filteredTasks = tasks.filter(task => 
-    !searchValue || 
-    task.checklist_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    task.asset_name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
+  const startIndex = (pagination.page - 1) * pagination.perPage;
 
   const columns: TableColumn<RoutineTask>[] = [
     {
@@ -71,13 +78,36 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
         </Link>
       ),
     },
-    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
+    { key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { key: 'checklist_name', header: 'Checklist', sortable: true, render: (v) => v || '-' },
     { key: 'asset_name', header: 'Asset', render: (v) => v || '-' },
-    { key: 'assigned_to', header: 'Assigned To', render: (v) => v || '-' },
-    { key: 'frequency', header: 'Frequency', render: (v) => v || '-' },
+    {
+      key: 'assigned_to_name',
+      header: 'Assigned To',
+      render: (_v, row) => row.assigned_to_name || row.assigned_to || '-',
+    },
+    {
+      key: 'checklist_frequency',
+      header: 'Frequency',
+      render: (_v, row) => row.checklist_frequency || row.frequency || '-',
+    },
+    {
+      key: 'created_at',
+      header: 'Created At',
+      render: (v) => formatDateTime(v as string),
+    },
+    {
+      key: 'updated_at',
+      header: 'Updated At',
+      render: (v) => formatDateTime(v as string),
+    },
+    {
+      key: 'location',
+      header: 'Location',
+      render: (v) => v || '-',
+    },
     { key: 'start_time', header: 'Start', render: (v) => v ? new Date(v).toLocaleDateString() : '-' },
-    { key: 'status', header: 'Status', render: (_, row) => <StatusBadge status={getTaskStatus(row)} /> },
+    { key: 'status', header: 'Status', render: (v) => v || '-' },
   ];
 
   if (loading && tasks.length === 0) {
@@ -102,7 +132,7 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
     );
   }
 
-  if (filteredTasks.length === 0) {
+  if (tasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <ListTodo className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -119,16 +149,19 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredTasks.map((task) => (
+          {tasks.map((task) => (
             <DataCard
               key={task.id}
               title={task.checklist_name || `Task #${task.id}`}
               subtitle={task.asset_name || '-'}
-              status={getTaskStatus(task)}
+              // show raw status text instead of mapped badge
               fields={[
-                { label: 'Assigned To', value: task.assigned_to || '-' },
-                { label: 'Frequency', value: task.frequency || '-' },
+                { label: 'Assigned To', value: task.assigned_to_name || task.assigned_to || '-' },
+                { label: 'Frequency', value: task.checklist_frequency || task.frequency || '-' },
                 { label: 'Start', value: task.start_time ? new Date(task.start_time).toLocaleDateString() : '-' },
+                { label: 'Updated', value: formatDateTime(task.updated_at as any) },
+                { label: 'Status', value: task.status || '-' },
+                { label: 'Location', value: task.location || '-' },
               ]}
               viewPath={`/asset/routine-task/${task.asset_id || 0}/${task.id}`}
             />
@@ -137,20 +170,20 @@ const RoutineTaskList: React.FC<RoutineTaskListProps> = ({ viewMode, searchValue
       ) : (
         <DataTable
           columns={columns}
-          data={filteredTasks}
+          data={tasks}
           viewPath={(row) => `/asset/routine-task/${row.asset_id || 0}/${row.id}`}
         />
       )}
 
-      {filteredTasks.length > 0 && (
+      {tasks.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records</div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'<<'}</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages || prev.page }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'>>'}</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>

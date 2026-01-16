@@ -169,134 +169,159 @@ const Assetinfo = ({ assetData }) => {
     }
   };
 
-  const InfoItem = ({ label, value }) => (
-    <div className="flex flex-col">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value || "-"}</span>
+  const InfoItem = ({ label, value, icon }) => (
+    <div className="flex items-start gap-2">
+      {icon && <div className="text-muted-foreground mt-0.5">{icon}</div>}
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground">{value || "-"}</p>
+      </div>
     </div>
   );
 
   return (
-    <section className="space-y-6">
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2">
-        <button
-          className="inline-flex items-center gap-2 px-4 py-2 border border-border bg-card text-foreground rounded-lg hover:bg-muted transition-colors"
-          onClick={() => setQrCode(true)}
-        >
-          <QrCode className="w-4 h-4" />
-          QR Code
-        </button>
-        <Link
-          to={`/assets/edit-asset/${id}`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <Edit className="w-4 h-4" />
-          Edit Details
-        </Link>
-      </div>
-
-      {/* Location Details */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="bg-primary/5 px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" />
-            Location Details
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <InfoItem label="Building" value={building_name} />
-            <InfoItem label="Floor" value={floor_name} />
-            <InfoItem label="Unit" value={unit_name} />
-            <InfoItem label="Latitude" value={latitude} />
-            <InfoItem label="Longitude" value={longitude} />
+    <section>
+      {/* Header with Action Buttons */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{name || 'Asset Details'}</h1>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-sm text-muted-foreground">#{asset_number}</span>
+            {critical && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200">
+                Critical
+              </span>
+            )}
+            {is_meter && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                Meter
+              </span>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Asset Information */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="bg-primary/5 px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
-            Asset Information
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <InfoItem label="Asset Name" value={name} />
-            <InfoItem label="Asset Number" value={asset_number} />
-            <InfoItem label="Equipment Id" value={equipemnt_id} />
-            <InfoItem label="Model Number" value={model_number} />
-            <InfoItem label="Serial Number" value={serial_number} />
-            <InfoItem label="Purchased on" value={purchased_on} />
-            <InfoItem label="Date Of Installation" value={installation} />
-            <InfoItem label="Breakdown" value={breakdown ? "Yes" : "No"} />
-            <InfoItem label="Capacity" value={capacity} />
-            <InfoItem label="UOM" value={uom} />
-            <InfoItem label="Purchase Cost" value={purchase_cost} />
-            <InfoItem label="Group" value={group_name} />
-            <InfoItem label="Subgroup" value={sub_group_name} />
-            <InfoItem label="Critical" value={critical ? "Yes" : "No"} />
-            <InfoItem label="Meter Applicable" value={is_meter ? "Yes" : "No"} />
-            <InfoItem label="Created On" value={dateFormat(created_at)} />
-            <InfoItem label="Updated On" value={dateFormat(updated_at)} />
-          </div>
+        <div className="flex gap-2">
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 border border-border bg-card text-foreground rounded-lg hover:bg-muted transition-colors"
+            onClick={() => setQrCode(true)}
+          >
+            <QrCode className="w-4 h-4" />
+            QR Code
+          </button>
+          <Link
+            to={`/assets/edit-asset/${id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Edit className="w-4 h-4" />
+            Edit Details
+          </Link>
         </div>
       </div>
 
-      {/* Additional Info */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="bg-primary/5 px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">Additional Info</h2>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-2">Comments</p>
-            <div className="bg-muted p-3 rounded-md">
-              <p className="text-sm text-foreground">
-                {remarks && remarks !== "null" ? remarks : "No Comments"}
-              </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Main Content - Left Column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Location Details */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                Location Details
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <InfoItem label="Building" value={building_name} />
+                <InfoItem label="Floor" value={floor_name} />
+                <InfoItem label="Unit" value={unit_name} />
+                <InfoItem label="Latitude" value={latitude} />
+                <InfoItem label="Longitude" value={longitude} />
+              </div>
             </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
-            <div className="bg-muted p-3 rounded-md">
-              <p className="text-sm text-foreground">
-                {description && description !== "null" ? description : "No Description"}
-              </p>
+
+          {/* Asset Information */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Asset Information
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <InfoItem label="Asset Name" value={name} />
+                <InfoItem label="Asset Number" value={asset_number} />
+                <InfoItem label="Equipment Id" value={equipemnt_id} />
+                <InfoItem label="Model Number" value={model_number} />
+                <InfoItem label="Serial Number" value={serial_number} />
+                <InfoItem label="Purchased on" value={purchased_on} />
+                <InfoItem label="Date Of Installation" value={installation} />
+                <InfoItem label="Breakdown" value={breakdown ? "Yes" : "No"} />
+                <InfoItem label="Capacity" value={capacity} />
+                <InfoItem label="UOM" value={uom} />
+                <InfoItem label="Purchase Cost" value={purchase_cost} />
+                <InfoItem label="Group" value={group_name} />
+                <InfoItem label="Subgroup" value={sub_group_name} />
+                <InfoItem label="Created On" value={dateFormat(created_at)} />
+                <InfoItem label="Updated On" value={dateFormat(updated_at)} />
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Warranty Details */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="bg-primary/5 px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            Warranty Details
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <InfoItem label="Warranty Start Date" value={warranty_start} />
-            <InfoItem label="Expiry Date" value={warranty_expiry} />
+          {/* Description */}
+          {(description && description !== "null") && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="bg-primary/5 px-6 py-4 border-b border-border">
+                <h2 className="font-semibold text-foreground flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Description
+                </h2>
+              </div>
+              <div className="p-6">
+                <p className="text-foreground whitespace-pre-wrap">{description}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Comments */}
+          {(remarks && remarks !== "null") && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="bg-primary/5 px-6 py-4 border-b border-border">
+                <h2 className="font-semibold text-foreground">Comments</h2>
+              </div>
+              <div className="p-6">
+                <p className="text-foreground whitespace-pre-wrap">{remarks}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Warranty Details */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                Warranty Details
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <InfoItem label="Warranty Start Date" value={warranty_start} />
+                <InfoItem label="Expiry Date" value={warranty_expiry} />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Attachments */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="bg-primary/5 px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            Attachments
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid md:grid-cols-3 gap-4">
+          {/* Attachments */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Attachments
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="grid md:grid-cols-3 gap-4">
             {/* Purchase Invoice */}
             <div className="bg-muted rounded-lg p-4">
               <p className="text-center font-medium text-foreground mb-3">Purchase Invoice</p>
@@ -397,76 +422,76 @@ const Assetinfo = ({ assetData }) => {
             </div>
           </div>
 
-          {/* Other Files */}
-          <div className="bg-muted rounded-lg p-4 mt-4">
-            <p className="text-center font-medium text-foreground mb-3">Other Files</p>
-            <div className="flex gap-4 flex-wrap justify-center">
-              {assetData.other_files && assetData.other_files.length > 0 ? (
-                assetData.other_files.map((other, index) => (
-                  <div key={other.id}>
-                    {isImage(domainPrefix + other.document) ? (
-                      <img
-                        src={domainPrefix + other.document}
-                        alt={`Attachment ${index + 1}`}
-                        className="w-40 h-28 object-cover rounded-md cursor-pointer"
-                        onClick={() => window.open(domainPrefix + other.document, "_blank")}
-                      />
-                    ) : (
-                      <a
-                        href={domainPrefix + other.document}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-col items-center gap-2 text-primary hover:text-primary/80 transition-colors"
-                      >
-                        <FaRegFileAlt size={40} />
-                        <span className="text-sm">{getFileName(other.document)}</span>
-                      </a>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No Attachments</p>
-              )}
+              {/* Other Files */}
+              <div className="bg-muted rounded-lg p-4 mt-4">
+                <p className="text-center font-medium text-foreground mb-3">Other Files</p>
+                <div className="flex gap-4 flex-wrap justify-center">
+                  {assetData.other_files && assetData.other_files.length > 0 ? (
+                    assetData.other_files.map((other, index) => (
+                      <div key={other.id}>
+                        {isImage(domainPrefix + other.document) ? (
+                          <img
+                            src={domainPrefix + other.document}
+                            alt={`Attachment ${index + 1}`}
+                            className="w-40 h-28 object-cover rounded-md cursor-pointer"
+                            onClick={() => window.open(domainPrefix + other.document, "_blank")}
+                          />
+                        ) : (
+                          <a
+                            href={domainPrefix + other.document}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <FaRegFileAlt size={40} />
+                            <span className="text-sm">{getFileName(other.document)}</span>
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No Attachments</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Asset Parameters Section */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="bg-primary/5 px-6 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">Asset Parameters</h2>
-        </div>
-        <div className="p-6">
-          {/* Tab Navigation */}
-          <div className="flex gap-4 border-b border-border mb-6">
-            <button
-              className={`pb-2 px-4 font-medium transition-colors ${
-                page === "consumption"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setPage("consumption")}
-            >
-              Consumption Asset Measure
-            </button>
-            <button
-              className={`pb-2 px-4 font-medium transition-colors ${
-                page === "nonconsumption"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setPage("nonconsumption")}
-            >
-              Non Consumption Asset Measure
-            </button>
-          </div>
+          {/* Asset Parameters Section */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Asset Parameters</h2>
+            </div>
+            <div className="p-6">
+              {/* Tab Navigation */}
+              <div className="flex gap-4 border-b border-border mb-6">
+                <button
+                  className={`pb-2 px-4 font-medium transition-colors ${
+                    page === "consumption"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setPage("consumption")}
+                >
+                  Consumption Asset Measure
+                </button>
+                <button
+                  className={`pb-2 px-4 font-medium transition-colors ${
+                    page === "nonconsumption"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setPage("nonconsumption")}
+                >
+                  Non Consumption Asset Measure
+                </button>
+              </div>
 
-          {/* Form */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground">
-              {page === "consumption" ? "Consumption" : "Non Consumption"} Parameter
-            </h3>
+              {/* Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground">
+                  {page === "consumption" ? "Consumption" : "Non Consumption"} Parameter
+                </h3>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="flex flex-col">
                 <label htmlFor="name" className="text-sm font-medium text-foreground mb-1">
@@ -649,26 +674,149 @@ const Assetinfo = ({ assetData }) => {
                 </label>
               </div>
             </div>
-            <div className="flex justify-center pt-4">
-              <button
-                className="bg-primary text-primary-foreground px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
-                onClick={handleAddConsumptionMeasure}
-              >
-                Add
-              </button>
+                <div className="flex justify-center pt-4">
+                  <button
+                    className="bg-primary text-primary-foreground px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
+                    onClick={handleAddConsumptionMeasure}
+                  >
+                    Add Parameter
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Parameters Table */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Asset Parameters List</h2>
+            </div>
+            <div className="p-6">
+              <Table
+                columns={assetParmsColumn}
+                data={asset_params}
+                isPagination={true}
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Parameters Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="p-6">
-          <Table
-            columns={assetParmsColumn}
-            data={asset_params}
-            isPagination={true}
-          />
+        {/* Sidebar - Right Column */}
+        <div className="space-y-6">
+          {/* Quick Info */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Quick Info</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  active ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+                }`}>
+                  {active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Critical</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  critical ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+                }`}>
+                  {critical ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Meter</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  is_meter ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+                }`}>
+                  {is_meter ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Breakdown</span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  breakdown ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-green-100 text-green-700 border border-green-200'
+                }`}>
+                  {breakdown ? 'Yes' : 'No'}
+                </span>
+              </div>
+              {purchase_cost && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Purchase Cost</span>
+                  <span className="text-sm font-medium text-foreground">{purchase_cost}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Asset Hierarchy */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Asset Hierarchy</h2>
+            </div>
+            <div className="p-6 space-y-3">
+              {group_name && (
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Group</p>
+                    <p className="text-xs text-muted-foreground">{group_name}</p>
+                  </div>
+                </div>
+              )}
+              {sub_group_name && (
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Subgroup</p>
+                    <p className="text-xs text-muted-foreground">{sub_group_name}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Timestamps */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="bg-primary/5 px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Timeline</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Created</p>
+                  <p className="text-xs text-muted-foreground">{dateFormat(created_at)}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Last Updated</p>
+                  <p className="text-xs text-muted-foreground">{dateFormat(updated_at)}</p>
+                </div>
+              </div>
+              {purchased_on && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Purchased</p>
+                    <p className="text-xs text-muted-foreground">{purchased_on}</p>
+                  </div>
+                </div>
+              )}
+              {installation && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Installed</p>
+                    <p className="text-xs text-muted-foreground">{installation}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

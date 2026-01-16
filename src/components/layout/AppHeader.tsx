@@ -229,7 +229,9 @@ interface AppHeaderProps {
 }
 
 const AppHeader: React.FC<AppHeaderProps> = () => {
+  console.log('[AppHeader] Component rendering');
   const location = useLocation();
+  console.log('[AppHeader] Current path:', location.pathname);
   const navigate = useNavigate();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSiteDropdown, setShowSiteDropdown] = useState(false);
@@ -240,30 +242,36 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   const [collapsedLevels, setCollapsedLevels] = useState({ level1: false, level2: false });
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const siteDropdownRef = useRef<HTMLDivElement>(null);
+  console.log('[AppHeader] State initialized');
 
   // Get enabled features from localStorage
   useEffect(() => {
     const storedFeatures = getItemInLocalStorage('FEATURES');
     if (storedFeatures && Array.isArray(storedFeatures)) {
       const featureNames = storedFeatures.map((f: any) => f.feature_name);
-      setEnabledFeatures(featureNames);
+      // Only update if features actually changed
+      setEnabledFeatures(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(featureNames)) {
+          return prev; // Return same reference to avoid re-render
+        }
+        return featureNames;
+      });
     }
   }, []);
 
-  // Filter modules based on enabled features
-  const isModuleEnabled = (moduleId: string): boolean => {
-    if (enabledFeatures.length === 0) return true; // Show all if no features configured
-
-    for (const [feature, moduleIds] of Object.entries(featureToModuleMap)) {
-      if (moduleIds.includes(moduleId)) {
-        return enabledFeatures.includes(feature);
-      }
-    }
-    return true; // Show modules not in the map by default
-  };
-
   // Filter modules and submodules based on features
   const filteredModules = useMemo(() => {
+    const isModuleEnabled = (moduleId: string): boolean => {
+      if (enabledFeatures.length === 0) return true; // Show all if no features configured
+
+      for (const [feature, moduleIds] of Object.entries(featureToModuleMap)) {
+        if (moduleIds.includes(moduleId)) {
+          return enabledFeatures.includes(feature);
+        }
+      }
+      return true; // Show modules not in the map by default
+    };
+
     return modules.map(mod => ({
       ...mod,
       subModules: mod.subModules.filter(sub => isModuleEnabled(sub.id))
@@ -368,15 +376,19 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     }
   };
 
-  // Derive active module and sub-module from current path
-  const getActiveFromPath = () => {
+  // Derive active module and sub-module from current path (memoized)
+  const { moduleId: activeModule, subModuleId: activeSubModule } = useMemo(() => {
     const pathname = location.pathname;
+
+    // Hard-match Fitout routes to the Fitout module (no submodules defined)
+    if (pathname === '/fitout' || pathname.startsWith('/fitout/')) {
+      return { moduleId: 'fitout', subModuleId: '' };
+    }
+
     for (const mod of filteredModules) {
       for (const subMod of mod.subModules) {
         // Check if submodule has children - PRIORITIZE EXACT MATCHES
         if (subMod.children && subMod.children.length > 0) {
-          console.log('      Submodule has children:', subMod.children.length);
-
           // FIRST: Check all children for exact matches
           for (const child of subMod.children) {
             if (pathname === child.path) {
@@ -395,7 +407,6 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           // SECOND: If no exact match found, check startsWith for nested routes
           for (const child of subMod.children) {
             if (child.path !== '/asset' && pathname.startsWith(child.path + '/')) {
-              console.log('          ✅ STARTSWITH MATCH: Returning module:', mod.id, 'submodule:', subMod.id);
               return { moduleId: mod.id, subModuleId: subMod.id };
             }
           }
@@ -407,19 +418,14 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           if (exactMatch) {
             return { moduleId: mod.id, subModuleId: subMod.id };
           }
-        } else {
         }
       }
       if (mod.path && (pathname === mod.path || pathname.startsWith(mod.path + '/'))) {
-        console.log('  ✅ MODULE MATCH: Returning module:', mod.id, 'submodule: empty');
         return { moduleId: mod.id, subModuleId: '' };
       }
     }
-    console.log('  ❌ NO MATCH: Returning default');
     return { moduleId: 'fm-module', subModuleId: '' };
-  };
-
-  const { moduleId: activeModule, subModuleId: activeSubModule } = getActiveFromPath();
+  }, [location.pathname, filteredModules]);
 
   const currentModule = filteredModules.find(m => m.id === activeModule);
   const currentSubModule = currentModule?.subModules.find(s => s.id === activeSubModule);
@@ -447,37 +453,22 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     }
 
     const activePath = location.pathname;
-    console.log('  Checking children for active path:', activePath);
 
     // Find active item with improved logic
     const activeItem = currentSubModule.children.find(c => {
-      console.log('    Checking child:', c.name, 'path:', c.path);
-
       // Handle exact match for /asset path
       if (c.path === '/asset') {
-        const match = activePath === '/asset';
-        console.log('      Exact match for /asset:', match);
-        return match;
+        return activePath === '/asset';
       }
-      // Handle other paths with exact match only (no startsWith for SoftService)
-      const exactMatch = activePath === c.path;
-      console.log('      exact match for', c.path, ':', exactMatch);
-
-      if (exactMatch) {
-        return true;
-      }
-      return false;
+      // Handle other paths with exact match only
+      return activePath === c.path;
     });
 
-    console.log('  Active item found:', activeItem?.name);
-
     if (!activeItem) {
-      console.log('  ❌ No active item found, returning all children');
       return currentSubModule.children;
     }
 
     const rest = currentSubModule.children.filter(c => c.path !== activeItem.path);
-    console.log('  Returning reordered list with active item first');
     return [activeItem, ...rest];
   }, [currentSubModule, location.pathname]);
 

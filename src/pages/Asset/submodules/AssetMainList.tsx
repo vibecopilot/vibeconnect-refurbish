@@ -51,6 +51,8 @@ const [assets, setAssets] = useState<Asset[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+
 
   const buildings = getItemInLocalStorage('Building') || [];
   const [floors, setFloors] = useState<any[]>([]);
@@ -117,13 +119,14 @@ const fetchAssets = useCallback(async () => {
     formData.append('file', importFile);
 
     try {
-      toast.loading('Uploading file...');
-      const response = await fetch(`https://admin.vibecopilot.ai/site_assets/import/?token=${token}`, {
+      const loadingId = toast.loading('Uploading file...');
+      const response = await fetch(`https://admin.vibecopilot.ai/site_assets/import.json?token=${token}`, {
         method: 'POST',
         body: formData,
+        redirect: 'manual', // prevent following redirects that can trigger CORS
       });
 
-      toast.dismiss();
+      toast.dismiss(loadingId);
       if (response.ok) {
         toast.success('File uploaded successfully.');
         setIsImportOpen(false);
@@ -235,6 +238,35 @@ const handleExportToExcel = useCallback(() => {
   toast.success('Excel file exported successfully');
 }, [assets]);
 
+
+const handleToggleBreakdown = async (assetId: string | number, currentValue?: boolean) => {
+  const idString = String(assetId);
+  if (togglingIds.has(idString)) return;
+
+  setTogglingIds(prev => new Set(prev).add(idString));
+  const loadingId = toast.loading(currentValue ? 'Marking In Use...' : 'Marking Breakdown...');
+
+  try {
+    const formData = new FormData();
+    formData.append('site_asset[breakdown]', String(!currentValue));
+    await assetService.updateAsset(assetId, formData);
+
+    setAssets(prev => prev.map(asset => asset.id === assetId ? { ...asset, breakdown: !currentValue } : asset));
+    setAllAssets(prev => prev.map(asset => asset.id === assetId ? { ...asset, breakdown: !currentValue } : asset));
+
+    toast.success(!currentValue ? 'Marked as Breakdown' : 'Marked as In Use');
+  } catch (err) {
+    console.error('Error updating breakdown status:', err);
+    toast.error('Failed to update status');
+  } finally {
+    toast.dismiss(loadingId);
+    setTogglingIds(prev => {
+      const next = new Set(prev);
+      next.delete(idString);
+      return next;
+    });
+  }
+};
 
   const handleBuildingChange = async (buildingId: string) => {
     setFilters(prev => ({ ...prev, building_id: buildingId, floor_id: '', unit_id: '' }));
@@ -354,6 +386,27 @@ const handleFilterReset = () => {
     { id: 'purchase_cost', label: 'Purchase Cost', key: 'purchase_cost', header: 'Purchase Cost', render: (v) => v ? `₹${v.toLocaleString()}` : '-' },
     { id: 'critical', label: 'Critical', key: 'critical', header: 'Critical', render: (v) => v ? 'Yes' : 'No' },
     { id: 'status', label: 'Status', key: 'status', header: 'Status', render: (_, row) => <StatusBadge status={getAssetStatus(row)} /> },
+    {
+      id: 'usage_toggle',
+      label: 'Usage',
+      key: 'usage_toggle',
+      header: 'Usage',
+      render: (_v, row) => {
+        const isLoading = togglingIds.has(String(row.id));
+        return (
+          <label className={`relative inline-flex items-center cursor-pointer ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={!row.breakdown}
+              onChange={() => handleToggleBreakdown(row.id, !!row.breakdown)}
+              disabled={isLoading}
+            />
+            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+          </label>
+        );
+      }
+    },
     { id: 'capacity', label: 'Capacity', key: 'capacity', header: 'Capacity', render: (v) => v || '-' },
     { id: 'created_at', label: 'Created On', key: 'created_at', header: 'Created On', render: (v) => v ? new Date(v).toLocaleDateString() : '-' },
     { id: 'updated_at', label: 'Updated On', key: 'updated_at', header: 'Updated On', render: (v) => v ? new Date(v).toLocaleDateString() : '-' },
@@ -655,3 +708,5 @@ const handleFilterReset = () => {
 };
 
 export default AssetMainList;
+
+

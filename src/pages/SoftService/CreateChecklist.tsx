@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Breadcrumb from "../../components/ui/Breadcrumb";
 import FormSection from "../../components/ui/FormSection";
 import FormInput from "../../components/ui/FormInput";
@@ -17,6 +17,7 @@ import { getItemInLocalStorage } from "../../utils/localStorage";
 
 import {
   postChecklist,
+  editChecklist,
   getAssignedTo,
   getChecklistGroupReading,
   getVendors,
@@ -30,6 +31,7 @@ import { ClipboardList, Plus, X, Calendar, Save, Settings } from "lucide-react";
 type OptionPN = "" | "P" | "N";
 
 interface Question {
+  id?: string | number;
   name: string;
   type: string; // multiple | inbox | description | Numeric
   options: string[]; // 4 options
@@ -41,6 +43,7 @@ interface Question {
   image_for_question: File[];
   weightage: string;
   rating: boolean;
+  _destroy?: string;
 }
 
 interface Section {
@@ -93,6 +96,8 @@ const emptyQuestion = (): Question => ({
 
 const CreateChecklist: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -151,6 +156,7 @@ const CreateChecklist: React.FC = () => {
   const [sections, setSections] = useState<Section[]>([
     { group: "", questions: [emptyQuestion()] },
   ]);
+  const [loadingPrefill, setLoadingPrefill] = useState(false);
 
   /** ---------------- fetch dropdowns (same as old) ---------------- */
   useEffect(() => {
@@ -209,10 +215,112 @@ const CreateChecklist: React.FC = () => {
     fetchAll();
   }, []);
 
+  /** ---------------- load existing checklist when editing ---------------- */
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    const loadExisting = async () => {
+      setLoadingPrefill(true);
+      try {
+        const res = await getChecklistDetails(id);
+        const data = res.data || {};
+
+        setName(data.name || "");
+        setFrequency(data.frequency || "");
+        setStartDate(data.start_date || today);
+        setEndDate(data.end_date || today);
+        setPriorityLevel(data.priority_level || "");
+        setSupplierId(data.supplier_id ? String(data.supplier_id) : "");
+        setLockOverdue(
+          typeof data.lock_overdue === "boolean"
+            ? String(data.lock_overdue)
+            : data.lock_overdue || ""
+        );
+        setCreateTicket(Boolean(data.ticket_enabled));
+        setTicketType((data.ticket_level_type as any) || "Question");
+        setAssignedToId(data.assigned_to ? String(data.assigned_to) : "");
+        setCategoryId(data.category_id ? String(data.category_id) : "");
+        setWeightageEnabled(Boolean(data.weightage_enabled));
+
+        const cronExpr =
+          data?.checklist_cron?.expression ||
+          data?.cron_expression ||
+          "0 0 * * *";
+        setCronExpression(cronExpr);
+
+        const graceMinutes = Number(data.grace_period) || 0;
+        const graceDays = Math.floor(graceMinutes / 1440);
+        const graceHours = Math.floor((graceMinutes % 1440) / 60);
+        const graceMins = graceMinutes % 60;
+        setSubmitDays(String(graceDays));
+        setSubmitHours(String(graceHours));
+        setSubmitMinutes(String(graceMins));
+
+        const extMinutes = Number(data.grace_period_unit) || 0;
+        const extDays = Math.floor(extMinutes / 1440);
+        const extHours = Math.floor((extMinutes % 1440) / 60);
+        const extMins = extMinutes % 60;
+        setExtensionDays(String(extDays));
+        setExtensionHours(String(extHours));
+        setExtensionMinutes(String(extMins));
+
+        const supers =
+          data.supervisors ||
+          data.supervisor_ids ||
+          data.supervisior_id ||
+          [];
+        const supArray = Array.isArray(supers) ? supers : [];
+        setSelectedSupervisors(
+          supArray.map((sid: any) => ({
+            value: String(sid),
+            label: supervisorOptions.find((o) => String(o.value) === String(sid))
+              ?.label || String(sid),
+          }))
+        );
+
+        const mappedSections: Section[] =
+          (data.groups || []).map((g: any) => ({
+            group: String(g.group_id || g.id || ""),
+            questions: (g.questions || []).map((q: any) => ({
+              id: q.id,
+              name: q.name || "",
+              type: q.qtype || "",
+              options: [q.option1, q.option2, q.option3, q.option4].map(
+                (x: any) => x || ""
+              ),
+              value_types: [
+                q.value_type1,
+                q.value_type2,
+                q.value_type3,
+                q.value_type4,
+              ].map((x: any) => (x || "") as OptionPN),
+              question_mandatory: !!q.question_mandatory,
+              reading: !!q.reading,
+              showHelpText: !!q.help_text_enbled,
+              help_text: q.help_text || "",
+              rating: !!q.rating,
+              weightage: q.weightage ? String(q.weightage) : "",
+              image_for_question: [],
+            })),
+          })) || [{ group: "", questions: [emptyQuestion()] }];
+
+        setSections(
+          mappedSections.length ? mappedSections : [{ group: "", questions: [emptyQuestion()] }]
+        );
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to load checklist");
+      } finally {
+        setLoadingPrefill(false);
+      }
+    };
+
+    loadExisting();
+  }, [id, isEdit, supervisorOptions, today]);
+
   /** ---------------- when template selected, preload checklist (same as old) ---------------- */
   useEffect(() => {
     const loadTemplate = async () => {
-      if (!masterid) return;
+      if (!masterid || isEdit) return;
       try {
         const res = await getChecklistDetails(masterid);
         const data = res.data;
@@ -256,7 +364,7 @@ const CreateChecklist: React.FC = () => {
 
     if (createNew) loadTemplate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterid, createNew]);
+  }, [masterid, createNew, isEdit]);
 
   /** ---------------- section helpers ---------------- */
   const addSection = () => {
@@ -420,6 +528,9 @@ const CreateChecklist: React.FC = () => {
         formData.append("groups[][group]", section.group);
 
         section.questions.forEach((q, questionIndex) => {
+          if (q.id) {
+            formData.append("groups[][questions][][id]", String(q.id));
+          }
           formData.append("groups[][questions][][name]", q.name);
           formData.append("groups[][questions][][type]", q.type);
           formData.append(
@@ -443,6 +554,9 @@ const CreateChecklist: React.FC = () => {
             q.weightage || ""
           );
           formData.append("groups[][questions][][rating]", String(!!q.rating));
+          if (q._destroy) {
+            formData.append("groups[][questions][][_destroy]", q._destroy);
+          }
 
           // multiple choice options + P/N types
           q.options.forEach((opt, i) => {
@@ -467,14 +581,18 @@ const CreateChecklist: React.FC = () => {
         });
       });
 
-      await postChecklist(formData);
-      toast.success("Checklist created successfully");
+      if (isEdit && id) {
+        await editChecklist(formData, id);
+        toast.success("Checklist updated successfully");
+      } else {
+        await postChecklist(formData);
+        toast.success("Checklist created successfully");
+      }
 
-      // route as per your new module
       navigate("/soft-services/checklist");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to create checklist");
+      toast.error(isEdit ? "Failed to update checklist" : "Failed to create checklist");
     } finally {
       setSubmitting(false);
     }

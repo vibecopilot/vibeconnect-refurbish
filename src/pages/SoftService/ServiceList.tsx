@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import ListToolbar from '../../components/ui/ListToolbar';
@@ -7,9 +7,10 @@ import DataTable, { TableColumn } from '../../components/ui/DataTable';
 import { 
   getSoftServices, 
   softServiceDownloadQrCode, 
-  getSoftServiceDownload 
+  getSoftServiceDownload,
+  importSoftServices
 } from '../../api';
-import { Loader2, Wrench, AlertCircle, RefreshCw, Eye, Edit2 } from 'lucide-react';
+import { Loader2, Wrench, AlertCircle, RefreshCw, Eye, Edit2, Upload, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Unit {
@@ -39,6 +40,8 @@ const ServiceList: React.FC = () => {
   const [services, setServices] = useState<SoftService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
   
   const getPerPage = (mode: 'grid' | 'table') => mode === 'grid' ? 12 : 10;
   const [pagination, setPagination] = useState({ page: 1, perPage: getPerPage('grid'), total: 0, totalPages: 0 });
@@ -47,15 +50,18 @@ const ServiceList: React.FC = () => {
     setPagination(prev => ({ ...prev, perPage: getPerPage(viewMode), page: 1 }));
   }, [viewMode]);
 
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchValue]);
+
 const fetchServices = useCallback(async () => {
   setLoading(true);
   setError(null);
 
   try {
-    const response = await getSoftServices();
+    const response = await getSoftServices(pagination.page, pagination.perPage, searchValue);
     const data = response.data;
 
-    // ✅ support multiple response shapes
     const serviceList =
       (Array.isArray(data) && data) ||
       data?.results ||
@@ -63,31 +69,14 @@ const fetchServices = useCallback(async () => {
       data?.data ||
       [];
 
-    // ✅ DEBUG: show what API returns
-    console.log("GET /soft-services raw:", data);
-    console.log("Normalized serviceList length:", serviceList.length);
-
-    // ✅ sort newest first (this is why old project shows instantly)
-    const sorted = [...serviceList].sort(
-      (a: any, b: any) =>
-        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    );
-
-    // ✅ filter from sorted (not from old filtered array)
-    const filtered = searchValue
-      ? sorted.filter((s: any) =>
-          (s.name || "").toLowerCase().includes(searchValue.toLowerCase())
-        )
-      : sorted;
-
-    setServices(filtered);
+    setServices(serviceList);
 
     setPagination((prev) => {
-      const totalPages = Math.max(1, Math.ceil(filtered.length / prev.perPage));
+      const total = data.total || data.total_count || data.count || serviceList.length;
+      const totalPages = data.total_pages || Math.ceil(total / prev.perPage) || 1;
       return {
         ...prev,
-        page: 1,               // ✅ ALWAYS go back to page 1 so new record shows
-        total: filtered.length,
+        total,
         totalPages,
       };
     });
@@ -97,12 +86,30 @@ const fetchServices = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, [searchValue]);
+}, [pagination.page, pagination.perPage, searchValue]);
 
 
 useEffect(() => {
   fetchServices();
-}, [fetchServices, location.key]); // ✅ route change/back navigation triggers refetch
+}, [fetchServices, location.key]); // ? route change/back navigation triggers refetch
+
+
+// Also fetch when component becomes visible (for navigation back)
+useEffect(() => {
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') {
+      fetchServices();
+    }
+  };
+  
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, []);
+
+
+useEffect(() => {
+  fetchServices();
+}, [fetchServices, location.key]); // âœ… route change/back navigation triggers refetch
 
 
 // Also fetch when component becomes visible (for navigation back)
@@ -181,6 +188,37 @@ useEffect(() => {
       console.error('Error downloading QR codes:', error);
       toast.error('Failed to download QR codes. Please try again.');
     }
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      toast.error('No file selected');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', importFile);
+    try {
+      toast.loading('Uploading services...');
+      const res = await importSoftServices(formData);
+      toast.dismiss();
+      if (res.status === 200) {
+        toast.success('Services imported successfully');
+        setIsImportOpen(false);
+        setImportFile(null);
+        fetchServices();
+      } else {
+        toast.error('Import failed, please try again');
+      }
+    } catch (err) {
+      toast.dismiss();
+      console.error(err);
+      toast.error('Import failed, please try again');
+    }
+  };
+
+  const handleDownloadSample = () => {
+    toast.error('Sample download not configured yet');
   };
 
   const formatDate = (dateStr?: string) => {
@@ -306,7 +344,73 @@ useEffect(() => {
         showQrCode
         qrCodeDisabled={selectedRows.length === 0}
         onQrCode={handleQrCode}
+        additionalButtons={(
+          <button
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </button>
+        )}
       />
+
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-xl bg-card shadow-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Bulk Upload
+              </h2>
+              <button className="text-xl leading-none" onClick={() => setIsImportOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleImportSubmit} className="space-y-4">
+              <div className="border border-dashed border-border rounded-lg p-6 text-center bg-muted/30">
+                <p className="font-medium mb-2">Drag &amp; Drop or</p>
+                <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  Choose File
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-sm text-muted-foreground mt-2">{importFile ? importFile.name : 'No file chosen'}</p>
+              </div>
+
+              <div className="flex justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleDownloadSample}
+                  className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Sample Format
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsImportOpen(false)}
+                    className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
+                  >
+                    Import
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
 
@@ -369,11 +473,37 @@ useEffect(() => {
             Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
-            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: 1 }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              «
+            </button>
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              ‹ Prev
+            </button>
+            <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
+              {pagination.page}
+            </span>
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              Next ›
+            </button>
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.totalPages }))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
+            >
+              »
+            </button>
           </div>
           <select 
             value={pagination.perPage} 
@@ -392,3 +522,6 @@ useEffect(() => {
 };
 
 export default ServiceList;
+
+
+

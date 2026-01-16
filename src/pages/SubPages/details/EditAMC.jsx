@@ -1,44 +1,82 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, FileText, Loader2, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
-import FormSection from '../../../components/ui/FormSection';
-import FormInput from '../../../components/ui/FormInput';
-import Button from '../../../components/ui/Button';
-import PageTitle from '../../../components/ui/PageTitle';
-import { EditAMCDetails, getEditAMCDetails, getVendors } from '../../../api';
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Calendar, FileText, Loader2, ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
+import FormSection from "../../../components/ui/FormSection";
+import FormInput from "../../../components/ui/FormInput";
+import Button from "../../../components/ui/Button";
+import PageTitle from "../../../components/ui/PageTitle";
+import { EditAMCDetails, getEditAMCDetails, getVendors } from "../../../api";
+
+const toInputDate = (v) => {
+  if (!v) return "";
+  if (typeof v === "string" && v.length >= 10 && v.includes("-")) return v.slice(0, 10);
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+};
+
+const toAbsoluteDocUrl = (doc) => {
+  if (!doc) return "";
+  return doc.startsWith("http") ? doc : `https://admin.vibecopilot.ai${doc}`;
+};
+
+const fileNameFromPath = (p) => {
+  if (!p) return "Document";
+  const parts = p.split("/");
+  return parts[parts.length - 1] || "Document";
+};
 
 const EditAssetAMC = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // AMC id
   const navigate = useNavigate();
+
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // existing attachments from backend
+  const [existingAttachments, setExistingAttachments] = useState([]);
+  // new files selected by user
+  const [newFiles, setNewFiles] = useState([]);
+
   const [formData, setFormData] = useState({
     vendor_id: "",
-    asset_id: id,
+    asset_id: "",
     start_date: "",
     end_date: "",
     frequency: "",
-    terms: [],
   });
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!id) return;
       setLoading(true);
       try {
         const [vendorResp, amcResp] = await Promise.all([
           getVendors(),
-          getEditAMCDetails(id)
+          getEditAMCDetails(id),
         ]);
 
         setVendors(vendorResp.data || []);
 
-        setFormData(prevFormData => ({
-          ...prevFormData,
-          ...amcResp.data,
-          terms: amcResp.data.terms || [],
-        }));
+        const data = amcResp.data || {};
+
+        setFormData({
+          vendor_id: String(data.vendor_id ?? ""),
+          asset_id: String(data.asset_id ?? ""),
+          start_date: toInputDate(data.start_date),
+          end_date: toInputDate(data.end_date),
+          frequency: data.frequency ?? "",
+        });
+
+        const attachments =
+          (Array.isArray(data.attachments) && data.attachments) ||
+          (Array.isArray(data.terms) && data.terms) ||
+          [];
+
+        setExistingAttachments(attachments);
+        setNewFiles([]);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to fetch AMC details");
@@ -52,22 +90,21 @@ const EditAssetAMC = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData({
-      ...formData,
-      terms: files,
-    });
+    const files = Array.from(e.target.files || []);
+    setNewFiles(files);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.vendor_id) return toast.error("Please select Vendor");
+    if (!formData.start_date) return toast.error("Please select Start Date");
+    if (!formData.end_date) return toast.error("Please select End Date");
+    if (!formData.frequency) return toast.error("Please select Frequency");
 
     if (formData.start_date >= formData.end_date) {
       toast.error("Start Date must be before End Date");
@@ -82,7 +119,10 @@ const EditAssetAMC = () => {
       dataToSend.append("asset_amc[start_date]", formData.start_date);
       dataToSend.append("asset_amc[end_date]", formData.end_date);
       dataToSend.append("asset_amc[frequency]", formData.frequency);
-      formData.terms.forEach((file) => dataToSend.append("terms[]", file));
+
+      // only new selected files
+      newFiles.forEach((file) => dataToSend.append("asset_amc[terms][]", file));
+
 
       await EditAMCDetails(dataToSend, id);
       toast.success("AMC Updated Successfully");
@@ -95,9 +135,9 @@ const EditAssetAMC = () => {
     }
   };
 
-  const vendorOptions = vendors.map(vendor => ({
-    value: vendor.id,
-    label: vendor.vendor_name || vendor.company_name || `Vendor ${vendor.id}`
+  const vendorOptions = vendors.map((vendor) => ({
+    value: String(vendor.id),
+    label: vendor.vendor_name || vendor.company_name || `Vendor ${vendor.id}`,
   }));
 
   const frequencyOptions = [
@@ -123,7 +163,6 @@ const EditAssetAMC = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => navigate("/asset/amc")}
@@ -132,14 +171,11 @@ const EditAssetAMC = () => {
           <ArrowLeft className="w-4 h-4" />
           Back to AMC List
         </button>
-        <PageTitle
-          title="Edit AMC"
-          subtitle="Update Annual Maintenance Contract details"
-        />
+
+        <PageTitle title="Edit AMC" subtitle="Update Annual Maintenance Contract details" />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* AMC Details */}
         <FormSection title="AMC DETAILS" icon={Calendar}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <FormInput
@@ -152,6 +188,7 @@ const EditAssetAMC = () => {
               required
               placeholder="Select Vendor"
             />
+
             <FormInput
               label="Start Date"
               name="start_date"
@@ -160,6 +197,7 @@ const EditAssetAMC = () => {
               onChange={handleChange}
               required
             />
+
             <FormInput
               label="End Date"
               name="end_date"
@@ -168,6 +206,7 @@ const EditAssetAMC = () => {
               onChange={handleChange}
               required
             />
+
             <FormInput
               label="Frequency"
               name="frequency"
@@ -181,13 +220,44 @@ const EditAssetAMC = () => {
           </div>
         </FormSection>
 
-        {/* AMC Terms Upload */}
-        <FormSection title="Upload AMC Terms" icon={FileText}>
+        {/* Existing Attachments */}
+        <FormSection title="Existing AMC Terms" icon={FileText}>
+          {existingAttachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No existing documents.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {existingAttachments.map((att, idx) => {
+                const href = toAbsoluteDocUrl(att?.document || att?.url);
+                const label = att?.document
+                  ? fileNameFromPath(att.document)
+                  : att?.name || `Document ${idx + 1}`;
+
+                return (
+                  <li key={att?.id || idx}>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {label}
+                      </a>
+                    ) : (
+                      <span>{label}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </FormSection>
+
+        {/* Upload New Terms */}
+        <FormSection title="Upload New AMC Terms" icon={FileText}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
-                AMC Terms Documents
-              </label>
+              <label className="block text-sm font-medium mb-2">AMC Terms Documents</label>
               <input
                 type="file"
                 multiple
@@ -199,28 +269,20 @@ const EditAssetAMC = () => {
                 Supported formats: PDF, DOC, DOCX, JPG, PNG
               </p>
             </div>
-            {formData.terms && formData.terms.length > 0 && (
+
+            {newFiles.length > 0 && (
               <div className="text-sm text-muted-foreground">
-                {formData.terms.length} file(s) selected
+                {newFiles.length} file(s) selected
               </div>
             )}
           </div>
         </FormSection>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-end gap-4 pt-6 border-t border-border">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/asset/amc")}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={() => navigate("/asset/amc")} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

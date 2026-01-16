@@ -4,7 +4,8 @@ import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
 import { Loader2, Gauge, AlertCircle, RefreshCw, Eye, EyeOff, Edit } from 'lucide-react';
-import { getMeteredSiteAsset, getFloors, getUnits } from '../../../api';
+import { meterService } from '../../../services/assetSubModules.service';
+import { getFloors, getUnits } from '../../../api';
 import { getItemInLocalStorage } from '../../../utils/localStorage';
 
 interface Meter {
@@ -50,6 +51,7 @@ const MeterList: React.FC<MeterListProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const buildings = getItemInLocalStorage('Building') || [];
   const [floors, setFloors] = useState<any[]>([]);
@@ -65,20 +67,31 @@ const MeterList: React.FC<MeterListProps> = ({
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
+  // Debounce search to reduce API calls and reset to first page on change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
   const fetchMeters = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getMeteredSiteAsset();
-      const filteredAssets = response.data.site_assets.filter((asset: Meter) => asset.is_meter);
-      const sortedData = filteredAssets.sort((a: Meter, b: Meter) => 
+      const response = await meterService.getMeters(pagination.page, pagination.perPage, debouncedSearch || undefined);
+      const data = response.data;
+      const list = data.site_assets || data.data || [];
+      const filteredAssets = list.filter((asset: Meter) => asset.is_meter);
+      const sortedData = filteredAssets.sort((a: Meter, b: Meter) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setMeters(sortedData);
       setPagination(prev => ({
         ...prev,
-        total: sortedData.length,
-        totalPages: Math.ceil(sortedData.length / prev.perPage),
+        total: data.total || data.total_count || sortedData.length,
+        totalPages: data.total_pages || Math.ceil((data.total || sortedData.length) / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch meters');
@@ -86,7 +99,7 @@ const MeterList: React.FC<MeterListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, debouncedSearch]);
 
   useEffect(() => { fetchMeters(); }, [fetchMeters]);
 
@@ -146,13 +159,8 @@ const MeterList: React.FC<MeterListProps> = ({
     return new Date(dateString).toLocaleString();
   };
 
-  // Client-side search filtering
-  let filteredMeters = meters.filter(meter => 
-    !searchValue || 
-    meter.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    meter.building_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    meter.unit_name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
+  // Client-side filtering for building/floor/unit (server handles main search/pagination)
+  let filteredMeters = meters;
 
   // Client-side filter by building, floor, unit
   if (filters.building_id) {
@@ -171,10 +179,7 @@ const MeterList: React.FC<MeterListProps> = ({
     );
   }
 
-  // Client-side pagination
   const startIndex = (pagination.page - 1) * pagination.perPage;
-  const endIndex = startIndex + pagination.perPage;
-  const paginatedMeters = filteredMeters.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<Meter> & { id: string; label: string }> = [
     // Action column
@@ -251,7 +256,7 @@ const MeterList: React.FC<MeterListProps> = ({
 
   const hasActiveFilters = filters.building_id || filters.floor_id || filters.unit_id;
 
-  if (paginatedMeters.length === 0) {
+  if (filteredMeters.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <Gauge className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -385,7 +390,7 @@ const MeterList: React.FC<MeterListProps> = ({
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedMeters.map((meter) => (
+          {filteredMeters.map((meter) => (
             <DataCard
               key={meter.id}
               title={meter.name}
@@ -403,20 +408,20 @@ const MeterList: React.FC<MeterListProps> = ({
           ))}
         </div>
       ) : (
-        <DataTable columns={visibleColumns} data={paginatedMeters} viewPath={(row) => `/asset/${row.id}`} />
+        <DataTable columns={visibleColumns} data={filteredMeters} viewPath={(row) => `/asset/${row.id}`} />
       )}
 
-      {paginatedMeters.length > 0 && (
+      {filteredMeters.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredMeters.length)} of {filteredMeters.length} records
+            Showing {startIndex + 1} to {Math.min(startIndex + filteredMeters.length, pagination.total || filteredMeters.length)} of {pagination.total || filteredMeters.length} records
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'<<'}</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredMeters.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredMeters.length / prev.perPage) }))} disabled={endIndex >= filteredMeters.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages || prev.page }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'>>'}</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>

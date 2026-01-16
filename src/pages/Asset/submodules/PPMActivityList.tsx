@@ -4,7 +4,7 @@ import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
 import { Loader2, Activity, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import { getPPMTask } from '../../../api';
+import { ppmActivityService } from '../../../services/assetSubModules.service';
 
 interface PPMActivity {
   id: number;
@@ -51,26 +51,40 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
+  // Debounce search input and reset to first page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
   const fetchActivities = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getPPMTask();
-      const filteredServiceTask = response.data.activities
-        .filter((asset: PPMActivity) => asset.asset_name)
-        .sort((a: PPMActivity, b: PPMActivity) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      setActivities(filteredServiceTask);
+      const response = await ppmActivityService.getPPMActivities(
+        pagination.page,
+        pagination.perPage,
+        {
+          status: selectedStatus,
+          search: debouncedSearch || undefined,
+        }
+      );
+      const data = response.data;
+      const list = data.activities || data.data || data || [];
+      setActivities(list);
       setPagination(prev => ({
         ...prev,
-        total: filteredServiceTask.length,
-        totalPages: Math.ceil(filteredServiceTask.length / prev.perPage),
+        total: data.total || data.total_count || data.count || list.length,
+        totalPages: data.total_pages || Math.ceil((data.total || list.length) / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch PPM activities');
@@ -78,7 +92,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, selectedStatus, debouncedSearch]);
 
   useEffect(() => { fetchActivities(); }, [fetchActivities]);
 
@@ -93,35 +107,19 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
 
   const getActivityStatus = (activity: PPMActivity): StatusType => {
     const status = activity.status?.toLowerCase();
-    if (status === 'complete' || status === 'completed') return 'checked-out';
-    if (status === 'overdue') return 'breakdown';
-    if (status === 'pending') return 'pending';
+    if (status === 'complete' || status === 'completed' || status === 'closed' || status === 'done') return 'checked-out';
+    if (status === 'overdue' || status === 'breakdown') return 'breakdown';
+    if (status === 'pending' || status === 'open') return 'pending';
+    if (status === 'in_progress' || status === 'ongoing' || status === 'assigned' || status === 'inprogress') return 'maintenance';
     return 'available';
   };
 
-  // Client-side search filtering
-  let filteredActivities = activities.filter(activity => 
-    !searchValue || 
-    activity.asset_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    activity.checklist_name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  // Client-side status filtering
-  if (selectedStatus !== 'all') {
-    filteredActivities = filteredActivities.filter(
-      (item) => item.status.toLowerCase() === selectedStatus
-    );
-  }
-
-  // Client-side pagination
   const startIndex = (pagination.page - 1) * pagination.perPage;
-  const endIndex = startIndex + pagination.perPage;
-  const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<PPMActivity> & { id: string; label: string }> = [
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { id: 'view', label: 'View', key: 'view', header: 'View', width: '80px', render: (_v, row) => (
-      <Link to={`/assets/routine-task-details/${row.asset_id}/${row.id}`} className="inline-flex items-center justify-center text-primary hover:text-primary/80" aria-label="View details">
+      <Link to={`/asset/routine-task/${row.asset_id}/${row.id}`} className="inline-flex items-center justify-center text-primary hover:text-primary/80" aria-label="View details">
         <Eye className="w-4 h-4" />
       </Link>
     ) },
@@ -173,7 +171,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
     );
   }
 
-  if (paginatedActivities.length === 0) {
+  if (activities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <Activity className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -185,9 +183,9 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
 
   return (
     <>
-      {/* Status Filter Radio Buttons */}
-      <div className="flex justify-between items-center mb-4 gap-2 flex-wrap">
-        <div className="flex justify-between items-center gap-2 border border-border rounded-md px-3 py-2">
+      {/* Status Filter - Aligned at same level as toolbar controls */}
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap -mt-16">
+        <div className="flex items-center gap-3 border border-border rounded-md px-3 py-2">
           <div className="flex items-center gap-2">
             <input
               type="radio"
@@ -262,7 +260,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedActivities.map((activity) => (
+          {activities.map((activity) => (
             <DataCard
               key={activity.id}
               title={activity.asset_name || `Activity #${activity.id}`}
@@ -273,29 +271,29 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
                 { label: 'Status', value: activity.status || '-' },
                 { label: 'Assigned To', value: activity.assigned_to_name || '-' },
               ]}
-              viewPath={`/assets/routine-task-details/${activity.asset_id}/${activity.id}`}
+              viewPath={`/asset/routine-task/${activity.asset_id}/${activity.id}`}
             />
           ))}
         </div>
       ) : (
-        <DataTable 
-          columns={visibleColumns} 
-          data={paginatedActivities} 
-          viewPath={(row) => `/assets/routine-task-details/${row.asset_id}/${row.id}`} 
+        <DataTable
+          columns={visibleColumns}
+          data={activities}
+          viewPath={(row) => `/asset/routine-task/${row.asset_id}/${row.id}`}
         />
       )}
 
-      {paginatedActivities.length > 0 && (
+      {activities.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredActivities.length)} of {filteredActivities.length} records
+            Showing {startIndex + 1} to {Math.min(startIndex + activities.length, pagination.total || activities.length)} of {pagination.total || activities.length} records
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'<<'}</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredActivities.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredActivities.length / prev.perPage) }))} disabled={endIndex >= filteredActivities.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages || prev.page }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'>>'}</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>

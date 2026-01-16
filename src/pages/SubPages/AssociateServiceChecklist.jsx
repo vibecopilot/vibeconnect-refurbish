@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
+import Breadcrumb from "../../components/ui/Breadcrumb";
 import {
   deleteServiceAssociation,
   getAssignedTo,
@@ -23,6 +23,7 @@ const AssociateServiceChecklist = () => {
   const [added, setAdded] = useState(false);
   const [selectedUserOption, setSelectedUserOption] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -98,15 +99,24 @@ const AssociateServiceChecklist = () => {
 
   useEffect(() => {
     const fetchServicesList = async () => {
-      // getting all the services
-      const servicesListResp = await getSoftServices();
-      const softServices = servicesListResp.data;
-      const serviceList = softServices.map((service) => ({
-        value: service.id,
-        label: service.name,
-      }));
-      console.log("Service list", serviceList);
-      setServices(serviceList);
+      try {
+        setServicesLoading(true);
+        const servicesListResp = await getSoftServices();
+        const raw = servicesListResp.data;
+        const softServices = Array.isArray(raw) ? raw : raw?.soft_services || raw?.data || [];
+        const serviceList = softServices.map((service) => ({
+          value: service.id,
+          label: service.name,
+        }));
+        console.log("Service list", serviceList);
+        setServices(serviceList);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+        setServices([]);
+        toast.error("Failed to load services");
+      } finally {
+        setServicesLoading(false);
+      }
     };
     const fetchAssignedTo = async () => {
       const assignedToList = await getAssignedTo();
@@ -397,90 +407,90 @@ const AssociateServiceChecklist = () => {
   };
 
   return (
-    <section className="flex ">
-      <div className="hidden md:block">
-        <Navbar />
-      </div>
-      <div className="p-4 overflow-hidden w-full my-2 flex mx-3 flex-col">
-        <h2 className="text-lg font-medium border-b-2 border-gray-400 mb-2">
-          Associate Checklist
-        </h2>
-        <div className="grid md:grid-cols-3 items-center gap-4">
-          <div className="w-full z-20">
-            <Select
-              isMulti
-              onChange={handleChangeSelect}
+    <div className="p-4 md:p-6 bg-background min-h-full">
+      <div className="w-full max-w-full mx-auto space-y-6">
+        <Breadcrumb
+          items={[
+            { label: "FM Module" },
+            { label: "Soft Services", path: "/soft-services" },
+            { label: "Checklist", path: "/soft-services/checklist" },
+            { label: "Associate Checklist" },
+          ]}
+        />
+
+        <div className="bg-card border border-border rounded-2xl shadow-sm p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-foreground">Associate Checklist</h1>
+              <p className="text-sm text-muted-foreground">Link services and assign users to this checklist</p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 items-center gap-4">
+            <div className="w-full z-20">
+              <Select
+                isMulti
+                onChange={handleChangeSelect}
               options={availableServices} // Use filtered services here
               noOptionsMessage={() => "No Services Available"}
               placeholder="Select Services"
               value={selectedOption}
               isDisabled={loading}
-              isLoading={services.length === 0}
-            />
-            {availableServices.length === 0 && services.length > 0 && (
-              <p className="text-sm text-gray-500 mt-1">
-                All services are already associated with this checklist
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col z-20">
-            {/* <label className="font-medium my-2">Assign To</label> */}
-            {/* <select
-              value={formData.assigned_to}
-              onChange={handleChange}
-              className="border border-gray-300 p-2 rounded-sm"
-            >
-              <option value="">Select Assign To</option>
-              {assignedTo.map((assign) => (
-                <option key={assign.id} value={assign.id}>
-                  {assign.firstname} {assign.lastname}
-                </option>
-              ))}
-                
-            </select> */}
-            <Select
-              isMulti
-              onChange={handleUserChangeSelect}
-              options={assignedTo}
-              noOptionsMessage={() => "No Users Available"}
-              placeholder="Select Users"
-            />
-          </div>
-          <div>
-            <button
-              className="border-2 border-black p-1 px-4 rounded-md"
-              onClick={handleAddAssociate}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Create Activity"}
-            </button>
-            {loading && (
-              <DNA
-                visible={true}
-                height={40}
-                width={40}
-                ariaLabel="dna-loading"
-                wrapperClass="dna-wrapper"
+              isLoading={servicesLoading}
               />
-            )}
-          </div>
-        </div>
-        <div className="my-4">
-          {listLoading ? (
-            <div className="flex justify-center items-center h-32">
-              <DNA
-                visible={true}
-                height={60}
-                width={60}
-                ariaLabel="dna-loading"
-                wrapperClass="dna-wrapper"
+              {availableServices.length === 0 && services.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  All services are already associated with this checklist
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col z-20">
+              <Select
+                isMulti
+                onChange={handleUserChangeSelect}
+                options={assignedTo}
+                noOptionsMessage={() => "No Users Available"}
+                placeholder="Select Users"
               />
             </div>
-          ) : (
-            <Table columns={column} data={association} pagination={false} />
-          )}
+            <div>
+              <button
+                className="border border-border p-2 px-4 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                onClick={handleAddAssociate}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Create Activity"}
+              </button>
+              {loading && (
+                <DNA
+                  visible={true}
+                  height={40}
+                  width={40}
+                  ariaLabel="dna-loading"
+                  wrapperClass="dna-wrapper"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="my-4">
+            {listLoading ? (
+              <div className="flex justify-center items-center h-32">
+                <DNA
+                  visible={true}
+                  height={60}
+                  width={60}
+                  ariaLabel="dna-loading"
+                  wrapperClass="dna-wrapper"
+                />
+              </div>
+            ) : (
+              <Table columns={column} data={association} pagination={false} />
+            )}
+          </div>
         </div>
       </div>
+
       <EditAssociationModal
         show={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -489,7 +499,7 @@ const AssociateServiceChecklist = () => {
         assignedTo={assignedTo}
         onUpdate={() => setAdded(true)} // triggers data refresh
       />
-    </section>
+    </div>
   );
 };
 

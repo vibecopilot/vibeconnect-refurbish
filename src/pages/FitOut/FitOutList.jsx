@@ -1,6 +1,3 @@
-import React from "react";
-import FitoutHub from "./FitoutHub";
+import FitoutList from './FitoutList.tsx';
 
-const FitOutList = () => <FitoutHub />;
-
-export default FitOutList;
+export default FitoutList;

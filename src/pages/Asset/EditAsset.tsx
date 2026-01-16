@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { Settings, MapPin, Package, Calendar, FileText, Shield, Plus, X, Loader2, UserPlus } from "lucide-react";
@@ -9,7 +9,6 @@ import FormGrid from "../../components/ui/FormGrid";
 import Button from "@/components/ui/Button";
 import PageTitle from "../../components/ui/PageTitle";
 import { getItemInLocalStorage } from "../../utils/localStorage";
-import { assetService } from "../../services/asset.service";
 import {
   getAssetGroups,
   getAssetSubGroups,
@@ -25,11 +24,14 @@ import AddSuppliers from "../../containers/modals/AddSuppliersModal";
 const EditAsset: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const storedBuildings = getItemInLocalStorage("Building");
   const buildings = Array.isArray(storedBuildings) ? storedBuildings : [];
   const themeColor = useSelector((state: any) => state.theme.color);
 
   const [loading, setLoading] = useState(true);
+  // Track buildings locally so we can inject the current asset's building even if it's missing from localStorage.
+  const [buildingList, setBuildingList] = useState<any[]>(buildings);
   const [floors, setFloors] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -41,6 +43,12 @@ const EditAsset: React.FC = () => {
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [meterType, setMeterType] = useState("");
   const [consumptionType, setConsumptionType] = useState("");
+  const [attachments, setAttachments] = useState({
+    invoice: [] as any[],
+    insurance: [] as any[],
+    manuals: [] as any[],
+    others: [] as any[],
+  });
 
   const [formData, setFormData] = useState({
     site_id: getItemInLocalStorage("SITEID") || "",
@@ -81,7 +89,14 @@ const EditAsset: React.FC = () => {
     insurance: [] as File[],
     manuals: [] as File[],
     others: [] as File[],
+
+
+
+  
   });
+
+
+
 
   const fetchVendors = async () => {
     try {
@@ -120,11 +135,23 @@ const EditAsset: React.FC = () => {
       try {
         const res = await getSiteAssetDetails(id);
         const data = res.data;
+
+        console.log("prefill", {
+  lat: data.latitude,
+  lng: data.longitude,
+  sub: data.sub_group_id,
+  parent: data.parent_asset_id,
+});
         
         // Fetch related data based on the asset
         if (data.building_id) {
           const floorResp = await getFloors(Number(data.building_id));
           setFloors(floorResp.data?.map((item: any) => ({ name: item.name, id: item.id })) || []);
+          // Ensure the building select has an option for the current asset even if it's not in localStorage.
+          setBuildingList(prev => {
+            if (prev.some((b) => String(b.id) === String(data.building_id))) return prev;
+            return [...prev, { id: data.building_id, name: data.building_name || `Building #${data.building_id}` }];
+          });
         }
         if (data.floor_id) {
           const unitResp = await getUnits(Number(data.floor_id));
@@ -135,8 +162,30 @@ const EditAsset: React.FC = () => {
             getAssetSubGroups(Number(data.asset_group_id)),
             getParentAsset(Number(data.asset_group_id))
           ]);
-          setAssetSubGroups(subGroupResp?.map((item: any) => ({ name: item.name, id: item.id })) || []);
-          setParentAsset(parentAssetResp.data?.site_assets || []);
+          const subGroupList = Array.isArray(subGroupResp)
+            ? subGroupResp
+            : Array.isArray(subGroupResp?.data)
+              ? subGroupResp.data
+              : Array.isArray(subGroupResp?.sub_groups)
+                ? subGroupResp.sub_groups
+                : [];
+const mappedSubGroups = (subGroupList || []).map((item: any) => ({
+  name: item.name,
+  id: item.id ?? item.sub_group_id ?? item.subGroupId,
+}));
+
+// ✅ If current asset sub group is not coming in list, inject it
+const currentSubId = data.sub_group_id ?? data.asset_sub_group_id;
+if (currentSubId && !mappedSubGroups.some((s: any) => String(s.id) === String(currentSubId))) {
+  mappedSubGroups.push({
+    id: currentSubId,
+    name: data.sub_group_name || `Sub Group #${currentSubId}`,
+  });
+}
+
+setAssetSubGroups(mappedSubGroups);
+
+          setParentAsset(parentAssetResp.data?.site_assets || parentAssetResp?.site_assets || []);
         }
 
         // Format dates for input fields
@@ -153,29 +202,35 @@ const EditAsset: React.FC = () => {
           unit_id: String(data.unit_id || ""),
           name: data.name || "",
           oem_name: data.oem_name || "",
-          latitude: data.latitude || "",
-          longitude: data.longitude || "",
+         latitude: data.latitude ?? "",
+longitude: data.longitude ?? "",
+
           asset_number: data.asset_number || "",
           equipment_id: data.equipment_id || data.equipemnt_id || "",
           serial_number: data.serial_number || "",
           model_number: data.model_number || "",
           purchased_on: formatDateForInput(data.purchased_on || data.purchase_date),
           purchase_cost: String(data.purchase_cost || ""),
-          comprehensive: data.comprehensive || "",
+          comprehensive: data.comprehensive === true ? "true" : data.comprehensive === false ? "false" : "",
           asset_group_id: String(data.asset_group_id || ""),
-          asset_sub_group_id: String(data.asset_sub_group_id || ""),
-          parent_asset_id: String(data.parent_asset_id || ""),
+          asset_sub_group_id: String(data.asset_sub_group_id ?? data.sub_group_id ?? data.subGroupId ?? ""),
+
+          parent_asset_id:
+  data.parent_asset_id && data.parent_asset_id !== 0
+    ? String(data.parent_asset_id)
+    : "",
+
           installation: formatDateForInput(data.installation),
           warranty_expiry: formatDateForInput(data.warranty_expiry),
           warranty_start: formatDateForInput(data.warranty_start),
-          warranty: data.warranty_start ? true : false,
-          complianceApplicable: false,
-          compliance_start: "",
-          compliance_end: "",
-          critical: data.critical || false,
+          warranty: Boolean(data.warranty_start || data.warranty_expiry),
+          complianceApplicable: data.complianceApplicable ?? data.compliance_applicable ?? false,
+          compliance_start: formatDateForInput(data.compliance_start || data.complianceStart),
+          compliance_end: formatDateForInput(data.compliance_end || data.complianceEnd),
+          critical: Boolean(data.critical),
           capacity: data.capacity || "",
-          breakdown: data.breakdown || false,
-          is_meter: data.is_meter || false,
+          breakdown: Boolean(data.breakdown),
+          is_meter: Boolean(data.is_meter),
           asset_type: data.asset_type || "",
           vendor_id: String(data.vendor_id || ""),
           unit: data.uom || "",
@@ -187,9 +242,23 @@ const EditAsset: React.FC = () => {
           others: [],
         });
 
-        if (data.asset_type) {
-          setMeterType(data.asset_type);
+        if (data.is_meter) {
+          setMeterType(data.asset_type || "");
+        } else {
+          setMeterType("");
         }
+        if (data.is_meter && data.asset_params && data.asset_params.length > 0) {
+          setConsumptionType("ConsumptionAssetMeasureType");
+        } else {
+          setConsumptionType("");
+        }
+
+        setAttachments({
+          invoice: data.purchase_invoices || [],
+          insurance: data.insurances || [],
+          manuals: data.manuals || [],
+          others: data.other_files || [],
+        });
 
         // Load existing consumption data (asset_params)
         if (data.asset_params && Array.isArray(data.asset_params)) {
@@ -248,8 +317,21 @@ const EditAsset: React.FC = () => {
           getAssetSubGroups(groupId),
           getParentAsset(groupId)
         ]);
-        setAssetSubGroups(subGroupResp?.map((item: any) => ({ name: item.name, id: item.id })) || []);
-        setParentAsset(parentAssetResp.data?.site_assets || []);
+        const subGroupList = Array.isArray(subGroupResp)
+          ? subGroupResp
+          : Array.isArray(subGroupResp?.data)
+            ? subGroupResp.data
+            : Array.isArray(subGroupResp?.sub_groups)
+              ? subGroupResp.sub_groups
+              : [];
+        setAssetSubGroups(
+  (subGroupList || []).map((item: any) => ({
+    name: item.name,
+    id: item.id ?? item.sub_group_id ?? item.subGroupId,
+  }))
+);
+
+        setParentAsset(parentAssetResp.data?.site_assets || parentAssetResp?.site_assets || []);
       } catch (error) {
         console.log(error);
       }
@@ -263,6 +345,44 @@ const EditAsset: React.FC = () => {
     if (files) {
       setFormData(prev => ({ ...prev, [fieldName]: Array.from(files) }));
     }
+  };
+
+  const getFileName = (file: any, fallback: string) => {
+    const raw = file?.document || file?.url || file?.name || "";
+    if (!raw) return fallback;
+    const parts = raw.split("/");
+    return parts[parts.length - 1] || fallback;
+  };
+
+  const renderExistingFiles = (files: any[], label: string) => {
+    if (!files || files.length === 0) return null;
+    return (
+      <div className="mt-2 text-sm">
+        <p className="text-muted-foreground mb-1">Existing {label}:</p>
+        <ul className="space-y-1">
+          {files.map((file, idx) => {
+            const href = file?.document || file?.url;
+            const text = getFileName(file, `${label} ${idx + 1}`);
+            return (
+              <li key={`${label}-${file?.id || idx}`}>
+                {href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {text}
+                  </a>
+                ) : (
+                  <span>{text}</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
   };
 
   const handleAddConsumption = () => {
@@ -391,7 +511,7 @@ const EditAsset: React.FC = () => {
     }
   };
 
-  const buildingOptions = buildings.map((b: any) => ({ value: String(b.id), label: b.name }));
+  const buildingOptions = buildingList.map((b: any) => ({ value: String(b.id), label: b.name }));
   const floorOptions = floors.map((f: any) => ({ value: String(f.id), label: f.name }));
   const unitOptions = units.map((u: any) => ({ value: String(u.id), label: u.name }));
   const groupOptions = assetGroups.map((g: any) => ({ value: String(g.id), label: g.name }));
@@ -408,15 +528,26 @@ const EditAsset: React.FC = () => {
     );
   }
 
+  // Determine breadcrumb path based on location state or asset type
+  const getBreadcrumbPath = () => {
+    if (location.state?.from === 'overview') {
+      return { label: 'Overview', path: '/asset/overview' };
+    }
+    if (formData.is_meter) {
+      return { label: 'Meter', path: '/asset/meter' };
+    }
+    return { label: 'Asset', path: '/asset' };
+  };
+
   return (
     <div className="p-6">
-      <PageTitle 
-        title="Edit Asset" 
+      <PageTitle
+        title="Edit Asset"
         breadcrumbs={[
-          { label: 'Asset', path: '/asset' }, 
+          getBreadcrumbPath(),
           { label: formData.name || `Asset #${id}`, path: `/asset/${id}` },
           { label: 'Edit' }
-        ]} 
+        ]}
       />
       
       <div className="space-y-6">
@@ -1024,6 +1155,7 @@ const EditAsset: React.FC = () => {
                 onChange={(e) => handleFileChange(e.target.files, 'invoice')}
                 className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
+              {renderExistingFiles(attachments.invoice, "Purchase Invoice")}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Insurance Documents</label>
@@ -1033,6 +1165,7 @@ const EditAsset: React.FC = () => {
                 onChange={(e) => handleFileChange(e.target.files, 'insurance')}
                 className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
+              {renderExistingFiles(attachments.insurance, "Insurance")}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Manuals</label>
@@ -1042,6 +1175,7 @@ const EditAsset: React.FC = () => {
                 onChange={(e) => handleFileChange(e.target.files, 'manuals')}
                 className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
+              {renderExistingFiles(attachments.manuals, "Manual")}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Other Files</label>
@@ -1051,6 +1185,7 @@ const EditAsset: React.FC = () => {
                 onChange={(e) => handleFileChange(e.target.files, 'others')}
                 className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
+              {renderExistingFiles(attachments.others, "Other File")}
             </div>
           </FormGrid>
         </FormSection>

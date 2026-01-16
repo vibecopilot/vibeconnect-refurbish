@@ -69,6 +69,13 @@ export const softServiceService = {
       params: { token: getToken() },
     });
   },
+
+  importServices: async (formData: FormData) => {
+    return axiosInstance.post('/soft_services/import.json', formData, {
+      params: { token: getToken() },
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 export default softServiceService;

@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { Loader2, ClipboardCheck, AlertCircle, RefreshCw, Eye, EyeOff, Edit } from 'lucide-react';
-import { getAssetPPMList } from '../../../api';
+import { Loader2, ClipboardCheck, AlertCircle, RefreshCw, Eye, EyeOff, Copy } from 'lucide-react';
+import { ppmChecklistService } from '../../../services/assetSubModules.service';
 
 interface PPMChecklist {
   id: number;
@@ -54,24 +54,33 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
+  // Debounce search input and reset page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
   const fetchChecklists = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getAssetPPMList();
-      const sortedPPMData = response.data.checklists.sort((a: PPMChecklist, b: PPMChecklist) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      setChecklists(sortedPPMData);
+      const response = await ppmChecklistService.getPPMChecklists(pagination.page, pagination.perPage, debouncedSearch || undefined);
+      const data = response.data;
+      const list = data.checklists || data.data || data || [];
+      setChecklists(list);
       setPagination(prev => ({
         ...prev,
-        total: sortedPPMData.length,
-        totalPages: Math.ceil(sortedPPMData.length / prev.perPage),
+        total: data.total || data.total_count || data.count || list.length,
+        totalPages: data.total_pages || Math.ceil((data.total || list.length) / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch PPM checklists');
@@ -79,19 +88,11 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, debouncedSearch]);
 
   useEffect(() => { fetchChecklists(); }, [fetchChecklists]);
 
-  // Client-side search filtering
-  const filteredChecklists = checklists.filter(checklist => 
-    !searchValue || checklist.name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  // Client-side pagination
   const startIndex = (pagination.page - 1) * pagination.perPage;
-  const endIndex = startIndex + pagination.perPage;
-  const paginatedChecklists = filteredChecklists.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<PPMChecklist> & { id: string; label: string }> = [
     // Action column
@@ -100,14 +101,14 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
       label: 'Action',
       key: 'action',
       header: 'Action',
-      width: '100px',
+      width: '120px',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <Link to={`/asset/ppm-checklist/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/ppm-checklist/${row.id}`} className="text-primary hover:text-primary/80" title="View">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/asset/edit-ppm/${row.id}`} className="text-primary hover:text-primary/80">
-            <Edit className="w-4 h-4" />
+          <Link to={`/admin/copy-ppm-checklist/${row.id}`} className="text-primary hover:text-primary/80" title="Copy">
+            <Copy className="w-4 h-4" />
           </Link>
         </div>
       )
@@ -124,13 +125,13 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
       header: 'No. Of Groups', 
       render: (_v, row) => row.groups?.length || 0 
     },
-    { 
-      id: 'associations', 
-      label: 'Associations', 
-      key: 'associations', 
-      header: 'Associations', 
+    {
+      id: 'associations',
+      label: 'Associations',
+      key: 'associations',
+      header: 'Associations',
       render: (_v, row) => (
-        <Link to={`/assets/associate-checklist/${row.id}`} className="px-4 py-1 bg-green-500 text-white rounded-full text-xs">
+        <Link to={`/assets/associate-ppm-checklist/${row.id}`} className="px-4 py-1 bg-green-500 text-white rounded-full text-xs hover:bg-green-600 transition-colors">
           Associate
         </Link>
       )
@@ -173,7 +174,7 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
     );
   }
 
-  if (paginatedChecklists.length === 0) {
+  if (checklists.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <ClipboardCheck className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -213,7 +214,7 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedChecklists.map((checklist) => (
+          {checklists.map((checklist) => (
             <DataCard
               key={checklist.id}
               title={checklist.name}
@@ -226,29 +227,29 @@ const PPMChecklistList: React.FC<PPMChecklistListProps> = ({
                 { label: 'Groups', value: checklist.groups?.length?.toString() || '0' },
               ]}
               viewPath={`/asset/ppm-checklist/${checklist.id}`}
-              editPath={`/asset/edit-ppm/${checklist.id}`}
+              copyPath={`/admin/copy-ppm-checklist/${checklist.id}`}
             />
           ))}
         </div>
       ) : (
         <DataTable
           columns={visibleColumns}
-          data={paginatedChecklists}
+          data={checklists}
           viewPath={(row) => `/asset/ppm-checklist/${row.id}`}
         />
       )}
 
-      {paginatedChecklists.length > 0 && (
+      {checklists.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredChecklists.length)} of {filteredChecklists.length} records
+            Showing {startIndex + 1} to {Math.min(startIndex + checklists.length, pagination.total || checklists.length)} of {pagination.total || checklists.length} records
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'<<'}</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredChecklists.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredChecklists.length / prev.perPage) }))} disabled={endIndex >= filteredChecklists.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages || prev.page }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'>>'}</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>

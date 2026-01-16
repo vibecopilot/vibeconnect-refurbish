@@ -13,6 +13,8 @@ import Cron from "react-js-cron";
 import "react-js-cron/dist/styles.css";
 import { FaTrash } from "react-icons/fa";
 import { useParams } from "react-router-dom";
+import Breadcrumb from "../../components/ui/Breadcrumb";
+import { FileText, Package, Calendar, Users, Settings, Clock, X, Plus } from "lucide-react";
 
 const EditPPMChecklist = () => {
   const { id } = useParams();
@@ -498,29 +500,54 @@ const EditPPMChecklist = () => {
     
     
   return (
-    <section>
-      <div className="m-2">
-        <h2 style={{ background: themeColor }} className="text-center text-xl font-bold p-2  rounded-full text-white">
-         
-          {isEditing ? " Edit PPM Checklist" : "PPM Checklist Details"}
-        </h2>
-        <div className="md:mx-20 my-5 mb-10 sm:border border-gray-400 p-5 px-10 rounded-lg sm:shadow-xl">
-        <div className="flex justify-end">
+    <div className="p-4 md:p-6 bg-background">
+      <div className="mx-auto max-w-[1400px] xl:max-w-[1600px] space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[
+            { label: "FM Module" },
+            { label: "Asset", path: "/asset" },
+            { label: "PPM Checklist", path: "/asset/ppm-checklist" },
+            { label: isEditing ? "Edit PPM Checklist" : "PPM Checklist Details" },
+          ]}
+        />
+
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              {isEditing ? "Edit PPM Checklist" : "PPM Checklist Details"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {isEditing ? "Update checklist information" : "View checklist details"}
+            </p>
+          </div>
+          <div className="flex gap-2">
             {!isEditing ? (
               <button
-                className="flex items-center gap-2 font-medium p-1 px-4 rounded-full border-2 border-black"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
                 onClick={toggleEdit}
               >
                 <BiEdit /> Edit
               </button>
             ) : (
               <button
-                className="flex items-center gap-2 font-medium p-1 px-4 rounded-full bg-red-400 text-white"
+                className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-accent transition-colors font-medium"
                 onClick={toggleEdit}
               >
-                <CloseOutline /> Cancel
+                <X className="w-4 h-4" /> Cancel
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Settings Toggles */}
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-primary/5 px-6 py-4 border-b border-border">
+            <h2 className="font-semibold text-foreground flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              Settings
+            </h2>
           </div>
         <div className="py-4">
       {/* Main Grid for all Toggles */}
@@ -1217,20 +1244,26 @@ const EditPPMChecklist = () => {
       />
       
     </div>
-    {isEditing ? (
-
-            <div className="flex justify-center">
-              <button onClick={handleSubmit} className="bg-black text-white p-2 px-4 rounded-md font-medium">
-                Save
+          {isEditing && (
+            <div className="flex justify-center gap-3 mt-6">
+              <button
+                onClick={() => window.history.back()}
+                className="px-6 py-2 border border-border rounded-lg text-foreground hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+              >
+                Save Changes
               </button>
             </div>
-    ):(
-<div></div>
-    )}
-          </div>
+          )}
         </div>
       </div>
-    </section>
+    </div>
+    </div>
   );
 };
 

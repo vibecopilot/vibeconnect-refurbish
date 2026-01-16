@@ -17,7 +17,6 @@ import FileInputBox from "../../containers/Inputs/FileInputBox";
 import { ColorPicker } from "antd";
 // import TicketCategorySetup from "../Setup/TicketSetup/TicketCategorySetup";
 import Navbar from "../../components/Navbar";
-import FitOutList from "./FitOutList";
 import CategoryPage from "./CategoryPage";
 import DataTable from "react-data-table-component";
 import axiosInstance from "../../api/axiosInstance";
@@ -499,16 +498,9 @@ const FitOutSetupPage = ({ embedded = false }) => {
     </div>
   );
 
-  if (embedded) {
-    return <div className="w-full">{content}</div>;
-  }
-
-  return (
-    <section className="flex">
-      <FitOutList />
-      {content}
-    </section>
-  );
+  // FitOutSetupPage should only render the setup content
+  // The FitoutHub component handles tab navigation and renders FitoutList separately
+  return <div className="w-full">{content}</div>;
 };
 
 export default FitOutSetupPage;

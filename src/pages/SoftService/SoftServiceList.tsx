@@ -6,7 +6,8 @@ import DataCard from '../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../components/ui/StatusBadge';
 import { softServiceService, SoftService } from '../../services/softService.service';
-import { Loader2, Wrench, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, Wrench, AlertCircle, RefreshCw, Upload, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const SoftServiceList: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const SoftServiceList: React.FC = () => {
   const [services, setServices] = useState<SoftService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
   
   const getPerPage = (mode: 'grid' | 'table') => mode === 'grid' ? 12 : 10;
   const [pagination, setPagination] = useState({ page: 1, perPage: getPerPage('grid'), total: 0, totalPages: 0 });
@@ -46,6 +49,37 @@ const SoftServiceList: React.FC = () => {
   }, [pagination.page, pagination.perPage]);
 
   useEffect(() => { fetchServices(); }, [fetchServices]);
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      toast.error('No file selected');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', importFile);
+    try {
+      toast.loading('Uploading services...');
+      const res = await softServiceService.importServices(formData);
+      toast.dismiss();
+      if (res.status === 200) {
+        toast.success('Services imported successfully');
+        setIsImportOpen(false);
+        setImportFile(null);
+        fetchServices();
+      } else {
+        toast.error('Import failed, please try again');
+      }
+    } catch (err) {
+      toast.dismiss();
+      console.error(err);
+      toast.error('Import failed, please try again');
+    }
+  };
+
+  const handleDownloadSample = async () => {
+    toast.error('Sample download endpoint not configured yet');
+  };
 
   const getServiceStatus = (service: SoftService): StatusType => {
     const status = service.status?.toLowerCase();
@@ -115,7 +149,73 @@ const SoftServiceList: React.FC = () => {
             alert('Please select at least one service to generate QR code');
           }
         }}
+        additionalButtons={(
+          <button
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </button>
+        )}
       />
+
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-xl bg-card shadow-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Bulk Upload
+              </h2>
+              <button className="text-xl leading-none" onClick={() => setIsImportOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleImportSubmit} className="space-y-4">
+              <div className="border border-dashed border-border rounded-lg p-6 text-center bg-muted/30">
+                <p className="font-medium mb-2">Drag &amp; Drop or</p>
+                <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  Choose File
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-sm text-muted-foreground mt-2">{importFile ? importFile.name : 'No file chosen'}</p>
+              </div>
+
+              <div className="flex justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleDownloadSample}
+                  className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Sample Format
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsImportOpen(false)}
+                    className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
+                  >
+                    Import
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
 

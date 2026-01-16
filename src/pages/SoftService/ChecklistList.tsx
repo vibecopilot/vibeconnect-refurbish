@@ -6,7 +6,7 @@ import DataCard from '../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../components/ui/StatusBadge';
 import { getServicesChecklist, exportChecklist } from '../../api';
-import { Loader2, ClipboardList, AlertCircle, RefreshCw, Eye, Copy } from 'lucide-react';
+import { Loader2, ClipboardList, AlertCircle, RefreshCw, Eye, Copy, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Checklist {
@@ -47,11 +47,19 @@ const ChecklistList: React.FC = () => {
     setPagination(prev => ({ ...prev, perPage: getPerPage(viewMode), page: 1 }));
   }, [viewMode]);
 
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchValue]);
+
   const fetchChecklists = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getServicesChecklist();
+      const response = await getServicesChecklist(
+        pagination.page,
+        pagination.perPage,
+        searchValue.trim()
+      );
       const data = response.data;
       const checklistList = Array.isArray(data) ? data : data?.checklists || data?.data || [];
       const normalized: Checklist[] = (checklistList || [])
@@ -77,20 +85,11 @@ const ChecklistList: React.FC = () => {
   // ✅ newest first (same as old project)
   .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
-      
-      // Filter by search
-const filtered = searchValue
-  ? normalized.filter((c) =>
-      (c.name || "").toLowerCase().includes(searchValue.toLowerCase())
-    )
-  : normalized;
-
-setChecklists(filtered);
-
+      setChecklists(normalized);
       setPagination(prev => ({
         ...prev,
-        total: filtered.length,
-        totalPages: Math.ceil(filtered.length / prev.perPage),
+        total: data.total || data.total_count || data.count || normalized.length,
+        totalPages: data.total_pages || Math.ceil((data.total || data.total_count || data.count || normalized.length) / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch checklists');
@@ -98,7 +97,7 @@ setChecklists(filtered);
     } finally {
       setLoading(false);
     }
-  }, [searchValue]);
+  }, [pagination.page, pagination.perPage, searchValue]);
 
   useEffect(() => { fetchChecklists(); }, [fetchChecklists]);
 
@@ -132,11 +131,6 @@ setChecklists(filtered);
     return 'in-use';
   };
 
-  const paginatedChecklists = checklists.slice(
-    (pagination.page - 1) * pagination.perPage,
-    pagination.page * pagination.perPage
-  );
-
   const columns: TableColumn<Checklist>[] = [
     {
       key: 'actions',
@@ -147,6 +141,9 @@ setChecklists(filtered);
           <Link to={`/soft-services/checklist/${row.id}`} className="p-1.5 rounded-md hover:bg-accent text-primary">
             <Eye className="w-4 h-4" />
           </Link>
+          <Link to={`/soft-services/checklist/${row.id}/edit`} className="p-1.5 rounded-md hover:bg-accent text-primary">
+            <Edit className="w-4 h-4" />
+          </Link>
           <Link to={`/admin/copy-checklist/service/${row.id}`} className="p-1.5 rounded-md hover:bg-accent text-primary">
             <Copy className="w-4 h-4" />
           </Link>
@@ -156,7 +153,18 @@ setChecklists(filtered);
     { key: 'name', header: 'NAME', sortable: true },
     { key: 'start_date', header: 'START DATE', render: (v) => formatDate(v) },
     { key: 'end_date', header: 'END DATE', render: (v) => formatDate(v) },
-    { key: 'priority', header: 'PRIORITY LEVEL', render: (v) => v ? <StatusBadge status={getPriorityStatus(v)} /> : '-' },
+    {
+      key: 'priority',
+      header: 'PRIORITY LEVEL',
+      render: (v) =>
+        v ? (
+          <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-accent text-foreground border border-border">
+            {String(v)}
+          </span>
+        ) : (
+          '-'
+        ),
+    },
     { key: 'frequency', header: 'FREQUENCY', render: (v) => v || '-' },
     {
   key: 'group_count',
@@ -168,9 +176,12 @@ setChecklists(filtered);
       key: 'associations', 
       header: 'ASSOCIATIONS', 
       render: (_, row) => (
-        <button className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors">
+        <Link
+          to={`/soft-services/associate-checklist/${row.id}`}
+          className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
+        >
           Associate
-        </button>
+        </Link>
       )
     },
   ];
@@ -220,7 +231,7 @@ setChecklists(filtered);
 
       {loading && <div className="flex items-center gap-2 mb-4 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Refreshing...</span></div>}
 
-      {!loading && paginatedChecklists.length === 0 && (
+      {!loading && checklists.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
           <ClipboardList className="w-16 h-16 text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Checklists Found</h3>
@@ -228,9 +239,9 @@ setChecklists(filtered);
         </div>
       )}
 
-      {viewMode === 'grid' && paginatedChecklists.length > 0 ? (
+      {viewMode === 'grid' && checklists.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedChecklists.map((checklist) => (
+          {checklists.map((checklist) => (
             <DataCard 
               key={checklist.id} 
               title={checklist.name} 
@@ -243,13 +254,15 @@ setChecklists(filtered);
                 { label: 'Groups', value: String(checklist.group_count || 0) },
               ]} 
               viewPath={`/soft-services/checklist/${checklist.id}`}
+              editPath={`/soft-services/checklist/${checklist.id}/edit`}
+              copyPath={`/admin/copy-checklist/service/${checklist.id}`}
             />
           ))}
         </div>
-      ) : paginatedChecklists.length > 0 && (
+      ) : checklists.length > 0 && (
         <DataTable 
           columns={columns} 
-          data={paginatedChecklists} 
+          data={checklists} 
         />
       )}
 

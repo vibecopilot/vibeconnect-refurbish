@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
-import { Loader2, ClipboardList, AlertCircle, RefreshCw, Eye, EyeOff, Upload, Download, Edit } from 'lucide-react';
-import { getChecklist, ChecklistImport, exportChecklist, downloadSampleChecklist } from '../../../api';
+import { Loader2, ClipboardList, AlertCircle, RefreshCw, Eye, EyeOff, Upload, Download, Edit, Copy } from 'lucide-react';
+import { getChecklistPaged, ChecklistImport, exportChecklist, downloadSampleChecklist } from '../../../api';
 import { getItemInLocalStorage } from '../../../utils/localStorage';
 import toast from 'react-hot-toast';
 
@@ -62,24 +62,36 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
   const [pagination, setPagination] = useState({ page: 1, perPage, total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [importFiles, setImportFiles] = useState<File[]>([]);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
 
+  // debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue.trim());
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
   const fetchChecklists = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getChecklist();
-      const sortedChecklists = response.data.checklists.sort((a: Checklist, b: Checklist) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      setChecklists(sortedChecklists);
+      const response = await getChecklistPaged(pagination.page, pagination.perPage, debouncedSearch);
+      const data = response.data;
+      const list = Array.isArray(data) ? data : data?.checklists || data?.data || [];
+      const total = data.total_entries ?? data.total ?? data.total_count ?? data.count ?? list.length;
+
+
+      setChecklists(list);
       setPagination(prev => ({
         ...prev,
-        total: sortedChecklists.length,
-        totalPages: Math.ceil(sortedChecklists.length / prev.perPage),
+        total,
+        totalPages: data.total_pages ?? Math.ceil(total / prev.perPage),
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch checklists');
@@ -87,7 +99,7 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, debouncedSearch]);
 
   useEffect(() => { fetchChecklists(); }, [fetchChecklists]);
 
@@ -174,15 +186,7 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
     }
   }, [onExportSet, checklists]);
 
-  // Client-side search filtering
-  const filteredChecklists = checklists.filter(checklist => 
-    !searchValue || checklist.name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
-
-  // Client-side pagination
   const startIndex = (pagination.page - 1) * pagination.perPage;
-  const endIndex = startIndex + pagination.perPage;
-  const paginatedChecklists = filteredChecklists.slice(startIndex, endIndex);
 
   const allColumns: Array<TableColumn<Checklist> & { id: string; label: string }> = [
     // Action column
@@ -194,11 +198,14 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <Link to={`/asset/checklist/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/checklist/${row.id}`} className="text-primary hover:text-primary/80" title="View">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/asset/checklist/${row.id}/edit`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/checklist/${row.id}/edit`} className="text-primary hover:text-primary/80" title="Edit">
             <Edit className="w-4 h-4" />
+          </Link>
+          <Link to={`/admin/copy-checklist/${row.id}`} className="text-primary hover:text-primary/80" title="Copy">
+            <Copy className="w-4 h-4" />
           </Link>
         </div>
       )
@@ -264,7 +271,10 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
     );
   }
 
-  if (paginatedChecklists.length === 0) {
+  const endIndex = startIndex + checklists.length;
+  const paginatedChecklists = checklists;
+
+  if (checklists.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <ClipboardList className="w-16 h-16 text-muted-foreground/50 mb-4" />
@@ -358,42 +368,43 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
       
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedChecklists.map((checklist) => (
+          {checklists.map((checklist) => (
             <DataCard
-              key={checklist.id}
-              title={checklist.name}
-              subtitle={`Type: ${checklist.ctype || 'Routine'}`}
-              status="available"
-              fields={[
-                { label: 'Frequency', value: checklist.frequency || '-' },
-                { label: 'Start Date', value: checklist.start_date || '-' },
-                { label: 'End Date', value: checklist.end_date || '-' },
-                { label: 'Groups', value: checklist.groups?.length?.toString() || '0' },
-              ]}
-              viewPath={`/asset/checklist/${checklist.id}`}
-              editPath={`/asset/checklist/${checklist.id}/edit`}
-            />
+  key={checklist.id}
+  title={checklist.name}
+  subtitle={`Type: ${checklist.ctype || 'Routine'}`}
+  fields={[
+    { label: 'Frequency', value: checklist.frequency || '-' },
+    { label: 'Start Date', value: checklist.start_date || '-' },
+    { label: 'End Date', value: checklist.end_date || '-' },
+    { label: 'Groups', value: checklist.groups?.length?.toString() || '0' },
+  ]}
+  viewPath={`/asset/checklist/${checklist.id}`}
+  editPath={`/asset/checklist/${checklist.id}/edit`}
+  copyPath={`/admin/copy-checklist/${checklist.id}`}
+/>
+
           ))}
         </div>
       ) : (
         <DataTable
           columns={visibleColumns}
-          data={paginatedChecklists}
+          data={checklists}
           viewPath={(row) => `/asset/checklist/${row.id}`}
         />
       )}
 
-      {paginatedChecklists.length > 0 && (
+      {checklists.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredChecklists.length)} of {filteredChecklists.length} records
+                              <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(startIndex + checklists.length, pagination.total || startIndex + checklists.length)} of {pagination.total || checklists.length} records
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">‹ Prev</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'<<'}</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Prev</button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={endIndex >= filteredChecklists.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredChecklists.length / prev.perPage) }))} disabled={endIndex >= filteredChecklists.length} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">»</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">Next</button>
+            <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages || prev.page }))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50">{'>>'}</button>
           </div>
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>
@@ -405,3 +416,4 @@ const ChecklistList: React.FC<ChecklistListProps> = ({
 };
 
 export default ChecklistList;
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Edit } from 'lucide-react';
+import { Eye, Edit, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StatusBadge, { StatusType } from './StatusBadge';
 
@@ -15,8 +15,10 @@ interface DataCardProps {
   fields: DataCardField[];
   viewPath?: string;
   editPath?: string;
+  copyPath?: string;
   onView?: () => void;
   onEdit?: () => void;
+  onCopy?: () => void;
   id?: string;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -29,8 +31,10 @@ const DataCard: React.FC<DataCardProps> = ({
   fields,
   viewPath,
   editPath,
+  copyPath,
   onView,
   onEdit,
+  onCopy,
   id,
   isSelected,
   onToggleSelect,
@@ -140,6 +144,25 @@ const DataCard: React.FC<DataCardProps> = ({
             >
               <Edit className="w-4 h-4" />
               Edit
+            </button>
+          )
+        )}
+        {(copyPath || onCopy) && (
+          copyPath ? (
+            <Link
+              to={copyPath}
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <Copy className="w-4 h-4" />
+              Copy
+            </Link>
+          ) : (
+            <button
+              onClick={onCopy}
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <Copy className="w-4 h-4" />
+              Copy
             </button>
           )
         )}

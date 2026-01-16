@@ -3,18 +3,20 @@ import { Link } from 'react-router-dom';
 import { Loader2, Package, Wrench, AlertTriangle, ClipboardCheck, Calendar, FileText, Eye, EyeOff, Grid, List, Edit2 } from 'lucide-react';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
-import { getSiteAsset } from '../../../api';
+import { getPerPageSiteAsset } from '../../../api';
 import { Asset } from '../../../services/asset.service';
 
 const AssetOverview: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [allAssets, setAllAssets] = useState<Asset[]>([]);
-  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [activeCard, setActiveCard] = useState<string>('all');
-  const [pagination, setPagination] = useState({ page: 1, perPage: 10, total: 0, totalPages: 0 });
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [cardFilter, setCardFilter] = useState<string>('');
+  const getPerPage = (mode: 'grid' | 'table') => (mode === 'grid' ? 12 : 10);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [pagination, setPagination] = useState({ page: 1, perPage: getPerPage('grid'), total: 0, totalPages: 0 });
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   // Statistics
   const [stats, setStats] = useState({
@@ -26,73 +28,98 @@ const AssetOverview: React.FC = () => {
     amc: 0,
   });
 
+  // Fetch stats for all cards (runs once on mount)
+  const fetchStats = useCallback(async () => {
+    try {
+      // Fetch each stat from backend with card_filter
+      const [totalRes, inUseRes, breakdownRes, activitiesRes, ppmRes, amcRes] = await Promise.all([
+        getPerPageSiteAsset(1, 1, '', ''), // all assets
+        getPerPageSiteAsset(1, 1, '', 'in_use'),
+        getPerPageSiteAsset(1, 1, '', 'breakdown'),
+        getPerPageSiteAsset(1, 1, '', 'activities_performed'),
+        getPerPageSiteAsset(1, 1, '', 'ppm_performed'),
+        getPerPageSiteAsset(1, 1, '', 'amc_performed'),
+      ]);
+
+      setStats({
+        total: totalRes.data.total || totalRes.data.total_count || 0,
+        inUse: inUseRes.data.total || inUseRes.data.total_count || 0,
+        breakdown: breakdownRes.data.total || breakdownRes.data.total_count || 0,
+        activities: activitiesRes.data.total || activitiesRes.data.total_count || 0,
+        ppm: ppmRes.data.total || ppmRes.data.total_count || 0,
+        amc: amcRes.data.total || amcRes.data.total_count || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  }, []);
+
+  // Fetch assets with current filter
   const fetchAssets = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getSiteAsset(pagination.page);
-      const assets = response.data.site_assets;
-      
+      const response = await getPerPageSiteAsset(pagination.page, pagination.perPage, searchValue, cardFilter);
+      const data = response.data;
+      const assetsList = data.site_assets || data.data || [];
+
       // Sort by created_at DESC
-      const sortedAssets = assets.sort((a: any, b: any) =>
+      const sortedAssets = assetsList.sort((a: any, b: any) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      const breakdownAssets = assets.filter((asset: any) => asset.breakdown === true);
-      const inUseAssets = assets.filter((asset: any) => asset.breakdown === false || asset.breakdown === null);
+      setAssets(sortedAssets);
 
-      setAllAssets(sortedAssets);
-      setFilteredAssets(sortedAssets);
-      setStats({
-        total: assets.length,
-        inUse: inUseAssets.length,
-        breakdown: breakdownAssets.length,
-        activities: 0, // TODO: Implement when API available
-        ppm: 0, // TODO: Implement when API available
-        amc: 0, // TODO: Implement when API available
-      });
-      
+      const totalCount = data.total || data.total_count || assetsList.length;
+
       // Set pagination
       setPagination(prev => ({
         ...prev,
-        total: assets.length,
-        totalPages: Math.ceil(assets.length / prev.perPage),
+        total: totalCount,
+        totalPages: data.total_pages || Math.ceil(totalCount / prev.perPage),
       }));
     } catch (error) {
       console.error('Error fetching assets:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.perPage, searchValue, cardFilter]);
 
+  // Fetch stats on component mount
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Fetch assets when filter, pagination, or search changes
   useEffect(() => {
     fetchAssets();
   }, [fetchAssets]);
 
+  // Adjust per-page when view mode changes
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, perPage: getPerPage(viewMode), page: 1 }));
+  }, [viewMode]);
+
+  // Reset to page 1 when search value changes
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchValue]);
+
+  // Handle card click - set filter and refetch from server
   const handleCardClick = (cardType: string) => {
     setActiveCard(cardType);
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page when switching cards
-    
-    // For now, we'll filter the already fetched data
-    // In a real implementation, you would make a new API call with the filter
-    switch (cardType) {
-      case 'all':
-        setFilteredAssets(allAssets);
-        break;
-      case 'inUse':
-        setFilteredAssets(allAssets.filter((asset: any) => !asset.breakdown));
-        break;
-      case 'breakdown':
-        setFilteredAssets(allAssets.filter((asset: any) => asset.breakdown));
-        break;
-      case 'activities':
-      case 'ppm':
-      case 'amc':
-        // TODO: Implement filtering when data available
-        setFilteredAssets([]);
-        break;
-      default:
-        setFilteredAssets(allAssets);
-    }
+
+    // Map card type to API filter value
+    const filterMap: Record<string, string> = {
+      'all': '',
+      'inUse': 'in_use',
+      'breakdown': 'breakdown',
+      'activities': 'activities_performed',
+      'ppm': 'ppm_performed',
+      'amc': 'amc_performed',
+    };
+
+    setCardFilter(filterMap[cardType] || '');
   };
 
   const getAssetStatus = (asset: any): StatusType => {
@@ -108,17 +135,17 @@ const columns: Array<TableColumn<any> & { id: string; label: string }> = [
   { 
     id: 'action', 
     label: 'Action', 
-    key: 'action',  // ✅ unique key
+    key: 'action',  // âœ… unique key
     header: 'Action', 
     width: '100px',
     render: (_, row) => {
       console.log('Rendering action column for row:', row.id);
       return (
         <div className="flex items-center gap-3">
-          <Link to={`/assets/asset-details/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}`} state={{ from: 'overview' }} className="text-primary hover:text-primary/80" title="View">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/assets/edit-asset/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}/edit`} state={{ from: 'overview' }} className="text-primary hover:text-primary/80" title="Edit">
             <Edit2 className="w-4 h-4" />
           </Link>
         </div>
@@ -127,9 +154,9 @@ const columns: Array<TableColumn<any> & { id: string; label: string }> = [
   },
   
   { 
-    id: 'sno',  // ✅ Changed from 'id'
+    id: 'sno',  // âœ… Changed from 'id'
     label: 'S.No', 
-    key: 'sno',  // ✅ Changed from 'id'
+    key: 'sno',  // âœ… Changed from 'id'
     header: 'S.No', 
     width: '80px', 
     render: (_val, _row, idx) => idx + 1 
@@ -139,7 +166,7 @@ const columns: Array<TableColumn<any> & { id: string; label: string }> = [
   { id: 'unit_name', label: 'Unit', key: 'unit_name', header: 'Unit', render: (v) => v || '-' },
   { id: 'name', label: 'Asset Name', key: 'name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
   
-  // Asset Number - API returns this ✅
+  // Asset Number - API returns this âœ…
   { 
     id: 'asset_number', 
     label: 'Asset Number', 
@@ -148,7 +175,7 @@ const columns: Array<TableColumn<any> & { id: string; label: string }> = [
     render: (v) => v || '-' 
   },
   
-  // Equipment Id - API returns "equipemnt_id" (with typo) ✅
+  // Equipment Id - API returns "equipemnt_id" (with typo) âœ…
   { 
     id: 'equipemnt_id', 
     label: 'Equipment Id', 
@@ -163,7 +190,7 @@ const columns: Array<TableColumn<any> & { id: string; label: string }> = [
   { id: 'group_name', label: 'Group', key: 'group_name', header: 'Group', render: (v) => v || '-' },
   { id: 'sub_group_name', label: 'Sub Group', key: 'sub_group_name', header: 'Sub Group', render: (v) => v || '-' },
   { id: 'purchased_on', label: 'Purchase Date', key: 'purchased_on', header: 'Purchase Date', render: (v) => v || '-' },
-  { id: 'purchase_cost', label: 'Purchase Cost', key: 'purchase_cost', header: 'Purchase Cost', render: (v) => v ? `₹${v.toLocaleString()}` : '-' },
+  { id: 'purchase_cost', label: 'Purchase Cost', key: 'purchase_cost', header: 'Purchase Cost', render: (v) => v ? `â‚¹${v.toLocaleString()}` : '-' },
   { id: 'critical', label: 'Critical', key: 'critical', header: 'Critical', render: (v) => v ? 'Yes' : 'No' },
   { id: 'status', label: 'Status', key: 'status', header: 'Status', render: (_, row) => <StatusBadge status={getAssetStatus(row)} /> },
   { id: 'capacity', label: 'Capacity', key: 'capacity', header: 'Capacity', render: (v) => v || '-' },
@@ -186,11 +213,8 @@ const columns: Array<TableColumn<any> & { id: string; label: string }> = [
   { id: 'vendor_name', label: 'Supplier', key: 'vendor_name', header: 'Supplier', render: (v) => v || '-' },
 ];
 
-  // Calculate paginated data
-  const paginatedAssets = filteredAssets.slice(
-    (pagination.page - 1) * pagination.perPage,
-    pagination.page * pagination.perPage
-  );
+  // Data is already paginated by API (server-side)
+  const paginatedAssets = assets;
 
   // Column visibility functions
   const toggleColumnVisibility = (columnId: string) => {
@@ -226,109 +250,101 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
 
   return (
     <div className="space-y-6">
-      {/* Statistics Cards - Responsive Full Width */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+      {/* Statistics Cards - Clean Permit Style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
         {/* Total Assets Card */}
-        <div
+        <button
           onClick={() => handleCardClick('all')}
-          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+          className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
             activeCard === 'all'
-              ? 'bg-blue-500 text-white border-blue-500'
-              : 'bg-card text-blue-500 border-blue-500 hover:bg-blue-50'
+              ? 'bg-blue-100 text-blue-700 border-blue-200 ring-2 ring-offset-2 ring-primary'
+              : 'bg-blue-100 text-blue-700 border-blue-200 hover:opacity-80'
           }`}
         >
-          <Package className="w-8 h-8 mb-2" />
-          <span className="text-sm font-medium">Total Assets</span>
-          <span className={`text-2xl font-bold mt-1 ${activeCard === 'all' ? 'text-white' : 'text-foreground'}`}>
+          <span className="text-xs font-medium">Total Assets</span>
+          <span className="text-xl font-bold mt-1">
             {stats.total}
           </span>
-        </div>
+        </button>
 
         {/* Assets in Use Card */}
-        <div
+        <button
           onClick={() => handleCardClick('inUse')}
-          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+          className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
             activeCard === 'inUse'
-              ? 'bg-green-500 text-white border-green-500'
-              : 'bg-card text-green-600 border-green-500 hover:bg-green-50'
+              ? 'bg-green-100 text-green-700 border-green-200 ring-2 ring-offset-2 ring-primary'
+              : 'bg-green-100 text-green-700 border-green-200 hover:opacity-80'
           }`}
         >
-          <Wrench className="w-8 h-8 mb-2" />
-          <span className="text-sm font-medium">Assets in Use</span>
-          <span className={`text-2xl font-bold mt-1 ${activeCard === 'inUse' ? 'text-white' : 'text-foreground'}`}>
+          <span className="text-xs font-medium">Assets in Use</span>
+          <span className="text-xl font-bold mt-1">
             {stats.inUse}
           </span>
-        </div>
+        </button>
 
         {/* Assets in Breakdown Card */}
-        <div
+        <button
           onClick={() => handleCardClick('breakdown')}
-          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+          className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
             activeCard === 'breakdown'
-              ? 'bg-red-500 text-white border-red-500'
-              : 'bg-card text-red-600 border-red-500 hover:bg-red-50'
+              ? 'bg-red-100 text-red-700 border-red-200 ring-2 ring-offset-2 ring-primary'
+              : 'bg-red-100 text-red-700 border-red-200 hover:opacity-80'
           }`}
         >
-          <AlertTriangle className="w-8 h-8 mb-2" />
-          <span className="text-sm font-medium">Assets in Breakdown</span>
-          <span className={`text-2xl font-bold mt-1 ${activeCard === 'breakdown' ? 'text-white' : 'text-foreground'}`}>
+          <span className="text-xs font-medium">Assets in Breakdown</span>
+          <span className="text-xl font-bold mt-1">
             {stats.breakdown}
           </span>
-        </div>
+        </button>
 
         {/* Activities Performed Card */}
-        <div
+        <button
           onClick={() => handleCardClick('activities')}
-          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+          className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
             activeCard === 'activities'
-              ? 'bg-yellow-500 text-white border-yellow-500'
-              : 'bg-card text-yellow-600 border-yellow-500 hover:bg-yellow-50'
+              ? 'bg-yellow-100 text-yellow-700 border-yellow-200 ring-2 ring-offset-2 ring-primary'
+              : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:opacity-80'
           }`}
         >
-          <ClipboardCheck className="w-8 h-8 mb-2" />
-          <span className="text-sm font-medium">Activities Performed</span>
-          <span className={`text-2xl font-bold mt-1 ${activeCard === 'activities' ? 'text-white' : 'text-foreground'}`}>
+          <span className="text-xs font-medium">Activities Performed</span>
+          <span className="text-xl font-bold mt-1">
             {stats.activities}
           </span>
-        </div>
+        </button>
 
         {/* PPM Performed Card */}
-        <div
+        <button
           onClick={() => handleCardClick('ppm')}
-          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+          className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
             activeCard === 'ppm'
-              ? 'bg-cyan-500 text-white border-cyan-500'
-              : 'bg-card text-cyan-600 border-cyan-500 hover:bg-cyan-50'
+              ? 'bg-cyan-100 text-cyan-700 border-cyan-200 ring-2 ring-offset-2 ring-primary'
+              : 'bg-cyan-100 text-cyan-700 border-cyan-200 hover:opacity-80'
           }`}
         >
-          <Calendar className="w-8 h-8 mb-2" />
-          <span className="text-sm font-medium">PPM Performed</span>
-          <span className={`text-2xl font-bold mt-1 ${activeCard === 'ppm' ? 'text-white' : 'text-foreground'}`}>
+          <span className="text-xs font-medium">PPM Performed</span>
+          <span className="text-xl font-bold mt-1">
             {stats.ppm}
           </span>
-        </div>
+        </button>
 
         {/* AMC Performed Card */}
-        <div
+        <button
           onClick={() => handleCardClick('amc')}
-          className={`p-4 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
+          className={`p-3 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-lg ${
             activeCard === 'amc'
-              ? 'bg-orange-500 text-white border-orange-500'
-              : 'bg-card text-orange-600 border-orange-500 hover:bg-orange-50'
+              ? 'bg-orange-100 text-orange-700 border-orange-200 ring-2 ring-offset-2 ring-primary'
+              : 'bg-orange-100 text-orange-700 border-orange-200 hover:opacity-80'
           }`}
         >
-          <FileText className="w-8 h-8 mb-2" />
-          <span className="text-sm font-medium">AMC Performed</span>
-          <span className={`text-2xl font-bold mt-1 ${activeCard === 'amc' ? 'text-white' : 'text-foreground'}`}>
+          <span className="text-xs font-medium">AMC Performed</span>
+          <span className="text-xl font-bold mt-1">
             {stats.amc}
           </span>
-        </div>
+        </button>
       </div>
 
-      {/* View Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-        <div />
-
+      {/* Search + View Controls */}
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-2 mb-4">
         <div className="flex items-center gap-2">
           {/* View Toggle */}
           <div className="flex items-center border border-border rounded-lg overflow-hidden">
@@ -345,6 +361,15 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
               <Grid className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Search */}
+          <input
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Search assets..."
+            className="pl-3 pr-3 py-2 w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
 
           {/* Hide Columns */}
           <div className="relative">
@@ -378,7 +403,7 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
                         />
                         <span className="flex items-center gap-2 text-sm">
                           {hiddenColumns.has(col.id) ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-primary" />}
-                          {col.label}
+                          {col.header}
                         </span>
                       </label>
                     ))}
@@ -401,7 +426,7 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
           {activeCard === 'amc' && 'AMC Performed'}
         </h3>
         
-        {filteredAssets.length > 0 ? (
+        {assets.length > 0 ? (
           viewMode === 'table' ? (
             <DataTable
               columns={visibleColumns}
@@ -410,35 +435,27 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {paginatedAssets.map((asset) => (
+              {paginatedAssets.map((asset: Asset) => (
                 <div key={asset.id} className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="mb-3">
                     <h3 className="font-semibold text-foreground">{asset.name || `Asset #${asset.id}`}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      (asset as any).breakdown ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {(asset as any).breakdown ? 'Breakdown' : 'In Use'}
-                    </span>
+                    <p className="text-xs text-muted-foreground">{asset.building_name || '-'}</p>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div><span className="font-medium">Serial:</span> {asset.serial_number || '-'}</div>
                     <div><span className="font-medium">Model:</span> {asset.model_number || '-'}</div>
-                    <div><span className="font-medium">Location:</span> {asset.building_name || '-'}</div>
+                    <div><span className="font-medium">Status:</span> {(asset as any).breakdown ? 'Breakdown' : 'In Use'}</div>
                     <div><span className="font-medium">Cost:</span> {asset.purchase_cost ? `₹${asset.purchase_cost.toLocaleString()}` : '-'}</div>
                     <div><span className="font-medium">OEM:</span> {asset.oem_name || '-'}</div>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <Link
-                      to={`/assets/asset-details/${asset.id}`}
-                      className="flex-1 text-center px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
-                    >
-                      View Details
+                  <div className="mt-4 flex items-center gap-4 text-sm text-primary">
+                    <Link to={`/asset/${asset.id}`} state={{ from: 'overview' }} className="inline-flex items-center gap-1 hover:text-primary/80">
+                      <Eye className="w-4 h-4" />
+                      <span>View</span>
                     </Link>
-                    <Link
-                      to={`/assets/edit-asset/${asset.id}`}
-                      className="flex-1 text-center px-3 py-2 bg-secondary text-secondary-foreground rounded-md text-sm hover:bg-secondary/90"
-                    >
-                      Edit
+                    <Link to={`/asset/${asset.id}/edit`} state={{ from: 'overview' }} className="inline-flex items-center gap-1 hover:text-primary/80">
+                      <Edit2 className="w-4 h-4" />
+                      <span>Edit</span>
                     </Link>
                   </div>
                 </div>
@@ -454,10 +471,10 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
       </div>
 
       {/* Pagination Controls */}
-      {filteredAssets.length > 0 && (
+      {assets.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">
-            Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, filteredAssets.length)} of {filteredAssets.length} records
+            Showing {((pagination.page - 1) * pagination.perPage) + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} records
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -465,29 +482,29 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
               disabled={pagination.page === 1}
               className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
             >
-              «
+              {"<<"}
             </button>
             <button
               onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
               disabled={pagination.page === 1}
               className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
             >
-              ‹ Prev
+              Prev
             </button>
             <span className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">{pagination.page}</span>
             <button
-              onClick={() => setPagination(prev => ({ ...prev, page: Math.min(Math.ceil(filteredAssets.length / prev.perPage), prev.page + 1) }))}
-              disabled={pagination.page >= Math.ceil(filteredAssets.length / pagination.perPage)}
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))}
+              disabled={pagination.page >= pagination.totalPages}
               className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
             >
-              Next ›
+              Next
             </button>
             <button
-              onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredAssets.length / prev.perPage) }))}
-              disabled={pagination.page >= Math.ceil(filteredAssets.length / pagination.perPage)}
+              onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages }))}
+              disabled={pagination.page >= pagination.totalPages}
               className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50"
             >
-              »
+              {">>"}
             </button>
           </div>
           <select
@@ -502,6 +519,7 @@ console.log('Hidden columns:', Array.from(hiddenColumns));
           </select>
         </div>
       )}
+
     </div>
   );
 };
