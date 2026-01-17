@@ -4,7 +4,7 @@ import Breadcrumb from "../../components/ui/Breadcrumb";
 import { Loader2, Save, X, Upload, ArrowLeft, FileText } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItemInLocalStorage } from "../../utils/localStorage";
-import { domainPrefix, getGenericCategory } from "../../api";
+import { domainPrefix, editContactBook, getContactBookDetails, getGenericCategory, getGenericSubCategory } from "../../api";
 
 /* ---------- API CONFIG ---------- */
 const API_BASE = domainPrefix;
@@ -15,11 +15,17 @@ interface GenericInfo {
     id: number;
     name: string;
     site_id?: number;
+    generic_sub_infos?: GenericSubInfo[];
 }
 
 interface GenericSubInfo {
     id: number;
     name: string;
+}
+
+interface Attachment {
+    id: number;
+    document: string;
 }
 
 interface ContactFormData {
@@ -48,9 +54,18 @@ const ContactBookEdit: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [categories, setCategories] = useState<GenericInfo[]>([]);
     const [subCategories, setSubCategories] = useState<GenericSubInfo[]>([]);
-    const [companyLogo, setCompanyLogo] = useState<File | null>(null);
-    const [attachment, setAttachment] = useState<File | null>(null);
-    const [existingLogo, setExistingLogo] = useState<string | null>(null);
+    
+    // Existing attachments from server
+    const [existingLogos, setExistingLogos] = useState<Attachment[]>([]);
+    const [existingDocuments, setExistingDocuments] = useState<Attachment[]>([]);
+    
+    // New files to upload
+    const [newLogos, setNewLogos] = useState<File[]>([]);
+    const [newDocuments, setNewDocuments] = useState<File[]>([]);
+    
+    // IDs to remove
+    const [removedLogoIds, setRemovedLogoIds] = useState<number[]>([]);
+    const [removedDocumentIds, setRemovedDocumentIds] = useState<number[]>([]);
 
     const [formData, setFormData] = useState<ContactFormData>({
         company_name: "",
@@ -71,29 +86,36 @@ const ContactBookEdit: React.FC = () => {
 
     /* ---------- FETCH INITIAL DATA ---------- */
     useEffect(() => {
-        fetchCategories();
-        if (id) fetchContact();
+        const init = async () => {
+            const categoryData = await fetchCategories();
+            if (id) fetchContact(categoryData);
+        };
+        init();
     }, [id]);
 
     const fetchCategories = async () => {
-        const res = await getGenericCategory()
-        console.log("respo", res.data)
-        const data = res?.data;
+        const res = await getGenericCategory();
+        console.log("respo", res.data);
+        const data = res?.data || [];
         setCategories(data);
+        return data; // Return for immediate use
     };
 
-    const fetchSubCategories = async (categoryId: string) => {
-        const res = await fetch(
-            `${API_BASE}/generic_sub_infos.json?token=${API_TOKEN}&generic_info_name=${categoryId}`
-        );
-        const data = await res.json();
-        setSubCategories(data);
+    const fetchSubCategories = (categoryId: string, categoryList?: GenericInfo[]) => {
+        const list = categoryList || categories;
+        const selectedCategory = list.find(c => c.id.toString() === categoryId);
+        if (selectedCategory && selectedCategory.generic_sub_infos) {
+            setSubCategories(selectedCategory.generic_sub_infos);
+        } else {
+            setSubCategories([]);
+        }
     };
 
-    const fetchContact = async () => {
+    const fetchContact = async (categoryList?: GenericInfo[]) => {
         try {
-            const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`);
-            const data = await res.json();
+            // const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`);
+            const res = await getContactBookDetails(id)
+            const data = res?.data;
 
             setFormData({
                 company_name: data.company_name || "",
@@ -112,12 +134,19 @@ const ContactBookEdit: React.FC = () => {
                 status: data.status ?? true,
             });
 
-            if (data.generic_info_id) {
-                fetchSubCategories(data.generic_info_id.toString());
+            // Use the passed categoryList to fetch sub-categories
+            if (data.generic_info_id && categoryList) {
+                fetchSubCategories(data.generic_info_id.toString(), categoryList);
             }
 
+            // Set existing logos
             if (data.logo?.length) {
-                setExistingLogo(`${API_BASE}${data.logo[0].document}`);
+                setExistingLogos(data.logo.map((l: any) => ({ id: l.id, document: l.document })));
+            }
+            
+            // Set existing documents
+            if (data.contact_books_attachment?.length) {
+                setExistingDocuments(data.contact_books_attachment.map((d: any) => ({ id: d.id, document: d.document })));
             }
         } catch {
             toast.error("Failed to load contact");
@@ -135,7 +164,7 @@ const ContactBookEdit: React.FC = () => {
 
             setFormData(prev => ({
                 ...prev,
-                mobile: value,
+                [name]: value,
             }));
             return;
         }
@@ -148,6 +177,25 @@ const ContactBookEdit: React.FC = () => {
         }));
 
         if (name === "generic_info_id") fetchSubCategories(value);
+    };
+
+    /* ---------- REMOVE HANDLERS ---------- */
+    const handleRemoveLogo = (logoId: number) => {
+        setRemovedLogoIds(prev => [...prev, logoId]);
+        setExistingLogos(prev => prev.filter(l => l.id !== logoId));
+    };
+
+    const handleRemoveDocument = (docId: number) => {
+        setRemovedDocumentIds(prev => [...prev, docId]);
+        setExistingDocuments(prev => prev.filter(d => d.id !== docId));
+    };
+
+    const handleRemoveNewLogo = (index: number) => {
+        setNewLogos(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveNewDocument = (index: number) => {
+        setNewDocuments(prev => prev.filter((_, i) => i !== index));
     };
 
     /* ---------- SAVE ---------- */
@@ -168,16 +216,28 @@ const ContactBookEdit: React.FC = () => {
                 fd.append(`contact_book[${k}]`, v as string)
             );
 
-            if (companyLogo) {
-                fd.append("contact_book[logo][]", companyLogo);
-            }
-            if (attachment) fd.append("contact_book[contact_books_attachment][]", attachment);
-
-            await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`, {
-                method: "PUT",
-                body: fd,
+            // Add removed logo IDs
+            removedLogoIds.forEach(id => {
+                fd.append("removed_logo_ids[]", id.toString());
             });
 
+            // Add removed document IDs
+            removedDocumentIds.forEach(id => {
+                fd.append("removed_document_ids[]", id.toString());
+            });
+
+            // Add new logos
+            newLogos.forEach(file => {
+                fd.append("logo[]", file);
+            });
+
+            // Add new documents
+            newDocuments.forEach(file => {
+                fd.append("attachfiles[]", file);
+            });
+
+            await editContactBook(id!, fd);
+            
             toast.success("Contact Book Updated");
             navigate("/contact-book");
         } catch {
@@ -224,32 +284,53 @@ const ContactBookEdit: React.FC = () => {
             </div>
 
             {/* Company Logo */}
-            <div className="mt-4">
+            <div className="mt-4 mb-6">
                 <label className="text-xs font-semibold mb-2 block">
                     Company Logo
                 </label>
 
-                <div className="flex items-center gap-4">
-                    {/* Preview */}
-                    <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
-                        {companyLogo ? (
-                            <img
-                                src={URL.createObjectURL(companyLogo)}
-                                alt="Logo preview"
-                                className="w-full h-full object-contain"
-                            />
-                        ) : existingLogo ? (
-                            <img
-                                src={existingLogo}
-                                alt="Existing logo"
-                                className="w-full h-full object-contain"
-                            />
-                        ) : (
-                            <span className="text-xs text-muted-foreground">No Logo</span>
-                        )}
-                    </div>
+                <div className="flex flex-wrap items-center gap-4">
+                    {/* Existing Logos */}
+                    {existingLogos.map((logo) => (
+                        <div key={logo.id} className="relative group">
+                            <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
+                                <img
+                                    src={`${API_BASE}${logo.document}`}
+                                    alt="Existing logo"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveLogo(logo.id)}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ))}
 
-                    {/* Upload */}
+                    {/* New Logos Preview */}
+                    {newLogos.map((file, index) => (
+                        <div key={index} className="relative group">
+                            <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
+                                <img
+                                    src={URL.createObjectURL(file)}
+                                    alt="New logo preview"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveNewLogo(index)}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ))}
+
+                    {/* Upload Button */}
                     <div>
                         <input
                             type="file"
@@ -257,16 +338,19 @@ const ContactBookEdit: React.FC = () => {
                             id="companyLogo"
                             hidden
                             onChange={(e) => {
-                                if (e.target.files?.[0]) {
-                                    setCompanyLogo(e.target.files[0]);
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    setNewLogos(prev => [...prev, file]);
                                 }
+                                e.target.value = ''; // Reset input
                             }}
                         />
                         <label
                             htmlFor="companyLogo"
-                            className="px-4 py-2 border border-border rounded-lg cursor-pointer text-sm hover:bg-accent inline-block"
+                            className="w-24 h-24 border-2 border-dashed border-border rounded-lg cursor-pointer text-sm hover:bg-accent flex flex-col items-center justify-center gap-1"
                         >
-                            {existingLogo || companyLogo ? "Replace Logo" : "Upload Logo"}
+                            <Upload className="w-5 h-5 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Add Logo</span>
                         </label>
                     </div>
                 </div>
@@ -340,13 +424,109 @@ const ContactBookEdit: React.FC = () => {
                     </Section>
 
 
-                    {/* SECTION 4 */}
-                    <Section title="Description & Attachments" index={4}>
+                    {/* SECTION 5 */}
+                    <Section title="Description & Attachments" index={5}>
                         <TextArea label="Address" name="address" value={formData.address} onChange={handleChange} />
                         <TextArea label="Profile" name="profile" value={formData.profile} onChange={handleChange} />
                         <TextArea label="Description" name="description" value={formData.description} onChange={handleChange} />
 
-                        <UploadBox onChange={setAttachment} />
+                        {/* Existing Documents */}
+                        {existingDocuments.length > 0 && (
+                            <div className="mt-4">
+                                <label className="text-xs font-semibold mb-2 block">Existing Attachments</label>
+                                <div className="flex flex-wrap gap-3">
+                                    {existingDocuments.map((doc) => {
+                                        const fileName = doc.document.split('/').pop() || 'Document';
+                                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document);
+                                        return (
+                                            <div key={doc.id} className="relative group">
+                                                <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
+                                                    {isImage ? (
+                                                        <img
+                                                            src={`${API_BASE}${doc.document}`}
+                                                            alt={fileName}
+                                                            className="w-full h-full object-contain"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center p-2">
+                                                            <FileText className="w-8 h-8 text-muted-foreground" />
+                                                            <span className="text-xs text-muted-foreground truncate w-full text-center mt-1">{fileName}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveDocument(doc.id)}
+                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* New Documents Preview */}
+                        {newDocuments.length > 0 && (
+                            <div className="mt-4">
+                                <label className="text-xs font-semibold mb-2 block">New Attachments</label>
+                                <div className="flex flex-wrap gap-3">
+                                    {newDocuments.map((file, index) => {
+                                        const isImage = file.type.startsWith('image/');
+                                        return (
+                                            <div key={index} className="relative group">
+                                                <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
+                                                    {isImage ? (
+                                                        <img
+                                                            src={URL.createObjectURL(file)}
+                                                            alt={file.name}
+                                                            className="w-full h-full object-contain"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center p-2">
+                                                            <FileText className="w-8 h-8 text-muted-foreground" />
+                                                            <span className="text-xs text-muted-foreground truncate w-full text-center mt-1">{file.name}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveNewDocument(index)}
+                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Upload New Documents */}
+                        <div className="mt-4">
+                            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                                <input 
+                                    type="file" 
+                                    hidden 
+                                    id="uploadDoc" 
+                                    multiple
+                                    onChange={(e) => {
+                                        const files = e.target.files ? Array.from(e.target.files) : [];
+                                        if (files.length) {
+                                            setNewDocuments(prev => [...prev, ...files]);
+                                        }
+                                        e.target.value = ''; // Reset input
+                                    }} 
+                                />
+                                <label htmlFor="uploadDoc" className="cursor-pointer text-sm font-medium text-primary">
+                                    Click to upload attachments
+                                </label>
+                            </div>
+                        </div>
                     </Section>
 
                     {/* ACTIONS */}
@@ -414,16 +594,6 @@ const TextArea = ({ label, ...props }: any) => (
     <div>
         <label className="text-xs font-semibold mb-1 block">{label}</label>
         <textarea {...props} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm" />
-    </div>
-);
-
-const UploadBox = ({ onChange }: any) => (
-    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-        <input type="file" hidden id="upload" onChange={(e) => onChange(e.target.files?.[0])} />
-        <label htmlFor="upload" className="cursor-pointer text-sm font-medium text-primary">
-            Click to upload attachment
-        </label>
     </div>
 );
 
