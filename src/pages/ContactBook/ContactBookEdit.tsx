@@ -4,9 +4,10 @@ import Breadcrumb from "../../components/ui/Breadcrumb";
 import { Loader2, Save, X, Upload, ArrowLeft, FileText } from "lucide-react";
 import toast from "react-hot-toast";
 import { getItemInLocalStorage } from "../../utils/localStorage";
+import { domainPrefix, getGenericCategory } from "../../api";
 
 /* ---------- API CONFIG ---------- */
-const API_BASE = "https://admin.vibecopilot.ai";
+const API_BASE = domainPrefix;
 const API_TOKEN = getItemInLocalStorage("TOKEN");
 
 /* ---------- TYPES ---------- */
@@ -75,8 +76,9 @@ const ContactBookEdit: React.FC = () => {
     }, [id]);
 
     const fetchCategories = async () => {
-        const res = await fetch(`${API_BASE}/generic_infos.json?token=${API_TOKEN}`);
-        const data = await res.json();
+        const res = await getGenericCategory()
+        console.log("respo", res.data)
+        const data = res?.data;
         setCategories(data);
     };
 
