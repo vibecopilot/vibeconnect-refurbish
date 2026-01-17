@@ -107,12 +107,14 @@ const ChecklistAuditForm: React.FC = () => {
 <Breadcrumb items={[
   { label: 'FM Module', path: '/audit' },
   { label: 'Audit', path: '/audit' },
-  { label: 'Checklist Audit' },
+  { label: 'Operational' },
+  { label: 'Checklists' },
+  { label: 'Create' },
 ]} />
 
       <form onSubmit={handleSubmit}>
         {/* Basic Info Section */}
-        <div className="bg-card border border-border rounded-lg p-6 mb-6">
+        <div className="bg-card border border-border rounded-lg p-6 mb-6 mt-4">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-primary/10 rounded-lg">
               <ClipboardList className="w-5 h-5 text-primary" />

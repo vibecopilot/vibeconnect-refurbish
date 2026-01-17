@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronRight, Upload, X, Save } from "lucide-react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import Breadcrumb from "../../components/ui/Breadcrumb";
+import { Loader2, Save, X, Upload, ArrowLeft, FileText } from "lucide-react";
+import toast from "react-hot-toast";
 import { getItemInLocalStorage } from "../../utils/localStorage";
-
-<ToastContainer position="top-right" />
 
 /* ---------- API CONFIG ---------- */
 const API_BASE = "https://admin.vibecopilot.ai";
@@ -21,9 +19,7 @@ interface GenericInfo {
 interface GenericSubInfo {
     id: number;
     name: string;
-    generic_info_name: number;
 }
-
 
 interface ContactFormData {
     company_name: string;
@@ -39,7 +35,6 @@ interface ContactFormData {
     profile: string;
     generic_info_id: string;
     generic_sub_info_id: string;
-    site_id?: string;
     status: boolean;
 }
 
@@ -48,16 +43,13 @@ const ContactBookEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [categories, setCategories] = useState<GenericInfo[]>([]);
     const [subCategories, setSubCategories] = useState<GenericSubInfo[]>([]);
     const [companyLogo, setCompanyLogo] = useState<File | null>(null);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [existingLogo, setExistingLogo] = useState<string | null>(null);
-    const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
-    const [removeLogo, setRemoveLogo] = useState(false);
-    const [removeAttachment, setRemoveAttachment] = useState(false);
-
 
     const [formData, setFormData] = useState<ContactFormData>({
         company_name: "",
@@ -76,72 +68,36 @@ const ContactBookEdit: React.FC = () => {
         status: true,
     });
 
-    /* ---------- FETCH CATEGORIES ---------- */
+    /* ---------- FETCH INITIAL DATA ---------- */
     useEffect(() => {
         fetchCategories();
-    }, []);
-
-    /* ---------- FETCH DATA FOR EDIT ---------- */
-    useEffect(() => {
-        if (id) {
-            fetchContact();
-        }
+        if (id) fetchContact();
     }, [id]);
 
-    /* ---------- FETCH SUBCATEGORIES WHEN CATEGORY CHANGES ---------- */
-    useEffect(() => {
-        if (formData.generic_info_id) {
-            fetchSubCategories(formData.generic_info_id);
-        } else {
-            setSubCategories([]);
-        }
-    }, [formData.generic_info_id]);
-
-    /* ---------- API CALLS ---------- */
     const fetchCategories = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/generic_infos.json?token=${API_TOKEN}`);
-            if (res.ok) {
-                const data = await res.json();
-                setCategories(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch categories:", error);
-            toast.error("Failed to load categories");
-        }
+        const res = await fetch(`${API_BASE}/generic_infos.json?token=${API_TOKEN}`);
+        const data = await res.json();
+        setCategories(data);
     };
 
     const fetchSubCategories = async (categoryId: string) => {
-        try {
-            const res = await fetch(
-                `${API_BASE}/generic_sub_infos.json?token=${API_TOKEN}&generic_info_name=${categoryId}`
-            );
-            if (res.ok) {
-                const data = await res.json();
-                setSubCategories(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch subcategories:", error);
-            toast.error("Failed to load subcategories");
-        }
+        const res = await fetch(
+            `${API_BASE}/generic_sub_infos.json?token=${API_TOKEN}&generic_info_name=${categoryId}`
+        );
+        const data = await res.json();
+        setSubCategories(data);
     };
 
     const fetchContact = async () => {
         try {
-            setLoading(true);
             const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`);
-
-            if (!res.ok) throw new Error("Failed to fetch contact");
-
             const data = await res.json();
-            const categoryId = data.generic_info?.id?.toString() || "";
-            const subCategoryId = data.generic_sub_info?.id?.toString() || "";
 
             setFormData({
                 company_name: data.company_name || "",
                 contact_person_name: data.contact_person_name || "",
-                mobile: data.mobile || "",
-                landline_no: data.landline_no || "",
+                mobile: String(data.mobile ?? ""),
+                landline_no: String(data.landline_no ?? ""),
                 primary_email: data.primary_email || "",
                 secondary_email: data.secondary_email || "",
                 website: data.website || "",
@@ -151,374 +107,261 @@ const ContactBookEdit: React.FC = () => {
                 profile: data.profile || "",
                 generic_info_id: data.generic_info_id?.toString() || "",
                 generic_sub_info_id: data.generic_sub_info_id?.toString() || "",
-                site_id: data.site_id?.toString() || "",
                 status: data.status ?? true,
             });
 
-            const logoUrl =
-                data.logo && data.logo.length > 0
-                    ? `${API_BASE}${data.logo[0].document}`
-                    : null;
-
-            const attachmentUrl =
-                data.contact_books_attachment && data.contact_books_attachment.length > 0
-                    ? `${API_BASE}${data.contact_books_attachment[0].document}`
-                    : null;
-
-            setExistingLogo(logoUrl);
-            setExistingAttachment(attachmentUrl);
-
-            if (categoryId) {
-                fetchSubCategories(categoryId);
+            if (data.generic_info_id) {
+                fetchSubCategories(data.generic_info_id.toString());
             }
-        } catch (err) {
-            console.error("Fetch failed", err);
-            toast.error("Failed to load contact details");
+
+            if (data.logo?.length) {
+                setExistingLogo(`${API_BASE}${data.logo[0].document}`);
+            }
+        } catch {
+            toast.error("Failed to load contact");
         } finally {
             setLoading(false);
         }
     };
 
     /* ---------- HANDLERS ---------- */
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) {
-            setCompanyLogo(e.target.files[0]);
-            setRemoveLogo(true);
-        }
-    };
-
-    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) {
-            setAttachment(e.target.files[0]);
-            setRemoveAttachment(true);
-        }
-    };
-
-
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-    ) => {
+    const handleChange = (e: React.ChangeEvent<any>) => {
         const { name, value } = e.target;
 
-        if ((name === "mobile" || name === "landline_no") && !/^\d*$/.test(value)) {
+        if (name === "mobile" || name === "landline_no") {
+            if (!/^\d*$/.test(value)) return;
+
+            setFormData(prev => ({
+                ...prev,
+                mobile: value,
+            }));
             return;
         }
 
-        setFormData((prev) => ({
+
+        setFormData(prev => ({
             ...prev,
             [name]: value,
             ...(name === "generic_info_id" ? { generic_sub_info_id: "" } : {}),
         }));
+
+        if (name === "generic_info_id") fetchSubCategories(value);
     };
 
-    /* ---------- SAVE HANDLER ---------- */
+    /* ---------- SAVE ---------- */
     const handleSave = async () => {
-        // Validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (!formData.company_name) return toast.error("Please Enter Company Name");
-        if (!formData.contact_person_name) return toast.error("Please Enter Contact Person Name");
-        if (!formData.mobile) return toast.error("Please Enter Mobile Number");
-        if (!/^\d{10}$/.test(formData.mobile)) return toast.error("Mobile Number must be exactly 10 digits");
-        if (!formData.primary_email) return toast.error("Please Enter Primary Email");
-        if (!emailRegex.test(formData.primary_email)) return toast.error("Please Enter Valid Primary Email");
-        // if (formData.secondary_email && !emailRegex.test(formData.secondary_email)) {
-        //     return toast.error("Please Enter Valid Secondary Email");
-        // }
-        if (formData.generic_info_id) {
-            fetchSubCategories(formData.generic_info_id);
+        if (!formData.company_name) return toast.error("Company name required");
+        const mobile = String(formData.mobile).replace(/\D/g, "");
+
+        if (mobile.length !== 10) {
+            return toast.error("Mobile No must be exactly 10 digits");
         }
-        if (!formData.generic_sub_info_id) return toast.error("Please Select Sub Category");
-
 
         try {
-            setLoading(true);
+            setSaving(true);
+            const fd = new FormData();
 
-            const selectedCategory = categories.find(
-                (c) => c.id.toString() === formData.generic_info_id
+            Object.entries(formData).forEach(([k, v]) =>
+                fd.append(`contact_book[${k}]`, v as string)
             );
 
-            const submitData = new FormData();
-
-            // fields
-            submitData.append("contact_book[company_name]", formData.company_name);
-            submitData.append("contact_book[contact_person_name]", formData.contact_person_name);
-            submitData.append("contact_book[mobile]", formData.mobile);
-            submitData.append("contact_book[landline_no]", formData.landline_no);
-            submitData.append("contact_book[primary_email]", formData.primary_email);
-            submitData.append("contact_book[secondary_email]", formData.secondary_email);
-            submitData.append("contact_book[website]", formData.website);
-            submitData.append("contact_book[key_offering]", formData.key_offering);
-            submitData.append("contact_book[address]", formData.address);
-            submitData.append("contact_book[description]", formData.description);
-            submitData.append("contact_book[profile]", formData.profile);
-            submitData.append("contact_book[generic_info_id]", formData.generic_info_id);
-            submitData.append("contact_book[generic_sub_info_id]", formData.generic_sub_info_id);
-
-            if (selectedCategory?.site_id) {
-                submitData.append("contact_book[site_id]", selectedCategory.site_id.toString());
-            }
-
-            // files (ONLY IF SELECTED)
             if (companyLogo) {
-                submitData.append("contact_book[logo][]", companyLogo);
+                fd.append("contact_book[logo][]", companyLogo);
             }
+            if (attachment) fd.append("contact_book[contact_books_attachment][]", attachment);
 
-            if (attachment) {
-                submitData.append("contact_book[contact_books_attachment][]", attachment);
-            }
-
-            if (removeLogo) {
-                submitData.append("contact_book[remove_logo]", "true");
-            }
-
-            if (removeAttachment) {
-                submitData.append("contact_book[remove_contact_books_attachment]", "true");
-            }
-
-
-
-            const res = await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`, {
+            await fetch(`${API_BASE}/contact_books/${id}.json?token=${API_TOKEN}`, {
                 method: "PUT",
-                body: submitData,
+                body: fd,
             });
 
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                console.error("Error response:", errorData);
-
-                if (errorData.errors) {
-                    Object.entries(errorData.errors).forEach(([field, messages]) => {
-                        toast.error(`${field}: ${(messages as string[]).join(", ")}`);
-                    });
-                } else {
-                    throw new Error("Failed to update contact");
-                }
-                return;
-            }
-
-            toast.success("Contact updated successfully");
+            toast.success("Contact Book Updated");
             navigate("/contact-book");
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to save contact");
+        } catch {
+            toast.error("Update failed");
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
-    if (loading && !formData.company_name) {
+    /* ---------- LOADING ---------- */
+    if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-gray-600">Loading...</div>
+            <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading contact...</p>
             </div>
         );
     }
 
+    /* ---------- RENDER ---------- */
     return (
-        <div className="min-h-screen bg-gray-50">
-            <ToastContainer position="top-right" />
+        <div className="p-6">
+            <Breadcrumb
+                items={[
+                    { label: "Contact Book", path: "/contact-book" },
+                    { label: "Edit" },
+                ]}
+            />
 
-            {/* ---------- HEADER ---------- */}
-            <div className="bg-white px-6 py-4 mx-4 mt-4 rounded-lg shadow-sm">
-                <nav className="flex items-center text-xs text-gray-500">
-                    <span
-                        className="cursor-pointer hover:text-purple-600"
-                        onClick={() => navigate("/contact-book")}
-                    >
-                        Contact Book
-                    </span>
-                    <ChevronRight size={12} className="mx-2" />
-                    <span className="text-gray-700 font-medium">Edit</span>
-                </nav>
+            {/* Header */}
+            <div className="flex items-center gap-4 mt-4 mb-6">
+                <button
+                    onClick={() => navigate("/contact-book")}
+                    className="p-2 hover:bg-muted rounded-lg"
+                >
+                    <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                </button>
+                <div>
+                    <h1 className="text-2xl font-bold">Edit Contact</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Update company and contact details
+                    </p>
+                </div>
+            </div>
 
-                <h2 className="text-xl font-semibold mt-2">Edit Contact</h2>
+            {/* Company Logo */}
+            <div className="mt-4">
+                <label className="text-xs font-semibold mb-2 block">
+                    Company Logo
+                </label>
 
-                {/* LOGO */}
-                <div className="flex flex-col items-center my-6">
-                    <label className="flex items-center justify-center w-20 h-20 rounded-full border-2 border-black cursor-pointer">
-                        <input
-                            type="file"
-                            hidden
-                            accept=".jpg,.jpeg,.png"
-                            onChange={handleLogoChange}
-                        />
+                <div className="flex items-center gap-4">
+                    {/* Preview */}
+                    <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
                         {companyLogo ? (
                             <img
                                 src={URL.createObjectURL(companyLogo)}
-                                alt="Company Logo"
-                                className="w-full h-full object-cover rounded-full"
+                                alt="Logo preview"
+                                className="w-full h-full object-contain"
                             />
                         ) : existingLogo ? (
                             <img
                                 src={existingLogo}
-                                alt="Company Logo"
-                                className="w-full h-full object-cover rounded-full"
+                                alt="Existing logo"
+                                className="w-full h-full object-contain"
                             />
                         ) : (
-                            <Upload className="w-6 h-6 text-gray-500" />
+                            <span className="text-xs text-muted-foreground">No Logo</span>
                         )}
-                    </label>
-                    <span className="text-xs mt-1">
-                        {companyLogo ? "New logo selected" : existingLogo ? "Click to change logo" : "Upload logo"}
-                    </span>
+                    </div>
+
+                    {/* Upload */}
+                    <div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            id="companyLogo"
+                            hidden
+                            onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                    setCompanyLogo(e.target.files[0]);
+                                }
+                            }}
+                        />
+                        <label
+                            htmlFor="companyLogo"
+                            className="px-4 py-2 border border-border rounded-lg cursor-pointer text-sm hover:bg-accent inline-block"
+                        >
+                            {existingLogo || companyLogo ? "Replace Logo" : "Upload Logo"}
+                        </label>
+                    </div>
                 </div>
             </div>
 
-            {/* ---------- FORM ---------- */}
-            <div className="p-6">
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                        <Input
-                            label="Company Name"
-                            name="company_name"
-                            value={formData.company_name}
-                            onChange={handleChange}
-                        />
-                        <Input
-                            label="Contact Person"
-                            name="contact_person_name"
-                            value={formData.contact_person_name}
-                            onChange={handleChange}
-                        />
-                        <Input
-                            label="Mobile"
-                            name="mobile"
-                            value={formData.mobile}
-                            onChange={handleChange}
-                            maxLength={10}
-                        />
-                        <Input
-                            label="Landline"
-                            name="landline_no"
-                            value={formData.landline_no}
-                            onChange={handleChange}
-                        />
-                        <Input
-                            label="Primary Email"
-                            name="primary_email"
-                            value={formData.primary_email}
-                            onChange={handleChange}
-                        />
-                        <Input
-                            label="Secondary Email"
-                            name="secondary_email"
-                            value={formData.secondary_email}
-                            onChange={handleChange}
-                        />
-                        <Input
-                            label="Website"
-                            name="website"
-                            value={formData.website}
-                            onChange={handleChange}
-                        />
-                        <Select
-                            label="Category"
-                            name="generic_info_id"
-                            value={formData.generic_info_id}
-                            onChange={handleChange}
-                            options={categories.map(c => ({
-                                value: c.id.toString(),
-                                label: c.name,
-                            }))}
-                        />
 
-                        <Select
-                            label="Sub Category"
-                            name="generic_sub_info_id"
-                            value={formData.generic_sub_info_id}
-                            onChange={handleChange}
-                            options={subCategories.map(sc => ({
-                                value: sc.id.toString(),
-                                label: sc.name,
-                            }))}
-                            disabled={!formData.generic_info_id}
-                        />
+            <div className="bg-card border border-border rounded-xl shadow-sm">
+                <div className="p-6 space-y-8">
 
-                        <Input
-                            label="Key Offering"
-                            name="key_offering"
-                            value={formData.key_offering}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    {/* SECTION 1 */}
+                    <Section title="Basic Information" index={1}>
+                        <Grid>
+                            <Input label="Company Name" name="company_name" value={formData.company_name} onChange={handleChange} />
+                            <Input label="Contact Person" name="contact_person_name" value={formData.contact_person_name} onChange={handleChange} />
+                            <Input label="Mobile" name="mobile" value={formData.mobile} onChange={handleChange} />
+                            <Input label="Landline" name="landline_no" value={formData.landline_no} onChange={handleChange} />
+                        </Grid>
+                    </Section>
 
-                    <TextArea
-                        label="Address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                    />
-                    <TextArea
-                        label="Profile"
-                        name="profile"
-                        value={formData.profile}
-                        onChange={handleChange}
-                    />
-                    <TextArea
-                        label="Description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                    />
+                    {/* SECTION 2 */}
+                    <Section title="Contact Details" index={2}>
+                        <Grid>
+                            <Input label="Primary Email" name="primary_email" value={formData.primary_email} onChange={handleChange} />
+                            <Input label="Secondary Email" name="secondary_email" value={formData.secondary_email} onChange={handleChange} />
+                            <Input label="Website" name="website" value={formData.website} onChange={handleChange} />
+                        </Grid>
+                    </Section>
 
-                    {/* ATTACHMENT */}
-                    <div className="mt-4">
-                        <label className="block text-xs font-semibold mb-1">Attachments</label>
-                        <label className="flex flex-col items-center justify-center h-24 border border-dashed border-gray-300 rounded-md text-xs cursor-pointer hover:bg-gray-50">
-                            <input
-                                type="file"
-                                hidden
-                                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-                                onChange={handleAttachmentChange}
-                            />
-                            <Upload className="w-5 h-5 text-gray-500 mb-1" />
-                            <span className="nline-flex items-center gap-2 px-8 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer hover:bg-primary/90 transition-colors text-sm font-medium">Click to upload</span>
-                            {attachment && (
-                                <span className="text-[10px] mt-1 text-green-600">{attachment.name}</span>
-                            )}
-                            {/* {!attachment && existingAttachment && (
-                                <span className="text-[15px] mt-1 text-gray-500">
-                                    Current file attached
-                                </span>
-                            )} */}
+                    {/* SECTION 3 */}
+                    <Section title="Category" index={3}>
+                        <Grid>
+                            <Select label="Category" name="generic_info_id" value={formData.generic_info_id} onChange={handleChange}
+                                options={categories.map(c => ({ value: c.id, label: c.name }))} />
+                            <Select label="Sub Category" name="generic_sub_info_id" value={formData.generic_sub_info_id} onChange={handleChange}
+                                options={subCategories.map(s => ({ value: s.id, label: s.name }))} />
+                        </Grid>
+                    </Section>
+                    {/* SECTION 4 */}
+                    <Section title="Status" index={4}>
+                        <div className="flex items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setFormData(prev => ({ ...prev, status: true }))
+                                }
+                                className={`px-6 py-2 rounded-lg border text-sm font-medium
+        ${formData.status
+                                        ? "bg-green-100 border-green-300 text-green-700"
+                                        : "bg-muted border-border text-muted-foreground"
+                                    }
+      `}
+                            >
+                                Active
+                            </button>
 
-                        </label>
-                    </div>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setFormData(prev => ({ ...prev, status: false }))
+                                }
+                                className={`px-6 py-2 rounded-lg border text-sm font-medium
+        ${!formData.status
+                                        ? "bg-red-100 border-red-300 text-red-700"
+                                        : "bg-muted border-border text-muted-foreground"
+                                    }
+      `}
+                            >
+                                Inactive
+                            </button>
+                        </div>
+                    </Section>
 
-                    {/* ---------- BUTTONS ---------- */}
-                    <div className="flex gap-4 mt-8 justify-end">
-                        {/* Cancel Button */}
+
+                    {/* SECTION 4 */}
+                    <Section title="Description & Attachments" index={4}>
+                        <TextArea label="Address" name="address" value={formData.address} onChange={handleChange} />
+                        <TextArea label="Profile" name="profile" value={formData.profile} onChange={handleChange} />
+                        <TextArea label="Description" name="description" value={formData.description} onChange={handleChange} />
+
+                        <UploadBox onChange={setAttachment} />
+                    </Section>
+
+                    {/* ACTIONS */}
+                    <div className="flex justify-end gap-3 pt-6 border-t border-border">
                         <button
                             onClick={() => navigate("/contact-book")}
-                            className="flex items-center gap-2 px-4 py-1.5 rounded-md
-               border border-gray-400 text-gray-900
-               bg-white hover:bg-gray-100 transition-colors"
+                            className="px-6 py-2.5 bg-muted rounded-lg"
                         >
-                            <X className="w-4 h-4" />
                             Cancel
                         </button>
-
-                        {/* Save Button */}
                         <button
                             onClick={handleSave}
-                            disabled={loading}
-                            className="flex items-center gap-2 px-4 py-1.5 rounded-md
-               bg-purple-600 text-white hover:bg-purple-700
-               disabled:opacity-50 disabled:cursor-not-allowed
-               transition-colors"
+                            disabled={saving}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg"
                         >
-                            {loading ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    <Save className="w-4 h-4" />
-                                    Save Changes
-                                </>
-                            )}
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Save Changes
                         </button>
                     </div>
 
@@ -528,36 +371,57 @@ const ContactBookEdit: React.FC = () => {
     );
 };
 
-/* ---------- REUSABLE COMPONENTS ---------- */
-const Input = ({ label, ...props }: any) => (
+/* ---------- UI HELPERS ---------- */
+
+const Section = ({ title, index, children }: any) => (
     <div>
-        <label className="block text-xs font-semibold mb-1">{label}</label>
-        <input {...props} className="w-full border rounded px-2 py-1 text-sm" />
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold">
+                {index}
+            </span>
+            {title}
+        </h2>
+        {children}
     </div>
 );
 
-const Select = ({ label, options, disabled, ...props }: any) => (
+const Grid = ({ children }: any) => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{children}</div>
+);
+
+const Input = ({ label, ...props }: any) => (
     <div>
-        <label className="block text-xs font-semibold mb-1">{label}</label>
-        <select
-            {...props}
-            disabled={disabled}
-            className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-        >
+        <label className="text-xs font-semibold mb-1 block">{label}</label>
+        <input {...props} className="w-full border rounded-lg px-3 py-2 text-sm" />
+    </div>
+);
+
+const Select = ({ label, options, ...props }: any) => (
+    <div>
+        <label className="text-xs font-semibold mb-1 block">{label}</label>
+        <select {...props} className="w-full border rounded-lg px-3 py-2 text-sm">
             <option value="">Select {label}</option>
-            {options.map((opt: any) => (
-                <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                </option>
+            {options.map((o: any) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
             ))}
         </select>
     </div>
 );
 
 const TextArea = ({ label, ...props }: any) => (
-    <div className="mt-4">
-        <label className="block text-xs font-semibold mb-1">{label}</label>
-        <textarea {...props} rows={3} className="w-full border rounded px-2 py-2 text-sm" />
+    <div>
+        <label className="text-xs font-semibold mb-1 block">{label}</label>
+        <textarea {...props} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm" />
+    </div>
+);
+
+const UploadBox = ({ onChange }: any) => (
+    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+        <input type="file" hidden id="upload" onChange={(e) => onChange(e.target.files?.[0])} />
+        <label htmlFor="upload" className="cursor-pointer text-sm font-medium text-primary">
+            Click to upload attachment
+        </label>
     </div>
 );
 

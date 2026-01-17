@@ -4,17 +4,32 @@ import { Eye, Edit2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../../components/list/ListToolbar';
 import DataTable from '../../../components/table/DataTable';
-import { getAuditScheduled ,getChecklist} from '../../../api';
+import { getAuditScheduled, getChecklist } from '../../../api';
 import { useViewMode } from '../../../hooks/useViewMode';
+
 
 interface ScheduledAudit {
   id: number;
+  audit_for: string;
   activity_name: string;
-  task: string;
-  assign_to: string;
-  assigned_to_name: string;
+  description: string;
+  checklist_type: string;
+  priority: string;
+  frequency: string;
+  assign_to: number | null;
+  scan_type: string;
+  plan_duration: number;
+  email_trigger_rule: string;
+  look_overdue_task: string;
+  start_from: string;
+  end_at: string;
+  select_supplier: number | null;
   created_at: string;
-  status: string;
+  status?: string;
+  audit_tasks: {
+    id: number;
+    task: string;
+  }[];
 }
 
 const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
@@ -49,14 +64,26 @@ const ScheduledList: React.FC = () => {
       const rawItems = Array.isArray(raw) ? raw : raw.data || raw.audits || raw.items || [];
 
       const items: ScheduledAudit[] = rawItems.map((it: any) => ({
-        id: it.id,
-        activity_name: it.activity_name || it.activity || it.name || '',
-        task: (it.tasks && it.tasks.length > 0 && it.tasks[0].name)  || it.task || '',
-        assigned_to: it.assign_to || (it.assigned && it.assigned.id) || '',
-        assigned_to_name: it.assigned_to_name || (it.assigned && (it.assigned.firstname || it.assigned.name)) || it.assigned_name || '',
-        created_at: it.created_at || it.created_on || '',
-        status: it.status || it.audit_status || '',
+      id: it.id,
+      audit_for: it.audit_for,
+      activity_name: it.activity_name,
+      description: it.description,
+      checklist_type: it.checklist_type,
+      priority: it.priority,
+      frequency: it.frequency,
+      assign_to: it.assign_to,
+      scan_type: it.scan_type,
+      plan_duration: it.plan_duration,
+      email_trigger_rule: it.email_trigger_rule,
+      look_overdue_task: it.look_overdue_task,
+      start_from: it.start_from,
+      end_at: it.end_at,
+      select_supplier: it.select_supplier,
+      created_at: it.created_at,
+      status: it.status,
+      audit_tasks: it.audit_tasks || [],
       }));
+
 
       // Determine if API provided pagination metadata
       const hasServerPagination = raw?.total_pages !== undefined || raw?.current_page !== undefined || raw?.total !== undefined || raw?.total_count !== undefined || raw?.count !== undefined;
@@ -88,28 +115,28 @@ const ScheduledList: React.FC = () => {
     }
   };
 
-useEffect(() => {
-  const timer = setTimeout(() => {
-    fetchData();
-  }, 300);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 300);
 
-  return () => clearTimeout(timer);
-}, [pagination.page, pagination.perPage, searchText, activeFilter]);
+    return () => clearTimeout(timer);
+  }, [pagination.page, pagination.perPage, searchText, activeFilter]);
 
-// Keep perPage in sync with view mode
-useEffect(() => {
-  setPagination(prev => ({ ...prev, perPage: getDefaultPerPage(viewMode), page: 1 }));
-}, [viewMode]);
+  // Keep perPage in sync with view mode
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, perPage: getDefaultPerPage(viewMode), page: 1 }));
+  }, [viewMode]);
 
- const handleSearch = (value: string) => {
-  setSearchText(value);
-  setPagination((p) => ({ ...p, page: 1 }));
-};
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
-const handleFilterChange = (filter: string) => {
-  setActiveFilter(filter);
-  setPagination((p) => ({ ...p, page: 1 }));
-};
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
 
   const handleExport = async () => {
@@ -125,11 +152,18 @@ const handleFilterChange = (filter: string) => {
         assigned_to: it.assign_to || (it.assigned && it.assigned.id) || '',
         created_at: it.created_at || it.created_on || '',
         status: it.status || it.audit_status || '',
+        audit_for: it.audit_for || '',
+        checklist_type: it.checklist_type || '',
+        priority: it.priority || '',
+        category_id: it.category_id || '',
+        start_from: it.start_from ? new Date(it.start_from).toLocaleDateString() : '',
+        end_at: it.end_at ? new Date(it.end_at).toLocaleDateString() : '',
+        supplier_id: it.supplier_id || ''
       }));
 
       const csvContent = [
         ['ID', 'Activity', 'Task', 'Assigned To', 'Created On', 'Status'].join(','),
-        ...dataToExport.map(item=> [
+        ...dataToExport.map(item => [
           item.id,
           item.activity_name || '',
           item.task || '',
@@ -153,127 +187,214 @@ const handleFilterChange = (filter: string) => {
     }
   };
 
-  const columns = [
-    {
-      name: 'Action',
-      width: '100px',
-      cell: (row: ScheduledAudit) => (
-        <div className="flex items-center">
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/audit/operational/scheduled/view/${row.id}`); }}
-            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-            title="View"
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/audit/operational/scheduled/edit/${row.id}`); }}
-            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-        </div>
-      ),
-    },
-    { name: 'ID', selector: (row: ScheduledAudit) => row.id, sortable: true, width: '80px' },
-    { name: 'Activity', selector: (row: ScheduledAudit) => row.activity_name || '-', sortable: true },
-    { name: 'Task', selector: (row: ScheduledAudit) => row.task || '-', sortable: true },
-    { name: 'Assigned To', selector: (row: ScheduledAudit) => row.assigned_to_name || row.assign_to || '-', sortable: true },
-    { name: 'Created On', selector: (row: ScheduledAudit) => row.created_at ? new Date(row.created_at).toLocaleDateString() : '-', sortable: true },
-  ];
+const columns = [
+  {
+    name: 'Action',
+    width: '100px',
+    cell: (row: ScheduledAudit) => (
+      <div className="flex items-center">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/audit/operational/scheduled/view/${row.id}`);
+          }}
+          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+        >
+          <Eye size={16} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/audit/operational/scheduled/edit/${row.id}`);
+          }}
+          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+        >
+          <Edit2 size={16} />
+        </button>
+      </div>
+    ),
+  },
+  { name: 'ID', selector: row => row.id, sortable: true, width: '80px' },
+  { name: 'Activity', selector: row => row.activity_name || '-', sortable: true },
+
+  {
+    name: 'Task',
+    selector: row =>
+      row.audit_tasks?.length
+        ? row.audit_tasks.map(t => t.task).join(', ')
+        : '-',
+    sortable: false,
+  },
+
+  {
+    name: 'Assigned To',
+    selector: row => row.assign_to ?? '-',
+    sortable: true,
+  },
+
+  {
+    name: 'Created On',
+    selector: row =>
+      row.created_at
+        ? new Date(row.created_at).toLocaleDateString()
+        : '-',
+    sortable: true,
+  },
+
+  { name: 'Status', selector: row => row.status || '-', sortable: true },
+  { name: 'Audit For', selector: row => row.audit_for || '-', sortable: true },
+  { name: 'Checklist Type', selector: row => row.checklist_type || '-', sortable: true },
+  { name: 'Priority', selector: row => row.priority || '-', sortable: true },
+
+  {
+    name: 'Start From',
+    selector: row =>
+      row.start_from
+        ? new Date(row.start_from).toLocaleDateString()
+        : '-',
+    sortable: true,
+  },
+  {
+    name: 'End At',
+    selector: row =>
+      row.end_at
+        ? new Date(row.end_at).toLocaleDateString()
+        : '-',
+    sortable: true,
+  },
+];
+
 
   const AuditCard = ({ item }: { item: ScheduledAudit }) => (
-    <div className="relative bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
-      {/* <div className="absolute top-3 right-3 text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md shadow-sm">
-        ID: {item.id ?? '-'}
-      </div> */}
-
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <ClipboardList className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{item.activity_name || 'N/A'}</h3>
-            <p className="text-sm text-muted-foreground">{item.id}</p>
-          </div>
-        </div>
-        <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-            item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-              item.status === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-          }`}>
-          {item.status || 'N/A'}
-        </span>
+  <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-shadow">
+    {/* Header */}
+    <div className="flex justify-between items-start mb-3">
+      {/* <div className="p-2 bg-primary/10 rounded-lg"> <ClipboardList className="w-4 h-4 text-primary" /> </div> */}
+      <div>
+        <h3 className="font-semibold text-foreground text-sm">
+          {item.activity_name || 'N/A'}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {item.id}
+        </p>
       </div>
 
-      <div className="space-y-1 text-sm text-muted-foreground mb-4 mt-4">
-        <p>Task: {item.task || '-'}</p>
-        <p>Assigned To: {item.assign_to || '-'}</p>
-        <p>Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</p>
-      </div>
-    <div className="flex items-center gap-2 pt-2 border-t border-border">
-  <button
-    onClick={() => navigate(`/audit/operational/scheduled/view/${item.id}`)}
-    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-accent 
-               text-purple-700 hover:text-primary transition-colors text-xs font-medium"
-    title="View"
-  >
-    <Eye className="w-4 h-4" />
-    <span>View</span>
-  </button>
+      <span
+        className={`px-2 py-0.5 text-xs rounded-full font-medium
+          ${
+            item.status === 'Completed'
+              ? 'bg-green-100 text-green-700'
+              : item.status === 'Pending'
+              ? 'bg-yellow-100 text-yellow-700'
+              : item.status === 'Open'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}
+      >
+        {item.status}
+      </span>
+    </div>
 
-  <button
-    onClick={() => navigate(`/audit/operational/scheduled/edit/${item.id}`)}
-    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-accent 
-               text-purple-700 hover:text-primary transition-colors text-xs font-medium"
-    title="Edit"
-  >
-    <Edit2 className="w-4 h-4" />
-    <span>Edit</span>
-  </button>
+    {/* Body (2-column like image) */}
+    <div className="flex justify-between">
+  <span className="text-muted-foreground">Task</span>
+  <span className="font-medium text-foreground text-right truncate max-w-[140px]">
+    {item.audit_tasks?.length
+      ? item.audit_tasks.map(t => t.task).join(', ')
+      : '-'}
+  </span>
+</div>
+
+<div className="flex justify-between">
+  <span className="text-muted-foreground">Assigned</span>
+  <span className="font-medium text-foreground">
+    {item.assign_to ?? '-'}
+  </span>
 </div>
 
 
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Created</span>
+        <span className="font-medium text-foreground">
+          {item.created_at
+            ? new Date(item.created_at).toLocaleDateString()
+            : '-'}
+        </span>
+      </div>
+  
+    {/* Footer actions */}
+    <div className="flex items-center gap-4 pt-3 mt-3 border-t border-border text-sm">
+      <button
+        onClick={() =>
+          navigate(`/audit/operational/scheduled/view/${item.id}`)
+        }
+        className="flex items-center gap-1 text-purple-700 hover:text-primary"
+      >
+        <Eye className="w-4 h-4" />
+        View
+      </button>
+
+      <button
+        onClick={() =>
+          navigate(`/audit/operational/scheduled/edit/${item.id}`)
+        }
+        className="flex items-center gap-1 text-purple-700 hover:text-primary"
+      >
+        <Edit2 className="w-4 h-4" />
+        Edit
+      </button>
     </div>
-  );
+  </div>
+);
+
 
   return (
-    <div>
-      {/* Status Filters - radio buttons */}
-      <div className="flex gap-4 mb-4 items-center flex-wrap">
-        {statusFilters.map((filter) => (
-          <label key={filter} className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="statusFilter"
-              value={filter}
-              checked={activeFilter === filter}
-              onChange={() => handleFilterChange(filter)}
-              className="w-4 h-4"
-            />
-            <span className={`transition-colors ${activeFilter === filter ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-              {filter}
-            </span>
-          </label>
-        ))}
-      </div>
+    <div className='flex flex-col w-full '>
+      <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+        {/* Left side - Status Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {statusFilters.map((filter) => (
+            <label
+              key={filter}
+              className={`relative inline-flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer mb-5
+                ${activeFilter === filter
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              <input
+                type="radio"
+                name="statusFilter"
+                value={filter}
+                checked={activeFilter === filter}
+                onChange={() => handleFilterChange(filter)}
+                className="w-4 h-4"
+              />
+              <span>{filter}</span>
+              {activeFilter === filter && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </label>
+          ))}
+        </div>
 
-      <ListToolbar
-        searchPlaceholder="Search audits..."
-        searchValue={searchText}
-        onSearchChange={handleSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
-        showAddButton
-        addButtonLabel="Add Audit"
-        onAddClick={() => navigate('/audit/operational/scheduled/create')}
-        showFilter={false}
-        showExport
-        onExportClick={handleExport}
-      />
+        {/* Right side - Toolbar */}
+        <ListToolbar
+          searchPlaceholder="Search audits..."
+          searchValue={searchText}
+          onSearchChange={handleSearch}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          showViewToggle
+          showAddButton
+          addButtonLabel="Add Audit"
+          onAddClick={() => navigate('/audit/operational/scheduled/create')}
+          showFilter={false}
+          showExport
+          onExportClick={handleExport}
+          className="mb-0"
+        />
+      </div>
 
       {/* Loading State */}
       {loading && (

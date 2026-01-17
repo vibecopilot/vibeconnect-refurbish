@@ -113,6 +113,11 @@ export const postAuditScheduled = async (data) =>
     },
   });
 };
+
+export const getAuditStatuses = () =>
+  axios.get('/audit/status-list');
+
+
     export const putAuditScheduled = async (data,id) =>
   axiosInstance.put(`/audits/${id}.json`, data, {
     params: {
