@@ -55,22 +55,21 @@ const TicketList: React.FC = () => {
   }>({});
 
   const colorOptions = [
-    { key: "Pending", bg: "bg-blue-200", border: "border-blue-100", text: "text-blue-600" },
-    { key: "Closed", bg: "bg-red-200", border: "border-red-100", text: "text-red-600" },
-    { key: "Complete", bg: "bg-green-200", border: "border-green-100", text: "text-green-600" },
-    { key: "Work Completed", bg: "bg-green-300", border: "border-green-200", text: "text-green-700" },
-    { key: "Reopened", bg: "bg-orange-200", border: "border-orange-100", text: "text-orange-600" },
-    { key: "Approved", bg: "bg-teal-200", border: "border-teal-5100", text: "text-teal-600" },
-    { key: "Work In Process", bg: "bg-indigo-200", border: "border-indigo-100", text: "text-indigo-600" },
-    { key: "Approval Pending", bg: "bg-yellow-200", border: "border-yellow-100", text: "text-yellow-600" },
-
+    { key: "Pending", bg: "bg-blue-100", border: "border-blue-200", text: "text-blue-700" },
+    { key: "Closed", bg: "bg-red-100", border: "border-red-200", text: "text-red-700" },
+    { key: "Complete", bg: "bg-green-100", border: "border-green-200", text: "text-green-700" },
+    { key: "Work Completed", bg: "bg-green-200", border: "border-green-300", text: "text-green-700" },
+    { key: "Reopened", bg: "bg-orange-100", border: "border-orange-200", text: "text-orange-700" },
+    { key: "Approved", bg: "bg-teal-100", border: "border-teal-200", text: "text-teal-700" },
+    { key: "Work In Process", bg: "bg-indigo-100", border: "border-indigo-200", text: "text-indigo-700" },
+    { key: "Approval Pending", bg: "bg-yellow-100", border: "border-yellow-200", text: "text-yellow-700" },
   ];
 
   const typeColorMap: Record<string, { bg: string; border: string; text: string; icon: string }> = {
-    "Complaint": { bg: "bg-red-100", border: "border-red-200", text: "text-red-600", icon: "text-red-500" },
-    "Request": { bg: "bg-purple-100", border: "border-purple-200", text: "text-purple-600", icon: "text-purple-500" },
-    "Suggestion": { bg: "bg-pink-100", border: "border-pink-200", text: "text-pink-600", icon: "text-pink-500" },
-    "Req": { bg: "bg-violet-100", border: "border-violet-200", text: "text-violet-600", icon: "text-violet-500" },
+    "Complaint": { bg: "bg-red-100", border: "border-red-200", text: "text-red-700", icon: "text-red-500" },
+    "Request": { bg: "bg-purple-100", border: "border-purple-200", text: "text-purple-700", icon: "text-purple-500" },
+    "Suggestion": { bg: "bg-pink-100", border: "border-pink-200", text: "text-pink-700", icon: "text-pink-500" },
+    "Req": { bg: "bg-slate-100", border: "border-slate-200", text: "text-slate-700", icon: "text-slate-500" },
   };
 
 
@@ -266,8 +265,6 @@ const TicketList: React.FC = () => {
         return true;
       });
     }
-
-    // Note: Search is now handled server-side, removed from client-side filtering
 
     // Apply advanced filters
     if (filters.building_name) {

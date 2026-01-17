@@ -15,8 +15,15 @@ interface ScheduledAudit {
   assigned_to_name: string;
   created_at: string;
   status: string;
-}
+  audit_for: String;
+  checklist_type: string;
+  priority: string;
+  category_id: string;
+  start_from: string;
+  end_at: string;
+  supplier_id: string;
 
+}
 const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
 
 const VendorScheduledList: React.FC = () => {
@@ -61,20 +68,20 @@ const VendorScheduledList: React.FC = () => {
 
   const applyFilters = (search: string, filter: string) => {
     let filtered = Array.isArray(data) ? data : [];
-    
+
     if (search) {
       filtered = filtered.filter((item) =>
         item.activity_name?.toLowerCase().includes(search.toLowerCase()) ||
         item.task_name?.toLowerCase().includes(search.toLowerCase())
       );
     }
-    
+
     if (filter !== 'All') {
-      filtered = filtered.filter((item) => 
+      filtered = filtered.filter((item) =>
         item.status?.toLowerCase() === filter.toLowerCase()
       );
     }
-    
+
     setFilteredData(filtered);
   };
 
@@ -88,7 +95,14 @@ const VendorScheduledList: React.FC = () => {
         item.task_name || '',
         item.assigned_to_name || '',
         item.created_at ? new Date(item.created_at).toLocaleDateString() : '',
-        item.status || ''
+        item.status || '',
+        item.audit_for || '',
+        item.checklist_type || '',
+        item.priority || '',
+        item.category_id || '',
+        item.start_from ? new Date(item.start_from).toLocaleDateString() : '',
+        item.end_at ? new Date(item.end_at).toLocaleDateString() : '',
+        item.supplier_id || ''
       ].join(','))
     ].join('\n');
 
@@ -129,6 +143,14 @@ const VendorScheduledList: React.FC = () => {
     { name: 'ACTIVITY', selector: (row: ScheduledAudit) => row.activity_name || '-', sortable: true },
     { name: 'TASK', selector: (row: ScheduledAudit) => row.task_name || '-', sortable: true },
     { name: 'ASSIGNED TO', selector: (row: ScheduledAudit) => row.assigned_to_name || '-', sortable: true },
+    { name: 'STATUS', selector: (row: ScheduledAudit) => row.status || '-', sortable: true },
+    { name: 'TASK FOR', selector: (row: ScheduledAudit) => row.audit_for || '-', sortable: true },
+    { name: 'CHECKLIST TYPE', selector: (row: ScheduledAudit) => row.checklist_type || '-', sortable: true },
+    { name: 'PRIORITY', selector: (row: ScheduledAudit) => row.priority || '-', sortable: true },
+    { name: 'CATEGORY ID', selector: (row: ScheduledAudit) => row.category_id || '-', sortable: true },
+    { name: 'START FROM', selector: (row: ScheduledAudit) => row.start_from ? new Date(row.start_from).toLocaleDateString() : '-', sortable: true },
+    { name: 'END AT', selector: (row: ScheduledAudit) => row.end_at ? new Date(row.end_at).toLocaleDateString() : '-', sortable: true },
+    { name: 'SUPPLIER ID', selector: (row: ScheduledAudit) => row.supplier_id || '-', sortable: true },
     { name: 'CREATED ON', selector: (row: ScheduledAudit) => row.created_at ? new Date(row.created_at).toLocaleDateString() : '-', sortable: true },
   ];
 
@@ -144,12 +166,11 @@ const VendorScheduledList: React.FC = () => {
             <p className="text-sm text-muted-foreground">ID: {item.id}</p>
           </div>
         </div>
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+        <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
           item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-          item.status === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-        }`}>
+            item.status === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+          }`}>
           {item.status || 'N/A'}
         </span>
       </div>
@@ -181,41 +202,51 @@ const VendorScheduledList: React.FC = () => {
 
   return (
     <div>
-      {/* Status Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {statusFilters.map((filter) => (
-          <button
-            key={filter}
-            onClick={() => handleFilterChange(filter)}
-            className={`px-3 py-1.5 text-sm transition-colors relative ${
-              activeFilter === filter
-                ? 'text-primary font-medium'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {filter}
-            {activeFilter === filter && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-            )}
-          </button>
-        ))}
+      <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+        {/* Left side - Status Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {statusFilters.map((filter) => (
+            <label
+              key={filter}
+              className={`relative inline-flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer mb-5
+                ${activeFilter === filter
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              <input
+                type="radio"
+                name="statusFilter"
+                value={filter}
+                checked={activeFilter === filter}
+                onChange={() => handleFilterChange(filter)}
+                className="w-4 h-4"
+              />
+              <span>{filter}</span>
+              {activeFilter === filter && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </label>
+          ))}
+        </div>
+
+        {/* Right side - Toolbar */}
+        <ListToolbar
+          searchPlaceholder="Search audits..."
+          searchValue={searchText}
+          onSearchChange={handleSearch}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          showViewToggle
+          showAddButton
+          addButtonLabel="Add"
+          onAddClick={() => navigate('/audit/vendor/scheduled/create')}
+          showFilter={false}
+          showExport
+          onExportClick={handleExport}
+          className="mb-0"
+        />
       </div>
-
-
-      <ListToolbar
-        searchPlaceholder="Search audits..."
-        searchValue={searchText}
-        onSearchChange={handleSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
-        showAddButton
-        addButtonLabel="Add"
-        onAddClick={() => navigate('/audit/vendor/scheduled/create')}
-        showFilter={false}
-        showExport
-        onExportClick={handleExport}
-      />
 
       {viewMode === 'grid' ? (
         <div className="mt-4">

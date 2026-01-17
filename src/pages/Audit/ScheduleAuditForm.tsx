@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Plus, Calendar } from 'lucide-react';
+import { ClipboardList, Plus, Calendar, X, RotateCcw, Save, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
@@ -15,6 +15,7 @@ const scanTypes = ['QR Code', 'NFC', 'Manual'];
 
 const API_BASE = "https://admin.vibecopilot.ai";
 const API_TOKEN = getItemInLocalStorage("TOKEN");
+const SITEID = getItemInLocalStorage("SITEID");
 
 interface FormData {
   audit_for: string;
@@ -129,17 +130,26 @@ const ScheduleAuditForm: React.FC = () => {
 
 
   const addTask = () => {
-    setTasks(prev => [...prev, {
-      id: Date.now(),
-      group: '',
-      subgroup: '',
-      task: '',
-      input_type: 'Text',
-      mandatory: false,
-      reading: false,
-      help_text: false,
-    }]);
+    setFormData(prev => ({
+      ...prev,
+      create_task: true, // FORCE true
+    }));
+
+    setTasks(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        group: '',
+        subgroup: '',
+        task: '',
+        input_type: 'Text',
+        mandatory: false,
+        reading: false,
+        help_text: false,
+      },
+    ]);
   };
+
 
   const updateTask = (id: number, field: keyof TaskItem, value: any) => {
     setTasks(prev => prev.map(task =>
@@ -163,79 +173,185 @@ const ScheduleAuditForm: React.FC = () => {
     }));
   };
   const handleScheduleTypeChange = (type: string) => {
-    setFormData(prev => ({ ...prev, audit_for: type }));
+    setFormData(prev => ({
+      ...prev,
+      audit_for: type,
+      asset_name: '',
+      service_name: '',
+      vendor_name: '',
+      training_name: '',
+    }));
   };
+  const handleReset = () => {
+    setFormData({
+      audit_for: 'Asset',
+      activity_name: '',
+      description: '',
+      allow_observations: false,
+      checklist_type: 'Individual',
+
+      asset_name: '',
+      service_name: '',
+      vendor_name: '',
+      training_name: '',
+
+      assign_to: '',
+      scan_type: '',
+      plan_duration: '',
+      priority: 'Medium',
+      email_trigger_rule: '',
+      supervisors: '',
+      category_id: '',
+      look_overdue_task: '',
+      frequency: 'Daily',
+      start_from: '',
+      end_at: '',
+      supplier_id: '',
+
+      create_new: true,
+      create_task: false,
+      weightage: false,
+    });
+
+    setTasks([]); // IMPORTANT: clear tasks also
+  };
+
 
   const handleChecklistTypeChange = (type: string) => {
     setFormData(prev => ({ ...prev, checklist_type: type }));
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (!formData.activity_name.trim()) {
-    toast.error('Activity Name is required');
-    return;
-  }
-
-  if (tasks.length === 0) {
-    toast.error('At least one task is required');
-    return;
-  }
-
-  for (const t of tasks) {
-    if (!t.group || !t.task || !t.input_type) {
-      toast.error('Task Group, Task Name and Input Type are required');
+    if (!formData.activity_name.trim()) {
+      toast.error('Activity Name is required');
       return;
     }
-  }
 
-  setLoading(true);
-
-  try {
-    const payload = new FormData();
-
-    // ----- AUDIT FIELDS -----
-    Object.entries(formData).forEach(([key, value]) => {
-      const mappedKey =
-        key === 'supplier_id' ? 'select_supplier' :
-        key === 'category_id' ? 'category' :
-        key;
-
-      payload.append(
-        `audit[${mappedKey}]`,
-        typeof value === 'boolean' ? (value ? '1' : '0') : String(value ?? '')
+    if (formData.create_task && tasks.length === 0) {
+      toast.error('At least one task is required');
+      return;
+    }
+    if (formData.create_task) {
+      const invalidTask = tasks.some(
+        t => !t.group || !t.task || !t.input_type
       );
-    });
 
-    // ----- TASKS (ONLY THIS FORMAT) -----
-    tasks.forEach((task, index) => {
-      payload.append(`audit[tasks_attributes][${index}][group]`, task.group);
-      payload.append(`audit[tasks_attributes][${index}][subgroup]`, task.subgroup);
-      payload.append(`audit[tasks_attributes][${index}][task]`, task.task);
-      payload.append(`audit[tasks_attributes][${index}][input_type]`, task.input_type);
-      payload.append(`audit[tasks_attributes][${index}][mandatory]`, task.mandatory ? '1' : '0');
-      payload.append(`audit[tasks_attributes][${index}][reading]`, task.reading ? '1' : '0');
-      payload.append(`audit[tasks_attributes][${index}][help_text]`, task.help_text ? '1' : '0');
-    });
-
-    // 🔍 DEBUG (TEMPORARY)
-    for (const pair of payload.entries()) {
-      console.log(pair[0], pair[1]);
+      if (invalidTask) {
+        toast.error('Please fill all required task fields');
+        return;
+      }
     }
 
-    const res = await postAuditScheduled(payload);
 
-    toast.success('Audit scheduled successfully');
-    navigate('/audit/operational/scheduled');
+    setLoading(true);
 
-  } catch (error: any) {
-    console.error('API Error:', error?.response?.data || error);
-    toast.error(error?.response?.data?.message || 'Something went wrong');
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      const payload = new FormData();
+
+      // -------------------------
+      // BASE FIELDS (always send)
+      // -------------------------
+      const baseFields = [
+        'audit_for',
+        'activity_name',
+        'description',
+        'allow_observations',
+        'checklist_type',
+        'assign_to',
+        'scan_type',
+        'plan_duration',
+        'priority',
+        'email_trigger_rule',
+        'supervisors',
+        'frequency',
+        'start_from',
+        'end_at',
+        'create_new',
+        'create_task',
+        'weightage',
+      ];
+
+      baseFields.forEach((key) => {
+        const value = (formData as any)[key];
+        if (value !== '' && value !== null && value !== undefined) {
+          payload.append(
+            `audit[${key}]`,
+            typeof value === 'boolean' ? (value ? '1' : '0') : String(value)
+          );
+        }
+      });
+
+      payload.append('audit[asset_name]', formData.asset_name || '');
+      payload.append('audit[service_name]', formData.service_name || '');
+      payload.append('audit[vendor_name]', formData.vendor_name || '');
+      payload.append('audit[training_name]', formData.training_name || '');
+
+      payload.append('audit[site_id]',SITEID || '');
+      if (formData.category_id) {
+        payload.append('audit[category]', formData.category_id);
+      }
+
+      if (formData.supplier_id) {
+        payload.append('audit[select_supplier]', formData.supplier_id);
+      }
+
+      if (formData.look_overdue_task) {
+        payload.append('audit[look_overdue_task]', formData.look_overdue_task);
+      }
+      if (tasks.length > 0) {
+        payload.append('audit[create_task]', '1');
+      }
+
+      if (tasks.length > 0) {
+        tasks.forEach((task, index) => {
+          payload.append(`audit[audit_tasks][][${index}][group]`, task.group);
+          payload.append(`audit[audit_tasks][][${index}][sub_group]`, task.sub_group);
+          payload.append(`audit[audit_tasks][][${index}][task]`, task.task);
+          payload.append(`audit[audit_tasks][][${index}][input_type]`, task.input_type);
+
+          payload.append(
+            `audit[audit_tasks][][${index}][mandatory]`,
+            task.mandatory ? '1' : '0'
+          );
+
+          payload.append(
+            `audit[audit_tasks][][${index}][reading]`,
+            task.reading ? '1' : '0'
+          );
+
+          payload.append(
+            `audit[audit_tasks][][${index}][help_text]`,
+            task.help_text ? '1' : '0'
+          );
+        });
+      }
+
+
+      // Optional: still keep logic clear
+      if (formData.audit_for === 'Asset' && !formData.asset_name) {
+        payload.set('audit[asset_name]', '');
+      }
+
+      // DEBUG (remove later)
+      for (const pair of payload.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+
+      await postAuditScheduled(payload);
+
+
+      toast.success('Audit scheduled successfully');
+      navigate('/audit/operational/scheduled');
+
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 
@@ -244,13 +360,14 @@ const handleSubmit = async (e: React.FormEvent) => {
       <Breadcrumb items={[
         { label: 'FM Module', path: '/audit' },
         { label: 'Audit', },
-        { label: 'Schedule Audit' },
+        { label: 'Operational' },
+        { label: 'Scheduled' },
         { label: 'Create' }
       ]} />
 
       <form onSubmit={handleSubmit}>
         {/* Toggle Section */}
-        <div className="flex gap-6 mb-6">
+        <div className="flex gap-6 mb-6 mt-6">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -608,9 +725,10 @@ const handleSubmit = async (e: React.FormEvent) => {
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Lock Overdue Task</label>
               <select
-                name="lock_overdue_task"
+                name="look_overdue_task"
                 value={formData.look_overdue_task}
                 onChange={handleInputChange}
+
                 className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select</option>
@@ -673,24 +791,43 @@ const handleSubmit = async (e: React.FormEvent) => {
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-center gap-4">
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
           <button
             type="button"
-            onClick={() => navigate(-1)}
-            className="px-8 py-2.5 border border-border text-foreground rounded-lg hover:bg-accent transition-colors"
+            onClick={() => navigate('/audit/operational/scheduledaudit')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-black  hover:bg-primary/90 rounded-lg  border border-gray-300 transition-colors"
           >
+            <X className="w-4 h-4" />
             Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2  text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-8 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50"
           >
-            {loading ? 'Submitting...' : 'Submit'}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Submit
+              </>
+            )}
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 };
 
