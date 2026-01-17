@@ -84,7 +84,6 @@ const ContactBookView: React.FC = () => {
             ]} />
 
             {/* Header */}
-            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4 mb-6">
                 <div className="flex items-center gap-4">
                     <button
