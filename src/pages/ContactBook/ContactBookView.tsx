@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
     Loader2, Edit, Building, User, Phone, Mail, Globe,
-    FileText, Calendar, ArrowLeft, ExternalLink
+    FileText, Calendar, ArrowLeft, ExternalLink,Image
 } from "lucide-react";
 import Breadcrumb from "../../components/ui/Breadcrumb";
+import { getContactBookDetails } from "../../api";
 
-const API_URL = "https://admin.vibecopilot.ai/contact_books";
+// const API_BASE = "domainPrefix";
+// const API_TOKEN = localStorage.getItem("TOKEN");
 const DOMAIN = "https://admin.vibecopilot.ai";
+
 
 interface FileItem {
     id: number;
@@ -27,8 +30,8 @@ interface Contact {
     address?: string;
     description?: string;
     profile?: string;
-    logo?: FileItem[];
-    contact_books_attachment?: FileItem[];
+    logo: FileItem[];
+    contact_books_attachment: FileItem[];
     status: boolean;
     generic_info_name?: string;
     generic_sub_info_name?: string;
@@ -37,7 +40,7 @@ interface Contact {
 }
 
 const ContactBookView: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id } = useParams();
     const navigate = useNavigate();
     const [contact, setContact] = useState<Contact | null>(null);
     const [loading, setLoading] = useState(true);
@@ -47,9 +50,8 @@ const ContactBookView: React.FC = () => {
 
         const fetchContact = async () => {
             try {
-                const res = await fetch(`${API_URL}/${id}.json?token=${localStorage.getItem("TOKEN")}`);
-                const data = await res.json();
-                setContact(data);
+                const res = await getContactBookDetails(id);
+                setContact(res?.data);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -75,6 +77,10 @@ const ContactBookView: React.FC = () => {
 
     const formatDate = (date?: string) =>
         date ? new Date(date).toLocaleString() : "-";
+
+
+    const isImage = (url: string) =>
+        /\.(jpg|jpeg|png|webp)$/i.test(url);
 
     return (
         <div className="p-6">
@@ -156,44 +162,47 @@ const ContactBookView: React.FC = () => {
                     )}
 
                     {/* Attachments */}
-                    {contact.contact_books_attachment?.length ? (
+                    {contact.contact_books_attachment?.length > 0 && (
                         <Card title={`Attachments (${contact.contact_books_attachment.length})`}>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {contact.contact_books_attachment.map((file) => (
+                                {contact.contact_books_attachment.map(file => (
                                     <a
                                         key={file.id}
                                         href={DOMAIN + file.document}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="group relative aspect-square rounded-lg overflow-hidden border"
+                                        className="border rounded-lg overflow-hidden group relative"
                                     >
-                                        <img
-                                            src={DOMAIN + file.document}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                                            <ExternalLink className="w-6 h-6 text-white" />
+                                        {isImage(file.document) ? (
+                                            <img src={DOMAIN + file.document} className="object-cover w-full h-32" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-32">
+                                                <FileText />
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                                            <ExternalLink className="text-white" />
                                         </div>
                                     </a>
                                 ))}
                             </div>
                         </Card>
-                    ) : null}
+                    )}
                 </div>
 
                 {/* SIDEBAR */}
                 <div className="space-y-6">
-                    {/* Logo */}
-                    <Card title="Company Logo">
-                        {contact.logo?.length ? (
-                            <img
-                                src={DOMAIN + contact.logo[0].document}
-                                className="w-32 h-32 rounded-full object-cover mx-auto"
-                            />
-                        ) : (
-                            <p className="text-center text-muted-foreground">No logo</p>
-                        )}
+                    {/* MULTIPLE LOGOS */}
+                    <Card title={`Company Logos (${contact.logo.length})`} icon={<Image />}>
+                        <div className="grid grid-cols-2 gap-4">
+                            {contact.logo.map(logo => (
+                                <img
+                                    key={logo.id}
+                                    src={DOMAIN + logo.document}
+                                    className="w-full h-28 object-cover rounded-lg border"
+                                />
+                            ))}
+                        </div>
                     </Card>
 
                     {/* Timeline */}
