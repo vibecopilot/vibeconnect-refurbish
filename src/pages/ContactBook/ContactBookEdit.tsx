@@ -54,15 +54,15 @@ const ContactBookEdit: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [categories, setCategories] = useState<GenericInfo[]>([]);
     const [subCategories, setSubCategories] = useState<GenericSubInfo[]>([]);
-    
+
     // Existing attachments from server
     const [existingLogos, setExistingLogos] = useState<Attachment[]>([]);
     const [existingDocuments, setExistingDocuments] = useState<Attachment[]>([]);
-    
+
     // New files to upload
     const [newLogos, setNewLogos] = useState<File[]>([]);
     const [newDocuments, setNewDocuments] = useState<File[]>([]);
-    
+
     // IDs to remove
     const [removedLogoIds, setRemovedLogoIds] = useState<number[]>([]);
     const [removedDocumentIds, setRemovedDocumentIds] = useState<number[]>([]);
@@ -143,11 +143,20 @@ const ContactBookEdit: React.FC = () => {
             if (data.logo?.length) {
                 setExistingLogos(data.logo.map((l: any) => ({ id: l.id, document: l.document })));
             }
-            
+
+            // Set existing documents
             // Set existing documents
             if (data.contact_books_attachment?.length) {
-                setExistingDocuments(data.contact_books_attachment.map((d: any) => ({ id: d.id, document: d.document })));
+                setExistingDocuments(
+                    data.contact_books_attachment
+                        .filter((d: any) => d.document)
+                        .map((d: any) => ({
+                            id: d.id,
+                            document: d.document
+                        }))
+                );
             }
+
         } catch {
             toast.error("Failed to load contact");
         } finally {
@@ -237,7 +246,7 @@ const ContactBookEdit: React.FC = () => {
             });
 
             await editContactBook(id!, fd);
-            
+
             toast.success("Contact Book Updated");
             navigate("/contact-book");
         } catch {
@@ -431,13 +440,18 @@ const ContactBookEdit: React.FC = () => {
                         <TextArea label="Description" name="description" value={formData.description} onChange={handleChange} />
 
                         {/* Existing Documents */}
+                        {/* Existing Attachments */}
                         {existingDocuments.length > 0 && (
                             <div className="mt-4">
-                                <label className="text-xs font-semibold mb-2 block">Existing Attachments</label>
-                                <div className="flex flex-wrap gap-3">
+                                <label className="text-xs font-semibold mb-2 block">
+                                    Existing Attachments
+                                </label>
+
+                                <div className="flex flex-wrap gap-4">
                                     {existingDocuments.map((doc) => {
-                                        const fileName = doc.document.split('/').pop() || 'Document';
+                                        const fileName = doc.document.split("/").pop() || "Document";
                                         const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document);
+
                                         return (
                                             <div key={doc.id} className="relative group">
                                                 <div className="w-24 h-24 border border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted">
@@ -450,14 +464,19 @@ const ContactBookEdit: React.FC = () => {
                                                     ) : (
                                                         <div className="flex flex-col items-center p-2">
                                                             <FileText className="w-8 h-8 text-muted-foreground" />
-                                                            <span className="text-xs text-muted-foreground truncate w-full text-center mt-1">{fileName}</span>
+                                                            <span className="text-xs text-muted-foreground truncate w-full text-center mt-1">
+                                                                {fileName}
+                                                            </span>
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* DELETE BUTTON */}
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveDocument(doc.id)}
-                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center
+                                       opacity-0 group-hover:opacity-100 transition-opacity"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
@@ -467,6 +486,7 @@ const ContactBookEdit: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
 
                         {/* New Documents Preview */}
                         {newDocuments.length > 0 && (
@@ -507,26 +527,36 @@ const ContactBookEdit: React.FC = () => {
 
                         {/* Upload New Documents */}
                         <div className="mt-4">
-                            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                            <input
+                                type="file"
+                                hidden
+                                id="uploadDoc"
+                                multiple
+                                onChange={(e) => {
+                                    const files = e.target.files ? Array.from(e.target.files) : [];
+                                    if (files.length) {
+                                        setNewDocuments(prev => [...prev, ...files]);
+                                    }
+                                    e.target.value = "";
+                                }}
+                            />
+
+                            {/* ENTIRE BOX IS CLICKABLE */}
+                            <label
+                                htmlFor="uploadDoc"
+                                className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer
+                                 hover:bg-purple transition"
+                            >
                                 <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                                <input 
-                                    type="file" 
-                                    hidden 
-                                    id="uploadDoc" 
-                                    multiple
-                                    onChange={(e) => {
-                                        const files = e.target.files ? Array.from(e.target.files) : [];
-                                        if (files.length) {
-                                            setNewDocuments(prev => [...prev, ...files]);
-                                        }
-                                        e.target.value = ''; // Reset input
-                                    }} 
-                                />
-                                <label htmlFor="uploadDoc" className="cursor-pointer text-sm font-medium text-primary">
-                                    Click to upload attachments
-                                </label>
-                            </div>
+                                <p className="text-sm font-bold text-white bg-purple-600 inline-block px-3 py-2 rounded-lg">
+                                    Click  to upload attachments
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Images, PDFs, DOC files supported
+                                </p>
+                            </label>
                         </div>
+
                     </Section>
 
                     {/* ACTIONS */}
