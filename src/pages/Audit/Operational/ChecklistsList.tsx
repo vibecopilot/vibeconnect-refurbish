@@ -41,53 +41,54 @@ const ChecklistsList: React.FC = () => {
   //fetching the backend data
   const fetchData = useCallback(async () => {
     setLoading(true);
+
     try {
+      const params = {
+        search: searchText || undefined,
+        status: activeFilter !== 'All' ? activeFilter : undefined,
+        page: pagination.page,
+        per_page: pagination.perPage,
+      };
+
       const [checklistRes, scheduledRes] = await Promise.all([
-        getChecklist(),
-        getAuditScheduled(),
+        getChecklist(params),
+        getAuditScheduled(params),
       ]);
 
-      // 🔹 Extract checklist data
-      const checklistItems: AuditChecklist[] =
-        Array.isArray(checklistRes.data)
-          ? checklistRes.data
-          : Array.isArray(checklistRes.data?.activities)
-            ? checklistRes.data.activities
-            : [];
+      const checklistItems =
+        checklistRes.data?.activities?.map((item: any) => ({
+          id: item.id,
+          activity_name: item.checklist_name,
+          name: item.asset_name,
+          status: item.status,
+          created_at: item.created_at,
+        })) || [];
 
-      // 🔹 Extract scheduled audit data
-      const scheduledItems: AuditChecklist[] =
-        Array.isArray(scheduledRes.data)
-          ? scheduledRes.data
-          : Array.isArray(scheduledRes.data?.audits)
-            ? scheduledRes.data.audits
-            : [];
+      const scheduledItems =
+        scheduledRes.data?.audits || [];
 
       const mergedData = [...checklistItems, ...scheduledItems];
 
-      const total = mergedData.length;
-      const totalPages = Math.max(1, Math.ceil(total / pagination.perPage));
-
-      const start = (pagination.page - 1) * pagination.perPage;
-      const end = start + pagination.perPage;
-
+      setPagedData(mergedData);
       setData(mergedData);
-      setFilteredData(mergedData.slice(start, end));
 
-      setPagination((p) => ({
+      setPagination(p => ({
         ...p,
-        total,
-        totalPages,
+        total: checklistRes.data?.total || mergedData.length,
+        totalPages: checklistRes.data?.total_pages || 1,
       }));
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to fetch data");
-      setData([]);
-      setFilteredData([]);
+      toast.error('Failed to fetch data');
+      setPagedData([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [
+    searchText,
+    activeFilter,
+    // pagination.page,
+    // pagination.perPage,
+  ]);
 
 
   useEffect(() => {
@@ -217,7 +218,7 @@ const ChecklistsList: React.FC = () => {
   const columns = [
     {
       name: 'ACTION',
-      width: '200px',
+      width: '100px',
       center: true,
       cell: (row: AuditChecklist) => (
         <div className="flex justify-center items-center gap-2 w-full">
@@ -240,94 +241,154 @@ const ChecklistsList: React.FC = () => {
       name: 'ID',
       selector: (r: AuditChecklist) => r.id,
       sortable: true,
-      width: '500px',
+      width: '10x0px',
       center: true,
     },
     {
       name: 'Activity Name',
-      selector: (r: AuditChecklist) => r.activity_name || r.name || '-',
+      selector: (r: AuditChecklist) => r.activity_name || '-',
       sortable: true,
       center: true,
       wrap: true,
     },
+    {
+      name: 'Asset Name',
+      selector: (r: AuditChecklist) => r.name || '-',
+      sortable: true,
+      center: true,
+      wrap: true,
+    },
+    {
+      name: 'Status',
+      selector: (r: AuditChecklist) => r.status || '-',
+      sortable: true,
+      center: true,
+    },
+    {
+      name: 'Created At',
+      selector: (r: AuditChecklist) =>
+        r.created_at ? new Date(r.created_at).toLocaleDateString() : '-',
+      sortable: true,
+      center: true,
+    }
   ];
 
 
   /* ---------------- CARD ---------------- */
   const ChecklistCard = ({ item }: { item: AuditChecklist }) => (
-    <div className=" relative bg-card border rounded-lg p-4">
-      <div className="flex justify-between mb-3">
-        <div className="flex gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <ClipboardList className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold">
-              {item.activity_name || item.name || 'N/A'}
-            </h3>
-            <p className="text-sm text-muted-foreground">{item.id}</p>
-          </div>
-
+    <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-shadow">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h3 className="font-semibold text-sm text-foreground">
+            {item.activity_name || 'N/A'}
+          </h3>
+          <p className="text-xs text-muted-foreground">{item.id}</p>
         </div>
-<span
-  className={`absolute top-3 right-3
-    inline-flex items-center justify-center
-    text-[10px] font-semibold px-2.5 py-0.5
-    rounded-full ${
-    normalizeStatus(item.status) === "completed"
-      ? "bg-green-100 text-green-700"
-      : normalizeStatus(item.status) === "pending"
-      ? "bg-yellow-100 text-yellow-700"
-      : normalizeStatus(item.status) === "open"
-      ? "bg-blue-100 text-blue-700"
-      : "bg-gray-100 text-gray-600"
-  }`}
->
-  {item.status || "N/A"}
-</span>
 
-
+        <span
+          className={`px-2 py-0.5 text-xs rounded-full font-medium
+            ${normalizeStatus(item.status) === 'completed'
+              ? 'bg-green-100 text-green-700'
+              : normalizeStatus(item.status) === 'pending'
+                ? 'bg-yellow-100 text-yellow-700'
+                : normalizeStatus(item.status) === 'open'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600'
+            }`}
+        >
+          {item.status || 'N/A'}
+        </span>
       </div>
-      <div>
-        <p className='text-sm text-muted-foreground flex'> name : {item.name || 'N/A'}</p>
-        <p className="text-sm text-muted-foreground flex">Created at : {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</p>
+
+      {/* Body */}
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Asset</span>
+          <span className="font-medium">{item.name || '-'}</span>
+        </div>
+
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Created</span>
+          <span className="font-medium">
+            {item.created_at
+              ? new Date(item.created_at).toLocaleDateString()
+              : '-'}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center gap-4 pt-3 mt-3 border-t border-border text-sm">
+        <button
+          onClick={() => navigate(`/audit/operational/checklists/${item.id}`)}
+          className="flex items-center gap-1 text-purple-700 hover:text-primary"
+        >
+          <Eye className="w-4 h-4" /> View
+        </button>
+
+        <button
+          onClick={() =>
+            navigate(`/audit/operational/checklists/${item.id}/edit`)
+          }
+          className="flex items-center gap-1 text-purple-700 hover:text-primary"
+        >
+          <Edit2 className="w-4 h-4" /> Edit
+        </button>
       </div>
     </div>
   );
 
   return (
     <div>
-      {/* Status Filters */}
-      <div className="flex gap-3 mb-3 flex-wrap">
-        {statusFilters.map((f) => (
-          <label key={f} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              checked={activeFilter === f}
-              onChange={() => handleFilterChange(f)}
-            />
-            <span>{f}</span>
-          </label>
-        ))}
-      </div>
+      <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+        {/* Left side - Status Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {statusFilters.map((filter) => (
+            <label
+              key={filter}
+              className={`relative inline-flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer mb-5
+                ${activeFilter === filter
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              <input
+                type="radio"
+                name="statusFilter"
+                value={filter}
+                checked={activeFilter === filter}
+                onChange={() => handleFilterChange(filter)}
+                className="w-4 h-4"
+              />
+              <span>{filter}</span>
+              {activeFilter === filter && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </label>
+          ))}
+        </div>
 
-      <ListToolbar
-        searchPlaceholder="Search checklists..."
-        searchValue={searchText}
-        onSearchChange={handleSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
-        showAddButton
-        addButtonLabel="Add"
-        onAddClick={() => navigate('/audit/operational/checklists/create')}
-        showFilter
-        onExportClick={handleExport}
-      />
+        {/* Right side - Toolbar */}
+        <ListToolbar
+          searchPlaceholder="Search checklists by Activity, Asset Name,Id"
+          searchValue={searchText}
+          onSearchChange={handleSearch}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          showViewToggle
+          showAddButton
+          addButtonLabel="Add"
+          onAddClick={() => navigate('/audit/operational/checklists/create')}
+          showFilter
+          onExportClick={handleExport}
+          className="mb-0"
+        />
+      </div>
 
 
       {viewMode === 'grid' ? (
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
             <div className="col-span-full text-center py-8">Loading...</div>
           ) : pagedData.length === 0 ? (
@@ -343,7 +404,7 @@ const ChecklistsList: React.FC = () => {
           columns={columns}
           data={filteredData}
           loading={loading}
-          pagination
+          pagination={false}
           paginationPerPage={10}
         />
       )}

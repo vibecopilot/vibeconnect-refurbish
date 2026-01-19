@@ -274,45 +274,49 @@ const ConductedList: React.FC = () => {
 
   return (
     <div>
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {statusFilters.map((filter) => (
-          <label
-            key={filter}
-            className={`relative inline-flex items-center gap-2 px-3 pt-1.5 pb-2.5 text-sm cursor-pointer
-    ${activeFilter === filter
-                ? 'text-primary font-medium'
-                : 'text-muted-foreground hover:text-foreground'
-              }`}
-          >
-            <input
-              type="radio"
-              name="statusFilter"
-              value={filter}
-              checked={activeFilter === filter}
-              onChange={() => handleFilterChange(filter)}
-              className="w-4 h-4"
-            />
+      <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+        {/* Left side - Status Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {statusFilters.map((filter) => (
+            <label
+              key={filter}
+              className={`relative inline-flex items-center gap-2  px-2 py-1.5 text-sm cursor-pointer mb-5
+                ${activeFilter === filter
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              <input
+                type="radio"
+                name="statusFilter"
+                value={filter}
+                checked={activeFilter === filter}
+                onChange={() => handleFilterChange(filter)}
+                className="w-4 h-4"
+              />
+              <span>{filter}</span>
+              {activeFilter === filter && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </label>
+          ))}
+        </div>
 
-            <span>{filter}</span>
-
-          </label>
-
-        ))}
+        {/* Right side - Toolbar */}
+        <ListToolbar
+          searchPlaceholder="Search audits..."
+          searchValue={searchText}
+          onSearchChange={handleSearch}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          showViewToggle
+          showAddButton={false}
+          showFilter={false}
+          showExport
+          onExportClick={handleExport}
+          className="mb-0"
+        />
       </div>
-
-
-      <ListToolbar
-        searchPlaceholder="Search audits..."
-        searchValue={searchText}
-        onSearchChange={handleSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
-        showAddButton={false}
-        showFilter={false}
-        showExport
-        onExportClick={handleExport}
-      />
 
       {viewMode === 'grid' ? (
         <div className="mt-4">
@@ -338,7 +342,7 @@ const ConductedList: React.FC = () => {
           columns={columns}
           data={filteredData}
           loading={loading}
-          pagination
+          pagination={false}
           paginationPerPage={recordsPerPage}
         />
       )}

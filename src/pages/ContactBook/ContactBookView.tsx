@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Pencil, ChevronRight } from "lucide-react";
-import { getItemInLocalStorage } from "../../utils/localStorage";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+    Loader2, Edit, Building, User, Phone, Mail, Globe,
+    FileText, Calendar, ArrowLeft, ExternalLink,Image
+} from "lucide-react";
+import Breadcrumb from "../../components/ui/Breadcrumb";
+import { getContactBookDetails } from "../../api";
 
-/* ---------- API BASE URL ---------- */
-const API_URL = "https://admin.vibecopilot.ai/contact_books";
-const FILE_BASE_URL = "https://admin.vibecopilot.ai";
+// const API_BASE = "domainPrefix";
+// const API_TOKEN = localStorage.getItem("TOKEN");
+const DOMAIN = "https://admin.vibecopilot.ai";
 
 
 interface FileItem {
     id: number;
     document: string;
 }
-
-/* ---------- TYPES ---------- */
 
 interface Contact {
     id: number;
@@ -28,8 +30,8 @@ interface Contact {
     address?: string;
     description?: string;
     profile?: string;
-    logo?: FileItem[];
-    contact_books_attachment?: FileItem[];
+    logo: FileItem[];
+    contact_books_attachment: FileItem[];
     status: boolean;
     generic_info_name?: string;
     generic_sub_info_name?: string;
@@ -38,163 +40,214 @@ interface Contact {
 }
 
 const ContactBookView: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id } = useParams();
     const navigate = useNavigate();
-    const [data, setData] = useState<Contact | null>(null);
+    const [contact, setContact] = useState<Contact | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!id) return;
+
         const fetchContact = async () => {
             try {
-                const res = await fetch(
-                    `${API_URL}/${id}.json?token=efe990d24b0379af8b5ba3d0a986ac802796bc2e0db15552`
-                );
-                if (!res.ok) throw new Error("Failed to fetch contact");
-                const json = await res.json();
-                setData(json);
-            } catch (error) {
-                console.error(error);
+                const res = await getContactBookDetails(id);
+                setContact(res?.data);
+            } catch (err) {
+                console.error(err);
             } finally {
                 setLoading(false);
             }
         };
 
-        if (id) fetchContact();
+        fetchContact();
     }, [id]);
 
-    if (loading) return <div className="p-6">Loading...</div>;
-    if (!data) return <div className="p-6">No data found</div>;
+    if (loading) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading contact details...</p>
+            </div>
+        );
+    }
 
-    const Field = ({ label, value }: any) => (
-        <div className="flex gap-2 text-sm">
-            <span className="font-semibold min-w-[130px]">{label} :</span>
-            <span className="text-gray-700 break-words">{value || "-"}</span>
-        </div>
-    );
+    if (!contact) {
+        return <div className="p-6">Contact not found</div>;
+    }
+
+    const formatDate = (date?: string) =>
+        date ? new Date(date).toLocaleString() : "-";
+
+
     const isImage = (url: string) =>
-        /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-
-    const getFileName = (url: string) =>
-        decodeURIComponent(url.split("/").pop() || "Attachment");
-
-
-
+        /\.(jpg|jpeg|png|webp)$/i.test(url);
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* HEADER */}
-            <div className="w-full bg-white px-6 py-3 mx-4 mt-4 rounded-lg shadow-sm">
-                <nav className="flex items-center text-xs text-gray-500">
-                    <span
-                        className="cursor-pointer hover:text-purple-600"
+        <div className="p-6">
+            <Breadcrumb items={[
+                { label: "Contact Book", path: "/contact-book" },
+                { label: contact.company_name }
+            ]} />
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4 mb-6">
+                <div className="flex items-center gap-4">
+                    <button
                         onClick={() => navigate("/contact-book")}
+                        className="p-2 hover:bg-muted rounded-lg"
                     >
-                        Contact Book
-                    </span>
-                    <ChevronRight size={12} className="mx-2" />
-                    <span className="text-gray-700 font-medium">View</span>
-                </nav>
-                <div className="text-black font-semibold text-xl mt-2">
-                    Contact Details
-                </div>
+                        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                    </button>
 
-                <div className="p-6">
-                    {/* edit button */}
-                    <div className="flex justify-end">
-                        <button
-                            onClick={() => navigate(`/contact-book/edit/${id}`)}
-                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-2 py-2 rounded-md text-sm font-semibold"
-                        >
-                            <Pencil size={16} /> Edit Contact
-                        </button>
-                    </div>
+                    <div className="space-y-1">
+                        {/* Company Name */}
+                        <h1 className="text-2xl font-bold">
+                            {contact.company_name}
+                        </h1>
 
-                    {/* LOGO */}
-                    <div className="flex justify-center mb-6">
-                        {data.logo && data.logo.length > 0 ? (
-                            <img
-                                src={`${FILE_BASE_URL}${data.logo[0].document}`}
-                                alt="Company Logo"
-                                className="w-24 h-24 rounded-full object-cover border"
-                            />
-                        ) : (
-                            <div className="w-24 h-24 rounded-full border flex items-center justify-center text-gray-400 text-xs">
-                                No Logo
-                            </div>
-                        )}
-                    </div>
+                        {/* ID + Status */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-muted-foreground">
+                                # {contact.id}
+                            </span>
 
-                </div>
-
-                {/* DETAILS */}
-                <div className="bg-white rounded-lg shadow p-6 mt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                        <Field label="Company Name" value={data.company_name || "-"} />
-                        <Field label="Contact Person" value={data.contact_person_name || "-"} />
-                        <Field label="Mobile" value={data.mobile} />
-                        <Field label="Landline" value={data.landline_no || "-"} />
-                        <Field label="Primary Email" value={data.primary_email || "-"} />
-                        <Field label="Secondary Email" value={data.secondary_email || "-"} />
-                        <Field label="Website" value={data.website || "-"} />
-                        <Field label="Category" value={data.generic_info_name || "-"} />
-                        <Field label="Sub Category" value={data.generic_sub_info_name || "-"} />
-                        <Field label="Key Offerings" value={data.key_offering || "-"} />
-                        <Field label="Address" value={data.address || "-"} />
-                        <Field label="Description" value={data.description || "-"} />
-                        <Field label="Profile" value={data.profile || "-"} />
-                        <Field label="Status" value={data.status ? "Active" : "Inactive"} />
-                        <Field label="Created At" value={data.created_at || "-"} />
-                        <Field label="Updated At" value={data.updated_at || "-"} />
-                    </div>
-
-                    {/* contact_books_attachment */}
-                    <div className="mt-8">
-                        <h4 className="font-semibold text-sm mb-2">Attachment</h4>
-
-                        <div className="border rounded-md p-3 min-w-[200px] min-h-[140px] flex items-center justify-center bg-gray-50">
-                            {data.contact_books_attachment &&
-                                data.contact_books_attachment.length > 0 ? (
-                                (() => {
-                                    const file = data.contact_books_attachment[0];
-                                    const fileUrl = `${FILE_BASE_URL}${file.document}`;
-
-                                    return isImage(fileUrl) ? (
-                                        <img
-                                            src={fileUrl}
-                                            alt="Attachment"
-                                            className="w-32 h-32 rounded object-cover border"
-                                        />
-                                    ) : (
-                                        <a
-                                            href={fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-purple-600 text-sm underline"
-                                        >
-                                            {getFileName(file.document)}
-                                        </a>
-                                    );
-                                })()
-                            ) : (
-                                <span className="text-sm text-gray-400">
-                                    No attachment uploaded
-                                </span>
-                            )}
+                            <span
+                                className={`px-2.5 py-0.5 rounded-full text-xs font-medium
+            ${contact.status
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }
+          `}
+                            >
+                                {contact.status ? "Active" : "Inactive"}
+                            </span>
                         </div>
                     </div>
+                </div>
+
+                <Link
+                    to={`/contact-book/edit/${id}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+                >
+                    <Edit className="w-4 h-4" />
+                    Edit Contact
+                </Link>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* MAIN CONTENT */}
+                <div className="lg:col-span-2 space-y-6">
+                    <Card title="Contact Information" icon={<Building />}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <Info label="Company" value={contact.company_name} icon={<Building />} />
+                            <Info label="Contact Person" value={contact.contact_person_name} icon={<User />} />
+                            <Info label="Mobile" value={contact.mobile} icon={<Phone />} />
+                            <Info label="Landline" value={contact.landline_no || "-"} icon={<Phone />} />
+                            <Info label="Primary Email" value={contact.primary_email} icon={<Mail />} />
+                            <Info label="Secondary Email" value={contact.secondary_email || "-"} icon={<Mail />} />
+                            <Info label="Category" value={contact.generic_info_name || "-"} icon={<Mail />} />
+                            <Info label="Sub Category" value={contact.generic_sub_info_name || "-"} icon={<Mail />} />
+                            <Info label="Website" value={contact.website || "-"} icon={<Globe />} />
+                        </div>
+                    </Card>
 
 
+
+                    {/* Description */}
+                    {(contact.description || contact.profile) && (
+                        <Card title="Description" icon={<FileText />}>
+                            {contact.profile && <p className="mb-3">{contact.profile}</p>}
+                            {contact.description && <p>{contact.description}</p>}
+                        </Card>
+                    )}
+
+                    {/* Attachments */}
+                    {contact.contact_books_attachment?.length > 0 && (
+                        <Card title={`Attachments (${contact.contact_books_attachment.length})`}>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {contact.contact_books_attachment.map(file => (
+                                    <a
+                                        key={file.id}
+                                        href={DOMAIN + file.document}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="border rounded-lg overflow-hidden group relative"
+                                    >
+                                        {isImage(file.document) ? (
+                                            <img src={DOMAIN + file.document} className="object-cover w-full h-32" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-32">
+                                                <FileText />
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                                            <ExternalLink className="text-white" />
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        </Card>
+                    )}
+                </div>
+
+                {/* SIDEBAR */}
+                <div className="space-y-6">
+                    {/* MULTIPLE LOGOS */}
+                    <Card title={`Company Logos (${contact.logo.length})`} icon={<Image />}>
+                        <div className="grid grid-cols-2 gap-4">
+                            {contact.logo.map(logo => (
+                                <img
+                                    key={logo.id}
+                                    src={DOMAIN + logo.document}
+                                    className="w-full h-28 object-cover rounded-lg border"
+                                />
+                            ))}
+                        </div>
+                    </Card>
+
+                    {/* Timeline */}
+                    <Card title="Timeline" icon={<Calendar />}>
+                        <Timeline label="Created At" value={formatDate(contact.created_at)} />
+                        <Timeline label="Updated At" value={formatDate(contact.updated_at)} />
+                    </Card>
                 </div>
             </div>
         </div>
     );
 };
 
-/* ---------- FIELD COMPONENT ---------- */
-const Field = ({ label, value }: any) => (
+/* ---------- REUSABLE UI ---------- */
+
+const Card = ({ title, icon, children }: any) => (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-primary/5 px-6 py-4 border-b border-border flex items-center gap-2">
+            {icon}
+            <h2 className="font-semibold">{title}</h2>
+        </div>
+        <div className="p-6">{children}</div>
+    </div>
+);
+
+
+const Info = ({ label, value, icon }: any) => (
+    <div className="flex items-start gap-3">
+        <div className="text-muted-foreground mt-0.5">
+            {icon}
+        </div>
+        <div>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-sm font-medium text-foreground break-words">
+                {value}
+            </p>
+        </div>
+    </div>
+);
+
+
+const Timeline = ({ label, value }: any) => (
     <div>
-        <label className="font-semibold">{label} :</label>
-        <div className="text-gray-700 mt-1">{value}</div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium">{value}</p>
     </div>
 );
 
