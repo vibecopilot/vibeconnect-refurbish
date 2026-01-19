@@ -17,6 +17,7 @@ interface ListToolbarProps {
   showQrCode?: boolean;
   qrCodeDisabled?: boolean;
   additionalButtons?: React.ReactNode;
+  leftContent?: React.ReactNode;
 }
 
 const ListToolbar: React.FC<ListToolbarProps> = ({
@@ -35,11 +36,19 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
   showQrCode = false,
   qrCodeDisabled = false,
   additionalButtons,
+  leftContent,
 }) => {
   return (
-    <div className="flex items-center justify-between gap-4 mb-6">
+    <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+      {/* Left Side - custom slot (e.g., filters) */}
+      {leftContent ? (
+        <div className="flex items-center gap-3">{leftContent}</div>
+      ) : (
+        <span className="sr-only">Toolbar</span>
+      )}
+
       {/* Right Side - Search and Actions */}
-      <div className="flex items-center gap-3 ml-auto">
+      <div className="flex items-center gap-3 ml-auto flex-wrap justify-end">
         {/* Search */}
         {showSearch && (
           <div className="relative">

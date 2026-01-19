@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { Building, Package, Calendar, FileText, DollarSign, Users } from "lucide-react";
+import { Package, Calendar, FileText, DollarSign, Users } from "lucide-react";
 import Breadcrumb from "../../components/ui/Breadcrumb";
 
 const AddAMC = () => {
-  const [amcFor, setAmcFor] = useState("asset");
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
@@ -11,7 +10,6 @@ const AddAMC = () => {
   const formattedDate = `${year}-${month}-${day}`;
   const [formData, setFormData] = useState({
     asset: "",
-    service: "",
     amc_cost: "",
     start_date: formattedDate,
     end_date: formattedDate,
@@ -39,33 +37,6 @@ const AddAMC = () => {
           </p>
         </div>
 
-        {/* AMC Type Selection */}
-        <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-center gap-4">
-            <p className="font-semibold text-foreground">AMC for:</p>
-            <button
-              className={`font-medium px-6 py-2 rounded-lg transition-all duration-300 ${
-                amcFor === "asset"
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-              onClick={() => setAmcFor("asset")}
-            >
-              Asset
-            </button>
-            <button
-              className={`font-medium px-6 py-2 rounded-lg transition-all duration-300 ${
-                amcFor === "service"
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-              onClick={() => setAmcFor("service")}
-            >
-              Service
-            </button>
-          </div>
-        </div>
-
         {/* Details Section */}
         <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
           <div className="bg-primary/5 px-6 py-4 border-b border-border">
@@ -77,42 +48,22 @@ const AddAMC = () => {
 
           <div className="p-6 space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              {amcFor === "asset" && (
-                <div className="flex flex-col">
-                  <label htmlFor="asset" className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Package className="w-4 h-4 text-muted-foreground" />
-                    Select Asset <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    className="border border-border p-2.5 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    name="asset"
-                    id="asset"
-                  >
-                    <option value="">Select Asset</option>
-                    <option value="asset 1">Asset 1</option>
-                    <option value="asset 2">Asset 2</option>
-                    <option value="asset 3">Asset 3</option>
-                  </select>
-                </div>
-              )}
-              {amcFor === "service" && (
-                <div className="flex flex-col">
-                  <label htmlFor="service" className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Building className="w-4 h-4 text-muted-foreground" />
-                    Select Service <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    className="border border-border p-2.5 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    name="service"
-                    id="service"
-                  >
-                    <option value="">Select Service</option>
-                    <option value="service 1">Service 1</option>
-                    <option value="service 2">Service 2</option>
-                    <option value="service 3">Service 3</option>
-                  </select>
-                </div>
-              )}
+              <div className="flex flex-col">
+                <label htmlFor="asset" className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  Select Asset <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="border border-border p-2.5 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  name="asset"
+                  id="asset"
+                >
+                  <option value="">Select Asset</option>
+                  <option value="asset 1">Asset 1</option>
+                  <option value="asset 2">Asset 2</option>
+                  <option value="asset 3">Asset 3</option>
+                </select>
+              </div>
 
               <div className="flex flex-col">
                 <label htmlFor="supplier" className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">

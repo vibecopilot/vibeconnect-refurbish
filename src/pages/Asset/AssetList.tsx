@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import ListToolbar from '../../components/ui/ListToolbar';
-import { AssetMainList, AMCList, MeterList, ChecklistList, RoutineTaskList, PPMChecklistList, PPMActivityList, PPMCalendar, StockItemsList,AssetOverview } from './submodules';
+import { AssetMainList, AMCList, MeterList, RoutineTaskList, PPMActivityList, PPMCalendar, StockItemsList, AssetOverview } from './submodules';
+import { MasterChecklistList, TypeFilterChips } from './MasterChecklist';
 
 const AssetList: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const AssetList: React.FC = () => {
   const [qrCallback, setQrCallback] = useState<(() => void) | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isChecklistImportOpen, setIsChecklistImportOpen] = useState(false);
+  const [masterTypeFilter, setMasterTypeFilter] = useState<'all' | 'routine' | 'ppm'>('all');
   // Records per page: 12 for grid, 10 for table
   const recordsPerPage = viewMode === 'grid' ? 12 : 10;
 
@@ -24,13 +26,12 @@ const AssetList: React.FC = () => {
     if (path === '/asset') return 'asset';
     if (path === '/asset/amc') return 'amc';
     if (path === '/asset/meter') return 'meter';
-    if (path === '/asset/checklist') return 'checklist';
+    if (path.startsWith('/asset/master-checklist') || path.startsWith('/asset/checklist') || path.startsWith('/asset/ppm-checklist')) return 'master-checklist';
     if (path === '/asset/routine-task') return 'routine-task';
-    if (path === '/asset/ppm-checklist') return 'ppm-checklist';
     if (path === '/asset/ppm-activity') return 'ppm-activity';
     if (path === '/asset/ppm-calendar') return 'ppm-calendar';
     if (path === '/asset/stock-items') return 'stock-items';
-    if (path === '/asset/overview') return 'overview'; // ✅ Add this
+    if (path === '/asset/overview') return 'overview'; // Add this
     return 'asset';
   };
 
@@ -39,7 +40,7 @@ const AssetList: React.FC = () => {
   const handleSearch = (value: string) => setSearchValue(value);
 
   // Tabs with Add button
-  const submodulesWithCreate = ['asset', 'amc', 'meter', 'checklist', 'ppm-checklist'];
+  const submodulesWithCreate = ['asset', 'amc', 'meter', 'master-checklist'];
 
   // Tabs with Filter button
   const tabsWithFilter = ['asset', 'meter'];
@@ -48,19 +49,18 @@ const AssetList: React.FC = () => {
   const tabsWithQrCode = ['asset'];
 
   // Tabs with Export button
-  const tabsWithExport = ['amc', 'checklist'];
+  const tabsWithExport = ['amc', 'master-checklist'];
 
   // Tabs with Import button
-  const tabsWithImport = ['asset', 'checklist'];
+  const tabsWithImport = ['asset', 'master-checklist'];
 
   const getAddPath = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const paths: Record<string, string> = {
-      'asset': '/asset/create',
-      'amc': '/asset/amc/create',
-      'meter': '/asset/create',
-      'checklist': '/asset/checklist/create',
-      'ppm-checklist': '/asset/ppm-checklist/create',
+      asset: '/asset/create',
+      amc: '/asset/amc/create',
+      meter: '/asset/create',
+      'master-checklist': '/asset/master-checklist/create',
     };
     return paths[activeTab] || '';
   };
@@ -68,27 +68,30 @@ const AssetList: React.FC = () => {
   const getAddLabel = () => {
     if (!submodulesWithCreate.includes(activeTab)) return '';
     const labels: Record<string, string> = {
-      'asset': 'Add Asset',
-      'amc': 'Add AMC',
-      'meter': 'Add Meter',
-      'checklist': 'Add Checklist',
-      'ppm-checklist': 'Add PPM Checklist',
+      asset: 'Add Asset',
+      amc: 'Add AMC',
+      meter: 'Add Meter',
+      'master-checklist': 'Add Checklist',
     };
     return labels[activeTab] || '';
   };
 
+  const getAddState = () => {
+    if (activeTab === 'meter') return { from: 'meter' };
+    return undefined;
+  };
+
   const getPageTitle = () => {
     const titles: Record<string, string> = {
-      'asset': 'Assets',
-      'amc': 'AMC',
-      'meter': 'Meter',
-      'checklist': 'Checklist',
+      asset: 'Assets',
+      amc: 'AMC',
+      meter: 'Meter',
+      'master-checklist': 'Master Checklist',
       'routine-task': 'Routine Task',
-      'ppm-checklist': 'PPM Checklist',
       'ppm-activity': 'PPM Activity',
       'ppm-calendar': 'PPM Calendar',
       'stock-items': 'Stock Items',
-       'overview': 'Overview', // ✅ Add this
+      overview: 'Overview', // Add this
     };
     return titles[activeTab] || 'Assets';
   };
@@ -113,43 +116,52 @@ const AssetList: React.FC = () => {
     };
 
     switch (activeTab) {
-      case 'asset': 
+      case 'asset':
         return (
-          <AssetMainList 
-            {...commonProps} 
-            isImportOpen={isImportOpen} 
-            setIsImportOpen={setIsImportOpen} 
+          <AssetMainList
+            {...commonProps}
+            isImportOpen={isImportOpen}
+            setIsImportOpen={setIsImportOpen}
             onExportSet={setExportCallback}
             onQrSet={setQrCallback}
           />
         );
-      case 'amc': 
+      case 'amc':
         return <AMCList {...commonProps} onExportSet={setExportCallback} />;
-      case 'meter': 
+      case 'meter':
         return <MeterList {...commonProps} />;
-      case 'checklist': 
-  return (
-    <ChecklistList 
-      {...commonProps} 
-      onExportSet={setExportCallback}
-      isImportOpen={isChecklistImportOpen} // ✅ Use separate state
-      setIsImportOpen={setIsChecklistImportOpen} // ✅ Use separate state
-    />
-  );
-      case 'routine-task': 
+      case 'master-checklist':
+        return (
+          <MasterChecklistList
+            {...commonProps}
+            onExportSet={setExportCallback}
+            isImportOpen={isChecklistImportOpen}
+            setIsImportOpen={setIsChecklistImportOpen}
+            typeFilter={masterTypeFilter}
+            onTypeFilterChange={setMasterTypeFilter}
+            showInlineFilter={false}
+          />
+        );
+      case 'routine-task':
         return <RoutineTaskList {...commonProps} />;
-      case 'ppm-checklist': 
-        return <PPMChecklistList {...commonProps} />;
-      case 'ppm-activity': 
+      case 'ppm-activity':
         return <PPMActivityList {...commonProps} />;
-      case 'ppm-calendar': 
+      case 'ppm-calendar':
         return <PPMCalendar searchValue={searchValue} />;
-      case 'stock-items': 
+      case 'stock-items':
         return <StockItemsList {...commonProps} />;
-      case 'overview': 
-        return <AssetOverview />; // ✅ Add this
-      default: 
-        return <AssetMainList {...commonProps} isImportOpen={isImportOpen} setIsImportOpen={setIsImportOpen} onExportSet={setExportCallback} onQrSet={setQrCallback} />;
+      case 'overview':
+        return <AssetOverview />;
+      default:
+        return (
+          <AssetMainList
+            {...commonProps}
+            isImportOpen={isImportOpen}
+            setIsImportOpen={setIsImportOpen}
+            onExportSet={setExportCallback}
+            onQrSet={setQrCallback}
+          />
+        );
     }
   };
 
@@ -157,53 +169,58 @@ const AssetList: React.FC = () => {
     <div className="p-6">
       <Breadcrumb items={getBreadcrumbs()} />
 
-     <ListToolbar
-  searchPlaceholder={`Search ${activeTab.replace('-', ' ')}...`}
-  searchValue={searchValue}
-  onSearchChange={handleSearch}
-  showSearch={activeTab !== 'overview' && activeTab !== 'ppm-calendar'}
-  viewMode={viewMode}
-  onViewModeChange={setViewMode}
-  showViewToggle={activeTab !== 'ppm-calendar' && activeTab !== 'overview'} // ✅ Hide for overview
-  onFilter={tabsWithFilter.includes(activeTab) ? () => setIsFilterOpen(true) : undefined}
-  onExport={tabsWithExport.includes(activeTab) ? (exportCallback || (() => {})) : undefined}
-  onAdd={getAddLabel() ? () => navigate(getAddPath()) : undefined}
-  addLabel={getAddLabel()}
-  showQrCode={tabsWithQrCode.includes(activeTab)}
-  onQrCode={tabsWithQrCode.includes(activeTab) ? qrCallback || undefined : undefined}
-  additionalButtons={
-    activeTab === 'ppm-calendar'
-      ? null
-      : activeTab !== 'overview' ? ( // ?. Hide buttons for overview
-      <>
-        {tabsWithImport.includes(activeTab) && (
-          <button
-            onClick={() => {
-              if (activeTab === 'asset') {
-                setIsImportOpen(true);
-              } else if (activeTab === 'checklist') {
-                setIsChecklistImportOpen(true);
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
-          >
-            Import
-          </button>
-        )}
-        
-        <button
-          onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
-          className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
-        >
-          Hide Columns
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </>
-    ) : null
-  }
-/>
+      <ListToolbar
+        searchPlaceholder={`Search ${activeTab.replace('-', ' ')}...`}
+        searchValue={searchValue}
+        onSearchChange={handleSearch}
+        showSearch={activeTab !== 'overview' && activeTab !== 'ppm-calendar'}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showViewToggle={activeTab !== 'ppm-calendar' && activeTab !== 'overview'} // Hide for overview
+        onFilter={tabsWithFilter.includes(activeTab) ? () => setIsFilterOpen(true) : undefined}
+        onExport={tabsWithExport.includes(activeTab) ? (exportCallback || (() => {})) : undefined}
+        onAdd={getAddLabel() ? () => navigate(getAddPath(), { state: getAddState() }) : undefined}
+        addLabel={getAddLabel()}
+        showQrCode={tabsWithQrCode.includes(activeTab)}
+        onQrCode={tabsWithQrCode.includes(activeTab) ? qrCallback || undefined : undefined}
+        leftContent={
+          activeTab === 'master-checklist' ? (
+            <TypeFilterChips typeFilter={masterTypeFilter} setTypeFilter={setMasterTypeFilter} />
+          ) : undefined
+        }
+        additionalButtons={
+          activeTab === 'ppm-calendar'
+            ? null
+            : activeTab !== 'overview' ? (
+              <>
+                {tabsWithImport.includes(activeTab) && (
+                  <button
+                    onClick={() => {
+                      if (activeTab === 'asset') {
+                        setIsImportOpen(true);
+                      } else if (activeTab === 'master-checklist') {
+                        setIsChecklistImportOpen(true);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                  >
+                    Import
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent"
+                >
+                  Hide Columns
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </>
+            ) : null
+        }
+      />
 
       {renderContent()}
     </div>
@@ -211,7 +228,3 @@ const AssetList: React.FC = () => {
 };
 
 export default AssetList;
-
-
-
-

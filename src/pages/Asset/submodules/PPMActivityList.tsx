@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DataCard from '../../../components/ui/DataCard';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import StatusBadge, { StatusType } from '../../../components/ui/StatusBadge';
@@ -45,6 +45,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
   isColumnMenuOpen,
   setIsColumnMenuOpen
 }) => {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<PPMActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +150,12 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when status changes
   };
 
+  const handleBackToList = () => {
+    setSelectedStatus('all');
+    setPagination(prev => ({ ...prev, page: 1 }));
+    setError(null);
+  };
+
   if (loading && activities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -176,7 +183,15 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
       <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
         <Activity className="w-16 h-16 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No PPM Activities Found</h3>
-        <p className="text-muted-foreground mb-4">{searchValue ? `No activities match "${searchValue}"` : 'No PPM activities scheduled yet'}</p>
+        <p className="text-muted-foreground mb-6">
+          {searchValue ? `No activities match "${searchValue}"` : 'No PPM activities scheduled yet'}
+        </p>
+        <button
+          onClick={handleBackToList}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
+        >
+          Back to List
+        </button>
       </div>
     );
   }

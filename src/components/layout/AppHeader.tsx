@@ -82,9 +82,8 @@ const modules: Module[] = [
           { name: 'Asset', path: '/asset' },
           { name: 'AMC', path: '/asset/amc' },
           { name: 'Meter', path: '/asset/meter' },
-          { name: 'Checklist', path: '/asset/checklist' },
+          { name: 'Master Checklist', path: '/asset/master-checklist' },
           { name: 'Routine Task', path: '/asset/routine-task' },
-          { name: 'PPM Checklist', path: '/asset/ppm-checklist' },
           { name: 'PPM Activity', path: '/asset/ppm-activity' },
           { name: 'PPM Calendar', path: '/asset/ppm-calendar' },
           { name: 'Stock Items', path: '/asset/stock-items' },
@@ -113,8 +112,8 @@ const modules: Module[] = [
       {
         id: 'audit', name: 'Audit', path: '/audit/operational/scheduled',
         children: [
-          {
-            name: 'Operational',
+          { 
+            name: 'Operational', 
             path: '/audit/operational/scheduled',
             children: [
               { name: 'Scheduled', path: '/audit/operational/scheduled' },
@@ -122,8 +121,8 @@ const modules: Module[] = [
               { name: 'Checklists', path: '/audit/operational/checklists' },
             ]
           },
-          {
-            name: 'Vendor',
+          { 
+            name: 'Vendor', 
             path: '/audit/vendor/scheduled',
             children: [
               { name: 'Scheduled', path: '/audit/vendor/scheduled' },
@@ -477,25 +476,39 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
     if (!currentSubModule?.children) return null;
     const activePath = location.pathname;
 
-    // Find the Level 3 item that matches current path or contains it
-    return currentSubModule.children.find(c => {
-      if (activePath === c.path) return true;
-      if (c.children) {
-        return c.children.some(child => activePath === child.path || activePath.startsWith(child.path + '/'));
-      }
-      return activePath.startsWith(c.path.replace(/\/scheduled$/, ''));
+    // Score matches so the most specific path wins (fixes /asset/meter highlighting Asset)
+    const scored = currentSubModule.children.map(child => {
+      const normalizedBase = child.path.replace(/\/scheduled$/, '');
+      const exactMatch = activePath === child.path;
+      const exactChildMatch = child.children?.some(grand => activePath === grand.path) || false;
+      const nestedPrefixMatch = child.children?.some(grand => activePath.startsWith(grand.path + '/')) || false;
+      const prefixMatch = activePath.startsWith(normalizedBase + '/') || activePath === normalizedBase;
+
+      const score =
+        (exactMatch ? 4 : 0) +
+        (exactChildMatch ? 3 : 0) +
+        (nestedPrefixMatch ? 2 : 0) +
+        (prefixMatch ? 1 : 0);
+
+      return { child, score, length: child.path.length };
     });
+
+    const best = scored
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score || b.length - a.length)[0];
+
+    return best?.child || currentSubModule.children[0] || null;
   }, [currentSubModule, location.pathname]);
 
   // Get Level 4 items (children of active Level 3 item)
   const sortedLevel4 = useMemo(() => {
     if (!activeLevel3Item?.children) return [];
-
+    
     const activePath = location.pathname;
     const activeItem = activeLevel3Item.children.find(c => activePath === c.path);
-
+    
     if (!activeItem) return activeLevel3Item.children;
-
+    
     const rest = activeLevel3Item.children.filter(c => c.path !== activeItem.path);
     return [activeItem, ...rest];
   }, [activeLevel3Item, location.pathname]);
@@ -558,6 +571,14 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           </Link>
         </div>
 
+        {/* Settings Icon */}
+        <button
+          onClick={() => navigate('/setup')}
+          className="p-2 hover:bg-accent rounded-lg transition-colors"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
+
         {/* Right Side Controls */}
         <div className="flex items-center gap-4">
           {/* Site/Company Selector */}
@@ -609,13 +630,10 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             )}
           </div>
           {/* Settings Icon */}
-            <button
-            onClick={() => navigate('/setup')}
-            className="p-2 hover:bg-accent rounded-lg transition-colors"
-            title="Setup"
-            >
+          <button className="p-2 hover:bg-accent rounded-lg transition-colors">
             <Settings className="w-5 h-5 text-muted-foreground" />
-            </button>
+          </button>
+
           {/* User Dropdown */}
           <div className="relative" ref={userDropdownRef}>
             <button
@@ -688,132 +706,132 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
       {/* Hide all navigation when on setup page */}
       {!isSetupPage && (
-        <>
-          {/* Module Navigation - Level 1 */}
-          <div className="relative">
-            <nav
-              className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto transition-all duration-300 ease-in-out ${collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-2 opacity-100'
+      <>
+      {/* Module Navigation - Level 1 */}
+      <div className="relative">
+        <nav
+          className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto transition-all duration-300 ease-in-out ${collapsedLevels.level1 && currentModule ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-16 py-2 opacity-100'
+            }`}
+        >
+          {sortedModules.map((module) => (
+            <button
+              key={module.id}
+              onClick={() => handleModuleClick(module.id)}
+              className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative uppercase
+                ${activeModule === module.id
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
-              {sortedModules.map((module) => (
-                <button
-                  key={module.id}
-                  onClick={() => handleModuleClick(module.id)}
-                  className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative uppercase
-                ${activeModule === module.id
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                >
-                  {module.name}
-                  {activeModule === module.id && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-                  )}
-                </button>
-              ))}
-            </nav>
+              {module.name}
+              {activeModule === module.id && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+              )}
+            </button>
+          ))}
+        </nav>
 
-            {/* Collapse/Expand Button for Level 1 */}
-            {currentModule && (
-              <button
-                onClick={toggleLevel1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card hover:bg-accent hover:border-primary/50 shadow-sm transition-all duration-200 z-10 group"
-                title={collapsedLevels.level1 ? "Expand modules" : "Collapse modules"}
-              >
-                {collapsedLevels.level1 ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                )}
-              </button>
+        {/* Collapse/Expand Button for Level 1 */}
+        {currentModule && (
+          <button
+            onClick={toggleLevel1}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card hover:bg-accent hover:border-primary/50 shadow-sm transition-all duration-200 z-10 group"
+            title={collapsedLevels.level1 ? "Expand modules" : "Collapse modules"}
+          >
+            {collapsedLevels.level1 ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            ) : (
+              <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
             )}
-          </div>
+          </button>
+        )}
+      </div>
 
-          {/* Sub-Module Navigation - Level 2 */}
-          {currentModule && currentModule.subModules.length > 0 && (
-            <div className="relative">
-              <nav
-                className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto bg-secondary/30 transition-all duration-300 ease-in-out ${collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-2 opacity-100'
+      {/* Sub-Module Navigation - Level 2 */}
+      {currentModule && currentModule.subModules.length > 0 && (
+        <div className="relative">
+          <nav
+            className={`flex items-center justify-between gap-2 px-4 pr-12 border-b border-border overflow-x-auto bg-secondary/30 transition-all duration-300 ease-in-out ${collapsedLevels.level2 ? 'max-h-0 py-0 opacity-0 border-0' : 'max-h-14 py-2 opacity-100'
+              }`}
+          >
+            {sortedSubModules.map((subModule) => (
+              <button
+                key={subModule.id}
+                onClick={() => handleSubModuleClick(subModule.path)}
+                className={`px-4 py-2.5 text-sm whitespace-nowrap transition-colors relative uppercase
+                  ${activeSubModule === subModule.id
+                    ? 'text-primary font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
-                {sortedSubModules.map((subModule) => (
-                  <button
-                    key={subModule.id}
-                    onClick={() => handleSubModuleClick(subModule.path)}
-                    className={`px-4 py-2.5 text-sm whitespace-nowrap transition-colors relative uppercase
-                  ${activeSubModule === subModule.id
-                        ? 'text-primary font-medium'
-                        : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                  >
-                    {subModule.name}
-                    {activeSubModule === subModule.id && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-                    )}
-                  </button>
-                ))}
-              </nav>
-
-              {/* Collapse/Expand Button for Level 2 */}
-              <button
-                onClick={toggleLevel2}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card hover:bg-accent hover:border-primary/50 shadow-sm transition-all duration-200 z-10 group"
-                title={collapsedLevels.level2 ? "Expand sub-modules" : "Collapse sub-modules"}
-              >
-                {collapsedLevels.level2 ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                {subModule.name}
+                {activeSubModule === subModule.id && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
                 )}
               </button>
-            </div>
-          )}
+            ))}
+          </nav>
 
-          {/* Tertiary Navigation - Level 3 */}
-          {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
-            <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
-              {sortedLevel3.map((item, idx) => (
-                <Link
-                  key={idx}
-                  to={item.path}
-                  className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 relative uppercase
+          {/* Collapse/Expand Button for Level 2 */}
+          <button
+            onClick={toggleLevel2}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card hover:bg-accent hover:border-primary/50 shadow-sm transition-all duration-200 z-10 group"
+            title={collapsedLevels.level2 ? "Expand sub-modules" : "Collapse sub-modules"}
+          >
+            {collapsedLevels.level2 ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            ) : (
+              <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Tertiary Navigation - Level 3 */}
+      {currentSubModule && currentSubModule.children && currentSubModule.children.length > 0 && (
+        <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/50 animate-fade-in">
+          {sortedLevel3.map((item, idx) => (
+            <Link
+              key={idx}
+              to={item.path}
+              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 relative uppercase
                 ${activeLevel3Item?.path === item.path || (item.children && location.pathname.startsWith(item.path.replace(/\/scheduled$/, '')))
-                      ? 'text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                >
-                  {item.name}
-                  {(activeLevel3Item?.path === item.path || (item.children && location.pathname.startsWith(item.path.replace(/\/scheduled$/, '')))) && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-                  )}
-                </Link>
-              ))}
-            </nav>
-          )}
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              {item.name}
+              {(activeLevel3Item?.path === item.path || (item.children && location.pathname.startsWith(item.path.replace(/\/scheduled$/, '')))) && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+              )}
+            </Link>
+          ))}
+        </nav>
+      )}
 
-          {/* Quaternary Navigation - Level 4 */}
-          {sortedLevel4.length > 0 && (
-            <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/30 animate-fade-in">
-              {sortedLevel4.map((item, idx) => (
-                <Link
-                  key={idx}
-                  to={item.path}
-                  className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 relative
+      {/* Quaternary Navigation - Level 4 */}
+      {sortedLevel4.length > 0 && (
+        <nav className="flex items-center justify-between gap-2 px-4 pr-12 py-2 border-b border-border overflow-x-auto bg-muted/30 animate-fade-in">
+          {sortedLevel4.map((item, idx) => (
+            <Link
+              key={idx}
+              to={item.path}
+              className={`px-3 py-1.5 text-sm whitespace-nowrap transition-all duration-200 relative
                 ${isActivePath(item.path)
-                      ? 'text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                >
-                  {item.name}
-                  {isActivePath(item.path) && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-                  )}
-                </Link>
-              ))}
-            </nav>
-          )}
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              {item.name}
+              {isActivePath(item.path) && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
+              )}
+            </Link>
+          ))}
+        </nav>
+      )}
 
-        </>
+      </>
       )}
       {/* Debug Info */}
       <div className="hidden debug-info p-2 text-xs text-muted-foreground border-t">

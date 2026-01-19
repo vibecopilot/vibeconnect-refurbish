@@ -191,10 +191,10 @@ const MeterList: React.FC<MeterListProps> = ({
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <Link to={`/asset/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}`} state={{ from: 'meter' }} className="text-primary hover:text-primary/80">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/asset/${row.id}/edit`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}/edit`} state={{ from: 'meter' }} className="text-primary hover:text-primary/80">
             <Edit className="w-4 h-4" />
           </Link>
         </div>
@@ -403,7 +403,9 @@ const MeterList: React.FC<MeterListProps> = ({
                 { label: 'Critical', value: meter.critical ? 'Yes' : 'No' },
               ]}
               viewPath={`/asset/${meter.id}`}
+              viewState={{ from: 'meter' }}
               editPath={`/asset/${meter.id}/edit`}
+              editState={{ from: 'meter' }}
             />
           ))}
         </div>
