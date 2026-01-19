@@ -20,7 +20,11 @@ import {
 } from "../../api";
 import AddSuppliers from "../../containers/modals/AddSuppliersModal";
 
-const AssetCreateForm: React.FC = () => {
+interface AssetCreateFormProps {
+  from?: string;
+}
+
+const AssetCreateForm: React.FC<AssetCreateFormProps> = ({ from }) => {
   const navigate = useNavigate();
   const storedBuildings = getItemInLocalStorage("Building");
   const buildings = Array.isArray(storedBuildings) ? storedBuildings : [];
@@ -269,7 +273,12 @@ const AssetCreateForm: React.FC = () => {
       const response = await postSiteAsset(formDataSend);
       toast.dismiss();
       toast.success("Asset Created Successfully");
-      navigate(`/assets/asset-details/${response.data.id}`);
+      // After create, go back to originating list (meter or asset)
+      if (from === "meter" || formData.is_meter) {
+        navigate("/asset/meter");
+      } else {
+        navigate("/asset");
+      }
     } catch (error) {
       toast.dismiss();
       toast.error("Failed to create asset");

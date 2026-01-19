@@ -44,7 +44,7 @@ import {
   RestaurantPOS
 } from "./pages/FoodsBeverage";
 import AssetList from "./pages/Asset/AssetList";
-import CreateAsset from "./pages/Asset/CreateAsset";
+import NewAssetExperimental from "./pages/Asset/NewAssetExperimental";
 import AddAMC from "./pages/SubPages/AddAMC";
 import CreateChecklist from "./pages/Asset/CreateChecklist";
 import EditChecklist from "./pages/Asset/EditChecklist";
@@ -57,10 +57,13 @@ import CopyChecklistService from "./pages/SubPages/CopyChecklistService";
 import AssociateAssetChecklist from "./pages/SubPages/AssociateAssetChecklist";
 import AssociateServiceChecklist from "./pages/SubPages/AssociateServiceChecklist";
 import AssetDetails from "./pages/SubPages/details/AssetDetails";
+import AssetDetailsBentoView from "./pages/SubPages/details/AssetDetailsBentoView";
+import { AssetDetailsFullScreen, TimelineFullScreen } from "./pages/SubPages/details/fullscreen";
 import EditAsset from "./pages/Asset/EditAsset";
 import EditStockItem from "./pages/Asset/EditStockItem";
 import EditAMC from "./pages/SubPages/details/EditAMC";
 import { ViewAMC, ViewMeter, ViewChecklist as ViewAssetChecklist, ViewRoutineTask, ViewPPMChecklist, ViewPPMActivity, ViewStockItem } from "./pages/Asset/submodules";
+import { MasterChecklistCreate, MasterChecklistView, MasterChecklistEdit, MasterChecklistCopy, AssociateMasterChecklist } from "./pages/Asset/MasterChecklist";
 import { TicketList, TicketCreate, TicketView, TicketEdit } from "./pages/ServiceDesk";
 import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList, SoftServicesOverview } from "./pages/SoftService";
 import {
@@ -196,9 +199,13 @@ function App() {
 
         {/* Asset Module */}
         <Route path="/asset" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        <Route path="/asset/create" element={<AuthenticatedLayout><CreateAsset /></AuthenticatedLayout>} />
-        <Route path="/asset/:id" element={<AuthenticatedLayout><AssetDetails /></AuthenticatedLayout>} />
+        <Route path="/asset/create" element={<AuthenticatedLayout><NewAssetExperimental /></AuthenticatedLayout>} />
+        <Route path="/asset/:id" element={<AuthenticatedLayout><AssetDetailsBentoView /></AuthenticatedLayout>} />
         <Route path="/asset/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
+
+        {/* Asset Fullscreen Views */}
+        <Route path="/asset/:id/details" element={<AuthenticatedLayout><AssetDetailsFullScreen /></AuthenticatedLayout>} />
+        <Route path="/asset/:id/timeline" element={<AuthenticatedLayout><TimelineFullScreen /></AuthenticatedLayout>} />
         
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
@@ -208,6 +215,7 @@ function App() {
         
         {/* Meter */}
         <Route path="/asset/meter" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/meter/create" element={<AuthenticatedLayout><NewAssetExperimental /></AuthenticatedLayout>} />
         <Route path="/asset/meter/:id" element={<AuthenticatedLayout><ViewMeter /></AuthenticatedLayout>} />
         <Route path="/asset/meter/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
         
@@ -238,7 +246,15 @@ function App() {
         
         {/* PPM Calendar */}
         <Route path="/asset/ppm-calendar" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        
+
+        {/* Master Checklist - Unified Checklist & PPM Checklist */}
+        <Route path="/asset/master-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/create" element={<AuthenticatedLayout><MasterChecklistCreate /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id" element={<AuthenticatedLayout><MasterChecklistView /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id/edit" element={<AuthenticatedLayout><MasterChecklistEdit /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id/copy" element={<AuthenticatedLayout><MasterChecklistCopy /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id/associate" element={<AuthenticatedLayout><AssociateMasterChecklist /></AuthenticatedLayout>} />
+
         {/* Stock Items */}
         <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><ViewStockItem /></AuthenticatedLayout>} />

@@ -82,9 +82,8 @@ const modules: Module[] = [
           { name: 'Asset', path: '/asset' },
           { name: 'AMC', path: '/asset/amc' },
           { name: 'Meter', path: '/asset/meter' },
-          { name: 'Checklist', path: '/asset/checklist' },
+          { name: 'Master Checklist', path: '/asset/master-checklist' },
           { name: 'Routine Task', path: '/asset/routine-task' },
-          { name: 'PPM Checklist', path: '/asset/ppm-checklist' },
           { name: 'PPM Activity', path: '/asset/ppm-activity' },
           { name: 'PPM Calendar', path: '/asset/ppm-calendar' },
           { name: 'Stock Items', path: '/asset/stock-items' },
@@ -476,15 +475,29 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   const activeLevel3Item = useMemo(() => {
     if (!currentSubModule?.children) return null;
     const activePath = location.pathname;
-    
-    // Find the Level 3 item that matches current path or contains it
-    return currentSubModule.children.find(c => {
-      if (activePath === c.path) return true;
-      if (c.children) {
-        return c.children.some(child => activePath === child.path || activePath.startsWith(child.path + '/'));
-      }
-      return activePath.startsWith(c.path.replace(/\/scheduled$/, ''));
+
+    // Score matches so the most specific path wins (fixes /asset/meter highlighting Asset)
+    const scored = currentSubModule.children.map(child => {
+      const normalizedBase = child.path.replace(/\/scheduled$/, '');
+      const exactMatch = activePath === child.path;
+      const exactChildMatch = child.children?.some(grand => activePath === grand.path) || false;
+      const nestedPrefixMatch = child.children?.some(grand => activePath.startsWith(grand.path + '/')) || false;
+      const prefixMatch = activePath.startsWith(normalizedBase + '/') || activePath === normalizedBase;
+
+      const score =
+        (exactMatch ? 4 : 0) +
+        (exactChildMatch ? 3 : 0) +
+        (nestedPrefixMatch ? 2 : 0) +
+        (prefixMatch ? 1 : 0);
+
+      return { child, score, length: child.path.length };
     });
+
+    const best = scored
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score || b.length - a.length)[0];
+
+    return best?.child || currentSubModule.children[0] || null;
   }, [currentSubModule, location.pathname]);
 
   // Get Level 4 items (children of active Level 3 item)

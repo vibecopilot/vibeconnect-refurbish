@@ -85,8 +85,15 @@ const AssetDetails = () => {
 
   // Determine breadcrumb path based on location state or asset type
   const getBreadcrumbPath = () => {
-    if (location.state?.from === 'overview') {
+    const from = location.state?.from;
+    if (from === 'overview') {
       return { label: 'Overview', path: '/asset/overview' };
+    }
+    if (from === 'meter') {
+      return { label: 'Meter', path: '/asset/meter' };
+    }
+    if (from === 'asset') {
+      return { label: 'Assets', path: '/asset' };
     }
     if (asset.is_meter) {
       return { label: 'Meter', path: '/asset/meter' };

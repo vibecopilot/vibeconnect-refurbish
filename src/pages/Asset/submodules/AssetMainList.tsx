@@ -361,10 +361,10 @@ const handleFilterReset = () => {
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <Link to={`/asset/${row.id}`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}`} state={{ from: 'asset' }} className="text-primary hover:text-primary/80">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/asset/${row.id}/edit`} className="text-primary hover:text-primary/80">
+          <Link to={`/asset/${row.id}/edit`} state={{ from: 'asset' }} className="text-primary hover:text-primary/80">
             <Edit className="w-4 h-4" />
           </Link>
         </div>
@@ -651,7 +651,9 @@ const handleFilterReset = () => {
                 { label: 'Cost', value: asset.purchase_cost ? `₹${asset.purchase_cost.toLocaleString()}` : '-' },
               ]}
               viewPath={`/asset/${asset.id}`}
+              viewState={{ from: 'asset' }}
               editPath={`/asset/${asset.id}/edit`}
+              editState={{ from: 'asset' }}
               isSelected={selectedRows.includes(String(asset.id))}
               onToggleSelect={() => {
                 setSelectedRows(prev =>
@@ -708,5 +710,3 @@ const handleFilterReset = () => {
 };
 
 export default AssetMainList;
-
-

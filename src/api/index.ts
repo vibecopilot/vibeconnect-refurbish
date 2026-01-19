@@ -1013,13 +1013,14 @@ export const getChecklist = async () => {
   });
 };
 
-export const getChecklistPaged = async (page = 1, perPage = 10, search = '') =>
+export const getChecklistPaged = async (page = 1, perPage = 10, search = '', ctype?: string) =>
   axiosInstance.get('/checklists.json', {
     params: {
       token: token,
       page,
       per_page: perPage,
       ...(search ? { 'q[name_cont]': search } : {}),
+      ...(ctype ? { 'q[ctype_eq]': ctype } : {}),
     },
   });
 
