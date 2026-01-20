@@ -92,12 +92,14 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
             <button
               onClick={() => onViewModeChange('grid')}
               className={`p-2 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              aria-label="Grid view"
             >
               <Grid3X3 className="w-4 h-4" />
             </button>
             <button
               onClick={() => onViewModeChange('table')}
               className={`p-2 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              aria-label="List view"
             >
               <List className="w-4 h-4" />
             </button>

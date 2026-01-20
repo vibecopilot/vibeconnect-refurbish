@@ -1,15 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Breadcrumb from '../../components/ui/Breadcrumb';
-import FormSection from '../../components/ui/FormSection';
-import FormGrid from '../../components/ui/FormGrid';
 import { getSoftServicesDetails, getSoftServiceSchedule, getSoftserviceActivityDetails, softServiceDownloadQrCode } from '../../api';
-import { Loader2, Wrench, AlertCircle, RefreshCw, Edit2, ArrowLeft, Paperclip, QrCode, Eye, ChevronLeft, ChevronRight, FileText, Calendar, Printer, X } from 'lucide-react';
+import { Loader2, Wrench, AlertCircle, RefreshCw, Edit2, ArrowLeft, Paperclip, QrCode, Eye, ChevronLeft, ChevronRight, FileText, Calendar, Printer, X, MapPin, Clock, Settings, Info, CheckCircle, BarChart3, User, Grid3X3, List as ListIcon } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import Table from '../../components/table/Table';
 import { dateTimeFormat } from '../../utils/dateUtils';
 import toast from 'react-hot-toast';
+
+// cn utility function
+const cn = (...classes: (string | boolean | undefined)[]) => {
+  return classes.filter(Boolean).join(' ');
+};
+
+// Animation variants
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, scale: 0.95 },
+  show: { opacity: 1, scale: 1 }
+};
+
+const usageSummarySample = [
+  { date: '2025-11-11', total: 270, extra: 90, usedCount: 3 },
+  { date: '2025-11-10', total: 165, extra: 45, usedCount: 2 },
+  { date: '2025-11-09', total: 140, extra: 20, usedCount: 2 },
+  { date: '2025-11-08', total: 90, extra: 30, usedCount: 1 },
+  { date: '2025-11-07', total: 60, extra: 0, usedCount: 1 },
+];
 
 interface ServiceDetails {
   id: number;
@@ -51,6 +77,9 @@ const ViewService: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [scheduleViewMode, setScheduleViewMode] = useState<'list' | 'grid'>('list');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   // Logs state
   const [logsDetails, setLogsDetails] = useState<any[]>([]);
@@ -170,6 +199,7 @@ const ViewService: React.FC = () => {
       );
       setFilteredScheduleData(filteredResult);
     }
+    setPage(1);
   };
 
   const filterByDateRange = (data: any[]) => {
@@ -253,12 +283,14 @@ const ViewService: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <Breadcrumb items={[
-          { label: 'FM Module' },
-          { label: 'Soft Services', path: '/soft-services' },
-          { label: 'Service' },
-        ]} />
+      <div className="min-h-screen bg-background">
+        <div className="p-6">
+          <Breadcrumb items={[
+            { label: 'FM Module' },
+            { label: 'Soft Services', path: '/soft-services' },
+            { label: 'Service' },
+          ]} />
+        </div>
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading service details...</p>
@@ -269,17 +301,19 @@ const ViewService: React.FC = () => {
 
   if (error || !service) {
     return (
-      <div className="p-6">
-        <Breadcrumb items={[
-          { label: 'FM Module' },
-          { label: 'Soft Services', path: '/soft-services' },
-          { label: 'Service' },
-        ]} />
+      <div className="min-h-screen bg-background">
+        <div className="p-6">
+          <Breadcrumb items={[
+            { label: 'FM Module' },
+            { label: 'Soft Services', path: '/soft-services' },
+            { label: 'Service' },
+          ]} />
+        </div>
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-12 h-12 text-destructive mb-4" />
           <h3 className="text-lg font-semibold mb-2">Failed to Load Service</h3>
           <p className="text-muted-foreground mb-4">{error || 'Service not found'}</p>
-          <button onClick={fetchServiceDetails} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+          <button onClick={fetchServiceDetails} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
             <RefreshCw className="w-4 h-4" /> Retry
           </button>
         </div>
@@ -288,104 +322,189 @@ const ViewService: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <Breadcrumb items={[
-        { label: 'FM Module' },
-        { label: 'Soft Services', path: '/soft-services' },
-        { label: 'Service', path: '/soft-services' },
-        { label: service.name },
-      ]} />
-
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between gap-3 mt-6 mb-4">
-        <button
-          onClick={() => navigate(fromOverview ? '/soft-services/overview' : '/soft-services')}
-          className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowQrModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-accent transition-colors"
-          >
-            <QrCode className="w-4 h-4" />
-            QR Code
-          </button>
-          <Link
-            to={`/soft-services/${id}/edit`}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Edit2 className="w-4 h-4" />
-            Edit
-          </Link>
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Breadcrumb */}
+      <div className="p-6 pb-0">
+        <Breadcrumb items={[
+          { label: 'FM Module' },
+          fromOverview
+            ? { label: 'Overview', path: '/soft-services/overview' }
+            : { label: 'Soft Services', path: '/soft-services' },
+          { label: 'Service', path: fromOverview ? '/soft-services/overview' : '/soft-services' },
+          { label: service.name },
+        ]} />
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <FormSection title="Service Details" icon={Wrench}>
-          <FormGrid columns={3}>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Service Name</label>
-              <p className="text-foreground font-medium">{service.name || '-'}</p>
+      {/* Sticky Header */}
+      <header className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-20">
+        <div className="w-full px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate(fromOverview ? '/soft-services/overview' : '/soft-services')}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </button>
+              <div className="h-8 w-px bg-border" />
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                  <Wrench className="h-5 w-5 text-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground">{service.name}</h1>
+                  <p className="text-xs text-muted-foreground">{service.group_name || 'Soft Service'}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Building</label>
-              <p className="text-foreground font-medium">{service.building_name || '-'}</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowQrModal(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                <QrCode className="h-4 w-4" />
+                <span className="text-sm">QR Code</span>
+              </button>
+              <Link
+                to={`/soft-services/${id}/edit`}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Edit2 className="h-4 w-4" />
+                <span className="text-sm">Edit</span>
+              </Link>
             </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Floor</label>
-              <p className="text-foreground font-medium">{service.floor_name || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Unit</label>
-              <p className="text-foreground font-medium">{service.unit_name || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Service Group</label>
-              <p className="text-foreground font-medium">{service.group_name || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Service SubGroup</label>
-              <p className="text-foreground font-medium">{service.sub_group_name || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Latitude</label>
-              <p className="text-foreground font-medium">{service.latitude || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Longitude</label>
-              <p className="text-foreground font-medium">{service.longitude || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Created By</label>
-              <p className="text-foreground font-medium">{service.created_by || '-'}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Created On</label>
-              <p className="text-foreground font-medium">{formatDate(service.created_at)}</p>
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Updated On</label>
-              <p className="text-foreground font-medium">{formatDate(service.updated_at)}</p>
-            </div>
-          </FormGrid>
-        </FormSection>
-
-        <FormSection title="Cron Setting" icon={Wrench}>
-          <div className="flex items-center gap-2 text-foreground">
-            <span>Every</span>
-            <span className="px-3 py-1 bg-accent rounded-md font-medium">{getDayLabel(service.cron_day)}</span>
-            <span>at</span>
-            <span className="px-3 py-1 bg-accent rounded-md font-medium">{service.cron_hour || '0'}</span>
-            <span>:</span>
-            <span className="px-3 py-1 bg-accent rounded-md font-medium">{service.cron_minute || '0'}</span>
           </div>
-        </FormSection>
+        </div>
+      </header>
 
+      {/* Bento Grid */}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="w-full px-6 pb-6 grid grid-cols-12 gap-4 auto-rows-[minmax(120px,auto)]"
+      >
+        {/* Service Details Card */}
+        <motion.div variants={item} className="col-span-12 lg:col-span-6 row-span-2 bg-card rounded-2xl border p-6 shadow-sm overflow-hidden relative group">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
+              Service Details
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Service Name</p>
+              <p className="font-medium text-sm">{service.name || '-'}</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Service Group</p>
+              <p className="font-medium text-sm">{service.group_name || '-'}</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Service SubGroup</p>
+              <p className="font-medium text-sm">{service.sub_group_name || '-'}</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Unit</p>
+              <p className="font-medium text-sm">{service.unit_name || '-'}</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Location Card */}
+        <motion.div variants={item} className="col-span-12 lg:col-span-6 row-span-2 bg-card rounded-2xl border p-6 shadow-sm relative group">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Location Details
+            </h2>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm text-muted-foreground">Building</span>
+              <span className="font-medium">{service.building_name || '-'}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm text-muted-foreground">Floor</span>
+              <span className="font-medium">{service.floor_name || '-'}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg">
+              <span className="text-sm text-muted-foreground">Coordinates</span>
+              <span className="font-medium text-primary text-xs">
+                {service.latitude && service.longitude
+                  ? `${service.latitude}, ${service.longitude}`
+                  : '-'}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Metadata Card */}
+        <motion.div variants={item} className="col-span-12 lg:col-span-6 row-span-1 bg-card rounded-2xl border p-6 shadow-sm relative group">
+          <h2 className="font-semibold mb-4 flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
+            Metadata
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Created By</p>
+              <p className="font-medium text-sm">{service.created_by || '-'}</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Created On</p>
+              <p className="font-medium text-sm">{formatDate(service.created_at)}</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Updated On</p>
+              <p className="font-medium text-sm">{formatDate(service.updated_at)}</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Usage Summary Bento */}
+        <motion.div variants={item} className="col-span-12 lg:col-span-6 row-span-2 bg-card rounded-2xl border p-6 shadow-sm relative group">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Usage Summary (sample)
+            </h2>
+            <button
+              onClick={() => navigate(`/soft-services/${id}/usage`)}
+              className="text-sm text-primary font-medium hover:underline"
+            >
+              Open full view
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div className="grid grid-cols-4 text-xs text-muted-foreground px-3">
+              <span>Date</span>
+              <span>Total</span>
+              <span>Extra</span>
+              <span className="text-right">Used</span>
+            </div>
+            {usageSummarySample.map((row) => (
+              <div key={row.date} className="grid grid-cols-4 items-center bg-muted/40 rounded-lg px-3 py-2 text-sm">
+                <span className="font-medium">{row.date}</span>
+                <span>{row.total} min</span>
+                <span className="text-orange-500">{row.extra} min</span>
+                <span className="text-right text-muted-foreground">{row.usedCount}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <p className="text-xs text-muted-foreground">Preview of date-wise asset usage. Click “Open full view” for charts and details.</p>
+          </div>
+        </motion.div>
+
+        {/* Attachments Card */}
         {service.attachments && service.attachments.length > 0 && (
-          <FormSection title="Attachments" icon={Paperclip}>
+          <motion.div variants={item} className="col-span-12 lg:col-span-6 row-span-1 bg-card rounded-2xl border p-6 shadow-sm relative group">
+            <h2 className="font-semibold mb-4 flex items-center gap-2">
+              <Paperclip className="h-5 w-5 text-primary" />
+              Attachments ({service.attachments.length})
+            </h2>
             <div className="flex flex-wrap gap-2">
               {service.attachments.map((att, idx) => (
                 <a
@@ -393,50 +512,55 @@ const ViewService: React.FC = () => {
                   href={att.url || att.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-1.5 bg-accent rounded-lg hover:bg-accent/80 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors border border-border"
                 >
-                  <span className="text-sm text-primary">{att.name || att.filename || `Attachment ${idx + 1}`}</span>
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{att.name || att.filename || `Attachment ${idx + 1}`}</span>
                 </a>
               ))}
             </div>
-          </FormSection>
+          </motion.div>
         )}
 
-        {/* Schedule & Logs Tabs */}
-        <div className="p-6 border-t border-border">
-          <div className="flex items-center gap-6 border-b border-border mb-6">
+        {/* Schedule & Logs Section */}
+        <motion.div variants={item} className="col-span-12 row-span-4 bg-card rounded-2xl border p-0 shadow-sm overflow-hidden">
+          <div className="px-6 pt-4 flex items-center gap-6 border-b border-border">
             <button
               onClick={() => setActiveTab('schedule')}
-              className={`pb-3 px-1 font-medium transition-colors ${
+              className={cn(
+                'pb-3 text-sm font-semibold transition-colors border-b-2',
                 activeTab === 'schedule'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+                  ? 'text-primary border-primary'
+                  : 'text-muted-foreground border-transparent hover:text-foreground'
+              )}
             >
+              <BarChart3 className="h-4 w-4 inline mr-2" />
               Schedule
             </button>
             <button
               onClick={() => setActiveTab('logs')}
-              className={`pb-3 px-1 font-medium transition-colors ${
+              className={cn(
+                'pb-3 text-sm font-semibold transition-colors border-b-2',
                 activeTab === 'logs'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+                  ? 'text-primary border-primary'
+                  : 'text-muted-foreground border-transparent hover:text-foreground'
+              )}
             >
-              Logs
+              <FileText className="h-4 w-4 inline mr-2" />
+              Activity Logs
             </button>
           </div>
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && (
-            <div className="space-y-4">
+            <div className="p-6 space-y-4">
               <div className="flex flex-col md:flex-row gap-3">
                 <input
                   type="text"
                   value={searchText}
                   onChange={handleSearch}
                   placeholder="Search by assigned to"
-                  className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 max-w-sm px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
                 />
                 <DatePicker
                   selectsRange
@@ -446,19 +570,155 @@ const ViewService: React.FC = () => {
                     setStartDate(update[0]);
                     setEndDate(update[1]);
                     setFilteredScheduleData(filterByDateRange(scheduleData));
+                    setPage(1);
                   }}
                   isClearable
                   placeholderText="Search by Date range"
-                  className="px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full md:w-64"
+                  className="px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full md:w-64"
                 />
+                <div className="flex items-center gap-2 rounded-lg border border-border p-1 bg-muted/40">
+                  <button
+                    aria-label="List view"
+                    className={cn(
+                      'p-2 rounded-md',
+                      scheduleViewMode === 'list'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent'
+                    )}
+                    onClick={() => setScheduleViewMode('list')}
+                  >
+                    <ListIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    aria-label="Grid view"
+                    className={cn(
+                      'p-2 rounded-md',
+                      scheduleViewMode === 'grid'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent'
+                    )}
+                    onClick={() => setScheduleViewMode('grid')}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <Table columns={scheduleColumns} data={filteredScheduleData} />
+
+              {/* Schedule content */}
+              {scheduleViewMode === 'list' ? (
+              <div className="border border-border rounded-xl overflow-hidden">
+                <div className="grid grid-cols-5 bg-muted/50 text-xs font-semibold text-muted-foreground px-4 py-2">
+                  <span>View</span>
+                  <span>Checklist</span>
+                  <span>Start Date</span>
+                  <span>Status</span>
+                  <span className="text-right">Assigned To</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {filteredScheduleData.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-muted-foreground">No schedule records</div>
+                  ) : (
+                    filteredScheduleData
+                      .slice((page - 1) * perPage, page * perPage)
+                      .map((row: any) => (
+                      <div key={row.id} className="grid grid-cols-5 px-4 py-3 text-sm items-center">
+                        <Link
+                          to={`/soft-services/${id}/task/${row.id}`}
+                          state={{ serviceId: id, serviceName: service?.name }}
+                          className="text-primary hover:underline flex items-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                        <span className="truncate">{row.checklist?.name || '-'}</span>
+                        <span>{dateFormat(row.start_time)}</span>
+                        <span className="capitalize text-muted-foreground">{row.status || '-'}</span>
+                        <span className="text-right truncate">{row.assigned_name || row.assigned_to || 'Unassigned'}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {filteredScheduleData.length === 0 ? (
+                    <div className="col-span-full text-center text-sm text-muted-foreground py-6 border border-border rounded-lg">
+                      No schedule records
+                    </div>
+                  ) : (
+                    filteredScheduleData
+                      .slice((page - 1) * perPage, page * perPage)
+                      .map((row: any) => (
+                        <div key={row.id} className="border border-border rounded-lg p-4 bg-muted/20 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Start</span>
+                            <span className="text-xs text-muted-foreground">{dateFormat(row.start_time)}</span>
+                          </div>
+                          <p className="text-sm font-semibold truncate">{row.checklist?.name || '-'}</p>
+                          <p className="text-xs text-muted-foreground capitalize">Status: {row.status || '-'}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Assigned: {row.assigned_name || row.assigned_to || 'Unassigned'}
+                          </p>
+                          <Link
+                            to={`/soft-services/${id}/task/${row.id}`}
+                            state={{ serviceId: id, serviceName: service?.name }}
+                            className="inline-flex items-center gap-2 text-primary text-sm font-medium"
+                          >
+                            <Eye className="w-4 h-4" /> View
+                          </Link>
+                        </div>
+                      ))
+                  )}
+                </div>
+              )}
+              {filteredScheduleData.length > 0 && (
+                <div className="flex flex-col md:flex-row items-center justify-center gap-3 pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    Showing {(page - 1) * perPage + 1}-
+                    {Math.min(page * perPage, filteredScheduleData.length)} of {filteredScheduleData.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={perPage}
+                      onChange={(e) => {
+                        setPerPage(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="px-3 py-2 border border-border rounded-lg bg-background text-sm text-foreground"
+                    >
+                      {[5, 10, 20, 50].map((n) => (
+                        <option key={n} value={n}>
+                          {n} / page
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-3 py-1 text-sm border border-border rounded-lg disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <span className="text-sm text-muted-foreground">Page {page}</span>
+                    <button
+                      onClick={() =>
+                        setPage((p) =>
+                          p * perPage >= filteredScheduleData.length ? p : p + 1
+                        )
+                      }
+                      disabled={page * perPage >= filteredScheduleData.length}
+                      className="px-3 py-1 text-sm border border-border rounded-lg disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Logs Tab */}
           {activeTab === 'logs' && (
-            <div className="space-y-4">
+            <div className="p-6 space-y-4">
               <div className="flex items-center gap-3 justify-end">
                 <button
                   onClick={handlePrevDate}
@@ -470,7 +730,7 @@ const ViewService: React.FC = () => {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
                 <button
                   onClick={handleNextDate}
@@ -482,7 +742,8 @@ const ViewService: React.FC = () => {
 
               <div className="space-y-4">
                 {logsDetails.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg">
+                    <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
                     No logs found for {dateFormat(selectedDate)}
                   </div>
                 ) : (
@@ -490,15 +751,15 @@ const ViewService: React.FC = () => {
                     const hasSubmissions = task.activity_log?.submissions?.length > 0;
                     return (
                       hasSubmissions && (
-                        <div key={task.id} className="bg-muted/30 border border-border rounded-lg p-5 space-y-4">
-                          <div>
+                        <div key={task.id} className="bg-muted/20 border border-border rounded-lg p-5 space-y-4">
+                          <div className="bg-primary/10 rounded-lg p-3">
                             <p className="text-sm text-muted-foreground mb-1">Checklist Name</p>
                             <p className="font-medium">{task.checklist?.name || 'No Checklist Name'}</p>
                           </div>
 
                           {task.activity_log.submissions.map((submission: any, subIndex: number) =>
                             submission && (
-                              <div key={submission.id} className="space-y-3">
+                              <div key={submission.id} className="space-y-3 border-l-4 border-primary pl-4">
                                 <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-900">
                                   <p className="text-sm text-muted-foreground mb-1">Question {subIndex + 1}</p>
                                   <p className="font-medium">{submission.question?.name || 'No Question'}</p>
@@ -550,13 +811,18 @@ const ViewService: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* QR Code Modal */}
       {showQrModal && service.qr_code_image_url && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowQrModal(false)}>
-          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">{service.name} - QR Code</h3>
               <button
@@ -580,7 +846,7 @@ const ViewService: React.FC = () => {
               <Printer className="w-4 h-4" />
               Download QR Code
             </button>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
