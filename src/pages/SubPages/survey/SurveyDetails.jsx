@@ -11,6 +11,7 @@ function SurveyDetails() {
   const [survey, setSurvey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openQuestionIds, setOpenQuestionIds] = useState(new Set());
 
   useEffect(() => {
     fetchSurveyDetails();
@@ -200,56 +201,98 @@ function SurveyDetails() {
 
           {/* Questions Section */}
           <div className="mt-6">
-            <h3 className="text-xl font-semibold text-foreground mb-4">
-              Survey Questions ({survey.survey_questions?.length || 0})
-            </h3>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Survey Questions
+              </h3>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                {survey.survey_questions?.length || 0} total
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">Browse all questions with clear tags and options.</p>
+
             {survey.survey_questions && survey.survey_questions.length > 0 ? (
-              <div className="space-y-4">
-                {survey.survey_questions.map((question, index) => (
-                  <div key={question.id} className="bg-muted/50 border border-border rounded-lg p-5">
-                    <div className="flex items-start gap-3 mb-3">
-                      <span className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-semibold">
-                        Q{index + 1}
-                      </span>
-                      <div className="flex-1">
-                        <h4 className="text-base font-semibold text-foreground mb-2">
-                          {question.q_title || 'Untitled Question'}
-                        </h4>
-                        <div className="flex flex-wrap gap-2 items-center">
-                          <span className="px-2 py-1 bg-background border border-border rounded text-xs font-medium">
-                            Type: {question.question_type?.replace('_', ' ') || 'Unknown'}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {survey.survey_questions.map((question, index) => {
+                  const hasOptions =
+                    (question.question_type === 'single_choice' || question.question_type === 'multiple_choice') &&
+                    question.options &&
+                    question.options.length > 0;
+                  const qKey = question.id ?? index;
+                  const isOpen = hasOptions && openQuestionIds.has(qKey);
+                  const toggleOptions = () => {
+                    if (!hasOptions) return;
+                    setOpenQuestionIds((prev) => {
+                      const next = new Set(prev);
+                      next.has(qKey) ? next.delete(qKey) : next.add(qKey);
+                      return next;
+                    });
+                  };
+
+                  return (
+                    <div
+                      key={question.id}
+                      className={`bg-card border border-border rounded-xl p-5 shadow-sm space-y-3 transition-colors ${
+                        hasOptions ? 'cursor-pointer hover:bg-primary/5' : 'hover:bg-muted/50'
+                      }`}
+                      onClick={toggleOptions}
+                    >
+                      <div className="flex items-start gap-3 justify-between">
+                        <div className="flex items-start gap-3">
+                          <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+                            Q{index + 1}
                           </span>
-                          {question.required && (
-                            <span className="px-2 py-1 bg-red-100 text-red-700 border border-red-200 rounded text-xs font-medium">
-                              Required
-                            </span>
-                          )}
-                          {(question.question_type === 'rating' || question.question_type === 'scale') && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-medium">
-                              Range: {question.min_value || 1} - {question.max_value || 10}
-                            </span>
-                          )}
+                          <div>
+                            <h4 className="text-base font-semibold text-foreground">
+                              {question.q_title || 'Untitled Question'}
+                            </h4>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              <span className="px-2 py-1 bg-background border border-border rounded text-xs font-medium">
+                                {question.question_type?.replace('_', ' ') || 'Unknown'}
+                              </span>
+                              {question.required && (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 border border-red-200 rounded text-xs font-semibold">
+                                  Required
+                                </span>
+                              )}
+                              {(question.question_type === 'rating' || question.question_type === 'scale') && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-medium">
+                                  Range {question.min_value || 1} - {question.max_value || 10}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Show options for choice-based questions */}
-                    {(question.question_type === 'single_choice' || question.question_type === 'multiple_choice') &&
-                     question.options && question.options.length > 0 && (
-                      <div className="mt-3 pl-16">
-                        <p className="text-sm text-muted-foreground mb-2">Options:</p>
-                        <ul className="space-y-1">
-                          {question.options.map((option, optIdx) => (
-                            <li key={optIdx} className="text-sm text-foreground flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                              {option.label || `Option ${optIdx + 1}`}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {hasOptions && !isOpen && (
+                        <p className="text-xs text-muted-foreground">Click to view options</p>
+                      )}
+
+                      {hasOptions && isOpen && (
+                        <div className="pt-2">
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Options</p>
+                          <div className="flex flex-wrap gap-2">
+                            {question.options.map((option, optIdx) => (
+                              <div
+                                key={optIdx}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+                              >
+                                <span className="h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
+                                  {String.fromCharCode(65 + optIdx)}
+                                </span>
+                                <span className="text-xs font-medium text-foreground">
+                                  {option.label || `Option ${optIdx + 1}`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-muted/50 border border-border rounded-lg p-8 text-center">

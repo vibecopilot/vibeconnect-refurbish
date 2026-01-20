@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 
 interface Task {
   id: number | string;
+  soft_service_id?: number | string;
+  service_id?: number | string;
   soft_service_name?: string;
   checklist_name?: string;
   start_time?: string;

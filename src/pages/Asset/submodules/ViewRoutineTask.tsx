@@ -112,6 +112,8 @@ const ViewRoutineTask: React.FC = () => {
             <InfoItem label="Asset" value={task.asset_name || '-'} />
             <InfoItem label="Status" value={task.status || '-'} />
             <InfoItem label="Frequency" value={task.frequency || '-'} />
+            <InfoItem label="Location" value={(task as any).location || '-'} />
+            <InfoItem label="Completed By" value={(task as any).assigned_to_name || '-'} />
           </div>
         </div>
 
@@ -126,6 +128,7 @@ const ViewRoutineTask: React.FC = () => {
             <InfoItem label="End Time" value={formatDateTime(task.end_time)} />
             <InfoItem label="Assigned To" value={task.assigned_to || '-'} />
             <InfoItem label="Created On" value={formatDateTime(task.created_at)} />
+            <InfoItem label="Updated On" value={formatDateTime(task.updated_at)} />
           </div>
         </div>
 

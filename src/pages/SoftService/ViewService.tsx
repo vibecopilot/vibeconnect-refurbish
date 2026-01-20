@@ -223,7 +223,7 @@ const ViewService: React.FC = () => {
     {
       name: 'View',
       cell: (row: any) => (
-        <Link to={`/soft-service/schedule-task-details/${id}/${row.id}`}>
+        <Link to={`/soft-services/${id}/task/${row.id}`} state={{ serviceId: id, serviceName: service?.name }}>
           <Eye className="w-4 h-4" />
         </Link>
       ),
@@ -257,8 +257,7 @@ const ViewService: React.FC = () => {
         <Breadcrumb items={[
           { label: 'FM Module' },
           { label: 'Soft Services', path: '/soft-services' },
-          { label: 'Overview', path: '/soft-services/overview' },
-          { label: 'View' },
+          { label: 'Service' },
         ]} />
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
@@ -274,8 +273,7 @@ const ViewService: React.FC = () => {
         <Breadcrumb items={[
           { label: 'FM Module' },
           { label: 'Soft Services', path: '/soft-services' },
-          { label: 'Overview', path: '/soft-services/overview' },
-          { label: 'View' },
+          { label: 'Service' },
         ]} />
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-12 h-12 text-destructive mb-4" />
@@ -294,7 +292,7 @@ const ViewService: React.FC = () => {
       <Breadcrumb items={[
         { label: 'FM Module' },
         { label: 'Soft Services', path: '/soft-services' },
-        { label: 'Overview', path: '/soft-services/overview' },
+        { label: 'Service', path: '/soft-services' },
         { label: service.name },
       ]} />
 

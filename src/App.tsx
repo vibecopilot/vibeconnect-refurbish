@@ -66,6 +66,7 @@ import { ViewAMC, ViewMeter, ViewChecklist as ViewAssetChecklist, ViewRoutineTas
 import { MasterChecklistCreate, MasterChecklistView, MasterChecklistEdit, MasterChecklistCopy, AssociateMasterChecklist } from "./pages/Asset/MasterChecklist";
 import { TicketList, TicketCreate, TicketView, TicketEdit } from "./pages/ServiceDesk";
 import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList, SoftServicesOverview } from "./pages/SoftService";
+import SoftServiceTaskDetails from "./pages/SoftService/SoftServiceTaskDetails";
 import {
   AmenitiesList,
   HotelBookingsList,
@@ -281,7 +282,8 @@ function App() {
           
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
-        <Route path="/soft-services/task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Task Details" /></AuthenticatedLayout>} />
+        <Route path="/soft-services/:serviceId/task/:taskId" element={<AuthenticatedLayout><SoftServiceTaskDetails /></AuthenticatedLayout>} />
+        <Route path="/soft-services/task/:taskId" element={<AuthenticatedLayout><SoftServiceTaskDetails /></AuthenticatedLayout>} />
 
         {/* Soft Services - Overview Tab */}
         <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} /></AuthenticatedLayout>} />

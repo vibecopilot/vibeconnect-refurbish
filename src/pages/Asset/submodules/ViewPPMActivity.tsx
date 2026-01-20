@@ -22,13 +22,36 @@ const ViewPPMActivity: React.FC = () => {
   }, [id, assetId]);
 
   const fetchActivityDetails = async () => {
-    if (!assetId) return;
+    if (!assetId || !id) return;
     setLoading(true);
     try {
       const res = await ppmActivityService.getPPMActivityByAsset(assetId);
-      const data = Array.isArray(res.data) ? res.data : [res.data];
-      const found = data.find((a: PPMActivityDetail) => String(a.id) === id);
-      setActivity(found || (data.length > 0 ? data[0] : null));
+      const raw = res.data || {};
+      const assetName = raw.site_asset?.name;
+      const activities = Array.isArray(raw.activities) ? raw.activities : [];
+      const found = activities.find((a: any) => String(a.id) === String(id)) || activities[0];
+
+      if (!found) {
+        setActivity(null);
+        setError('PPM Activity not found');
+        return;
+      }
+
+      setActivity({
+        id: found.id,
+        checklist_id: found.checklist?.id,
+        checklist_name: found.checklist?.name,
+        asset_id: Number(assetId),
+        asset_name: assetName,
+        assigned_to: found.assigned_name || found.assigned_to,
+        start_time: found.start_time,
+        end_time: found.end_time,
+        status: found.status,
+        frequency: found.checklist?.frequency,
+        due_date: found.start_time,
+        submissions: found.activity_log?.submissions || [],
+        created_at: found.created_at,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch PPM activity details');
     } finally {
