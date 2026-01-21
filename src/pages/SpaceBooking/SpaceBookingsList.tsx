@@ -43,6 +43,7 @@ const SpaceBookingsList: React.FC = () => {
   const [filteredBookings, setFilteredBookings] = useState<SpaceBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fullTextModal, setFullTextModal] = useState<string | null>(null);
 
   const getDefaultPerPage = (mode: 'grid' | 'table') => mode === 'grid' ? 12 : 10;
   
@@ -203,6 +204,24 @@ const SpaceBookingsList: React.FC = () => {
     return 'bg-gray-100 text-gray-700';
   };
 
+  // Horizontal truncation function with click-to-view modal
+  const renderTruncated = (val: any, maxWidth = '150px') => {
+    if (!val || val === 'N/A' || val === '-') return val || '-';
+    return (
+      <div 
+        className="whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer hover:text-primary transition-colors"
+        style={{ maxWidth }}
+        title="Click to view full content"
+        onClick={(e) => {
+          e.stopPropagation();
+          setFullTextModal(String(val));
+        }}
+      >
+        {val}
+      </div>
+    );
+  };
+
   const columns: TableColumn<SpaceBooking>[] = [
     {
       key: 'actions',
@@ -215,9 +234,23 @@ const SpaceBookingsList: React.FC = () => {
       ),
     },
     { key: 'id', header: 'ID', width: '80px', sortable: true },
-    { key: 'fac_name', header: 'FACILITY NAME', sortable: true },
-    { key: 'fac_type', header: 'FACILITY TYPE', sortable: true },
-    { key: 'amount', header: 'TOTAL AMOUNT', render: (v) => v || 'N/A' },
+    { 
+      key: 'fac_name', 
+      header: 'FACILITY NAME', 
+      sortable: true,
+      render: (v) => renderTruncated(v, '200px')
+    },
+    { 
+      key: 'fac_type', 
+      header: 'FACILITY TYPE', 
+      sortable: true,
+      render: (v) => renderTruncated(v, '150px')
+    },
+    { 
+      key: 'amount', 
+      header: 'TOTAL AMOUNT', 
+      render: (v) => v ? `₹${v}` : 'N/A' 
+    },
     { 
       key: 'status', 
       header: 'PAYMENT STATUS', 
@@ -227,13 +260,41 @@ const SpaceBookingsList: React.FC = () => {
         </span>
       )
     },
-    { key: 'payment', header: 'PAYMENT METHOD', render: (v: any) => v?.payment_method || 'N/A' },
-    { key: 'book_by_user', header: 'BOOKED BY', render: (v) => v || 'N/A' },
-    { key: 'created_at', header: 'BOOKED ON', render: (v) => formatDate(v as string) },
-    { key: 'booking_date', header: 'SCHEDULED ON', render: (v) => formatDate(v as string) },
-    { key: 'slot_time', header: 'SCHEDULED TIME', render: (v) => v || 'N/A' },
-    { key: 'description', header: 'DESCRIPTION', render: (v) => v || '-' },
-    { key: 'terms', header: 'TERMS', render: (v) => v || '-' },
+    { 
+      key: 'payment', 
+      header: 'PAYMENT METHOD', 
+      render: (v: any) => renderTruncated(v?.payment_method || 'N/A', '120px')
+    },
+    { 
+      key: 'book_by_user', 
+      header: 'BOOKED BY', 
+      render: (v) => renderTruncated(v || 'N/A', '150px')
+    },
+    { 
+      key: 'created_at', 
+      header: 'BOOKED ON', 
+      render: (v) => formatDate(v as string) 
+    },
+    { 
+      key: 'booking_date', 
+      header: 'SCHEDULED ON', 
+      render: (v) => formatDate(v as string) 
+    },
+    { 
+      key: 'slot_time', 
+      header: 'SCHEDULED TIME', 
+      render: (v) => v || 'N/A' 
+    },
+    { 
+      key: 'description', 
+      header: 'DESCRIPTION', 
+      render: (v) => renderTruncated(v || '-', '200px')
+    },
+    { 
+      key: 'terms', 
+      header: 'TERMS', 
+      render: (v) => renderTruncated(v || '-', '200px')
+    },
     { 
       key: 'booking_status', 
       header: 'BOOKING STATUS', 
@@ -288,110 +349,146 @@ const SpaceBookingsList: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <Breadcrumb 
-        items={[
-          { label: 'Booking Management' }, 
-          { label: 'Space Booking' }
-        ]} 
-      />
-
-      {/* Toolbar */}
-      <ListToolbar
-        searchPlaceholder="Search by Facility"
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-        onFilter={() => {}}
-        onExport={handleExport}
-        showViewToggle={true}
-        onAdd={() => navigate('/space-booking/book')}
-        addLabel="Book"
-      />
-
-      {loading && bookings.length > 0 && (
-        <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-sm">Refreshing...</span>
-        </div>
-      )}
-
-      {!loading && filteredBookings.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
-          <Building2 className="w-16 h-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No Space Bookings Found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchValue ? `No bookings match "${searchValue}"` : 'Book a space to get started'}
-          </p>
-          <button
-            onClick={() => navigate('/space-booking/book')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium"
-          >
-            + Book Space
-          </button>
-        </div>
-      )}
-
-      {paginatedData.length > 0 && viewMode === 'table' && (
-        <DataTable
-          columns={columns}
-          data={paginatedData}
-          selectable
-          selectedRows={selectedRows}
-          onSelectRow={handleSelectRow}
-          onSelectAll={handleSelectAll}
-          viewPath={(row) => `/space-booking/${row.id}`}
+    <>
+      <div className="p-6">
+        <Breadcrumb 
+          items={[
+            { label: 'Booking Management' }, 
+            { label: 'Space Booking' }
+          ]} 
         />
-      )}
 
-      {paginatedData.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paginatedData.map((booking) => (
-            <DataCard
-              key={booking.id}
-              title={booking.fac_name || `Booking #${booking.id}`}
-              subtitle={`${formatDate(booking.booking_date)} • ${booking.slot_time}`}
-              status={booking.status?.toLowerCase() === 'confirmed' || booking.status?.toLowerCase() === 'approved' ? 'approved' : 
-                      booking.status?.toLowerCase() === 'cancelled' ? 'rejected' : 'pending'}
-              fields={[
-                { label: 'Type', value: booking.fac_type || '-' },
-                { label: 'Amount', value: booking.amount ? `₹${booking.amount}` : 'N/A' },
-                { label: 'Booked By', value: booking.book_by_user || 'N/A' },
-              ]}
-              viewPath={`/space-booking/${booking.id}`}
-            />
-          ))}
+        {/* Toolbar */}
+        <ListToolbar
+          searchPlaceholder="Search by Facility"
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          onFilter={() => {}}
+          onExport={handleExport}
+          showViewToggle={true}
+          onAdd={() => navigate('/space-booking/book')}
+          addLabel="Book"
+        />
+
+        {loading && bookings.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Refreshing...</span>
+          </div>
+        )}
+
+        {!loading && filteredBookings.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
+            <Building2 className="w-16 h-16 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No Space Bookings Found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchValue ? `No bookings match "${searchValue}"` : 'Book a space to get started'}
+            </p>
+            <button
+              onClick={() => navigate('/space-booking/book')}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium"
+            >
+              + Book Space
+            </button>
+          </div>
+        )}
+
+        {paginatedData.length > 0 && viewMode === 'table' && (
+          <DataTable
+            columns={columns}
+            data={paginatedData}
+            selectable
+            selectedRows={selectedRows}
+            onSelectRow={handleSelectRow}
+            onSelectAll={handleSelectAll}
+            viewPath={(row) => `/space-booking/${row.id}`}
+          />
+        )}
+
+        {paginatedData.length > 0 && viewMode === 'grid' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {paginatedData.map((booking) => (
+              <DataCard
+                key={booking.id}
+                title={booking.fac_name || `Booking #${booking.id}`}
+                subtitle={`${formatDate(booking.booking_date)} • ${booking.slot_time}`}
+                status={booking.status?.toLowerCase() === 'confirmed' || booking.status?.toLowerCase() === 'approved' ? 'approved' : 
+                        booking.status?.toLowerCase() === 'cancelled' ? 'rejected' : 'pending'}
+                fields={[
+                  { label: 'Type', value: booking.fac_type || '-' },
+                  { label: 'Amount', value: booking.amount ? `₹${booking.amount}` : 'N/A' },
+                  { label: 'Booked By', value: booking.book_by_user || 'N/A' },
+                ]}
+                viewPath={`/space-booking/${booking.id}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {filteredBookings.length > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
+            <div className="text-sm text-muted-foreground">
+              Showing {((pagination.page - 1) * pagination.perPage) + 1} to{' '}
+              {Math.min(pagination.page * pagination.perPage, filteredBookings.length)} of{' '}
+              {filteredBookings.length} records
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">«</button>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">‹ Prev</button>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= Math.ceil(filteredBookings.length / pagination.perPage)} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">Next ›</button>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredBookings.length / prev.perPage) }))} disabled={pagination.page >= Math.ceil(filteredBookings.length / pagination.perPage)} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">»</button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Per page:</span>
+              <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
+                <option value={10}>10</option>
+                <option value={12}>12</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Full Text Modal */}
+      {fullTextModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" 
+          onClick={() => setFullTextModal(null)}
+        >
+          <div 
+            className="w-full max-w-md bg-card border border-border rounded-xl shadow-xl p-6 relative animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Full Content</h3>
+              <button 
+                className="text-2xl leading-none text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setFullTextModal(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 bg-muted/20 rounded-lg border border-border max-h-[60vh] overflow-y-auto">
+              <p className="text-sm text-foreground whitespace-pre-wrap break-words">{fullTextModal}</p>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button 
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors" 
+                onClick={() => setFullTextModal(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
-      {filteredBookings.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            Showing {((pagination.page - 1) * pagination.perPage) + 1} to{' '}
-            {Math.min(pagination.page * pagination.perPage, filteredBookings.length)} of{' '}
-            {filteredBookings.length} records
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">«</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">‹ Prev</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page >= Math.ceil(filteredBookings.length / pagination.perPage)} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">Next ›</button>
-            <button onClick={() => setPagination(prev => ({ ...prev, page: Math.ceil(filteredBookings.length / prev.perPage) }))} disabled={pagination.page >= Math.ceil(filteredBookings.length / pagination.perPage)} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">»</button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Per page:</span>
-            <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
-              <option value={10}>10</option>
-              <option value={12}>12</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

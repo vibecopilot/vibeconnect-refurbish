@@ -384,6 +384,23 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
       return { moduleId: 'fitout', subModuleId: '' };
     }
 
+    // Hard-match Finance routes to Finance module
+    if (pathname.startsWith('/finance/')) {
+      // Find Finance module
+      const financeModule = filteredModules.find(m => m.id === 'finance');
+      if (financeModule) {
+        // Check which submodule matches
+        for (const subMod of financeModule.subModules) {
+          // Check if pathname starts with submodule path
+          if (pathname.startsWith(subMod.path)) {
+            return { moduleId: 'finance', subModuleId: subMod.id };
+          }
+        }
+        // If no submodule matches but we're on /finance/*, activate Finance module
+        return { moduleId: 'finance', subModuleId: '' };
+      }
+    }
+
     for (const mod of filteredModules) {
       for (const subMod of mod.subModules) {
         // Check if submodule has children - PRIORITIZE EXACT MATCHES
@@ -410,11 +427,12 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             }
           }
         }
-        // Direct path match for submodules without children - only exact match
+        // Direct path match for submodules without children - check startsWith for nested routes
         // Skip this check if submodule has children (handled above)
         if (!subMod.children || subMod.children.length === 0) {
           const exactMatch = pathname === subMod.path;
-          if (exactMatch) {
+          const startsWithMatch = pathname.startsWith(subMod.path + '/');
+          if (exactMatch || startsWithMatch) {
             return { moduleId: mod.id, subModuleId: subMod.id };
           }
         }
