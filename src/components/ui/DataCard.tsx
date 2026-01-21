@@ -14,7 +14,9 @@ interface DataCardProps {
   status?: StatusType;
   fields: DataCardField[];
   viewPath?: string;
+  viewState?: any;
   editPath?: string;
+  editState?: any;
   copyPath?: string;
   onView?: () => void;
   onEdit?: () => void;
@@ -30,7 +32,9 @@ const DataCard: React.FC<DataCardProps> = ({
   status,
   fields,
   viewPath,
+  viewState,
   editPath,
+  editState,
   copyPath,
   onView,
   onEdit,
@@ -113,6 +117,7 @@ const DataCard: React.FC<DataCardProps> = ({
           viewPath ? (
             <Link 
               to={viewPath} 
+              state={viewState}
               className="flex items-center gap-1.5 text-sm text-primary hover:underline"
             >
               <Eye className="w-4 h-4" />
@@ -132,6 +137,7 @@ const DataCard: React.FC<DataCardProps> = ({
           editPath ? (
             <Link 
               to={editPath} 
+              state={editState}
               className="flex items-center gap-1.5 text-sm text-primary hover:underline"
             >
               <Edit className="w-4 h-4" />

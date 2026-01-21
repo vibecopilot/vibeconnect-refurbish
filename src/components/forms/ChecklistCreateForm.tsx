@@ -2,105 +2,113 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Settings, ClipboardList, Calendar, Plus, X, Clock } from "lucide-react";
+import Select from "react-select";
+import Cron from "react-js-cron";
+import "react-js-cron/dist/styles.css";
+
 import FormSection from "../ui/FormSection";
 import FormInput from "../ui/FormInput";
 import FormGrid from "../ui/FormGrid";
 import FormToggle from "../ui/FormToggle";
 import Button from "../ui/Button";
+
 import { getItemInLocalStorage } from "../../utils/localStorage";
 import {
   getAssignedTo,
+  getChecklistDetails,
   getChecklistGroupReading,
-  getVendors,
+  getHostList,
   getMasterChecklist,
+  getVendors,
   postChecklist,
   editChecklist,
-  getChecklistDetails,
 } from "../../api";
-import Select from "react-select";
-import Cron from "react-js-cron";
-import "react-js-cron/dist/styles.css";
 
-interface Question {
-  id?: number;
-  name: string;
-  type: string;
-  options: string[];
-  value_types: string[];
-  question_mandatory: boolean;
-  mandatory?: boolean;
-  reading: boolean;
-  help_text: string;
-  showHelpText: boolean;
-  image_for_question: File[];
-  weightage: string;
-  rating: boolean;
-}
+// ƒo. same behavior, but safe number conversions
+const toNum = (v: any) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
-interface Section {
-  group: string;
-  questions: Question[];
-}
+type ChecklistType = "routine" | "ppm";
 
 interface ChecklistCreateFormProps {
-  checklistType?: "routine" | "ppm" | "soft_service";
+  checklistType?: ChecklistType;
   isEditMode?: boolean;
   existingData?: any;
   checklistId?: string;
   prefillData?: any;
-  prefillMode?: "copy";
+  prefillMode?: "copy" | null;
 }
 
-const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
+const AddChecklist: React.FC<ChecklistCreateFormProps> = ({
   checklistType = "routine",
   isEditMode = false,
-  existingData = null,
+  existingData,
   checklistId,
-  prefillData = null,
-  prefillMode,
+  prefillData,
+  prefillMode = null,
 }) => {
   const navigate = useNavigate();
+
   const siteId = getItemInLocalStorage("SITEID");
   const userId = getItemInLocalStorage("UserId");
   const categories = getItemInLocalStorage("categories") || [];
 
-  const today = new Date();
-  const formattedDate = today.toISOString().split("T")[0];
+  const todayObj = new Date();
+  const formattedDate = todayObj.toISOString().split("T")[0];
+
+  // ---- existing states (same)
+  const [assignedUser, setAssignedUser] = useState<any[]>([]);
+  const [optionssupervisior, setOptionssupervisior] = useState<any[]>([]);
+  const [selectedOptionssupervisior, setSelectedOptionssupervisior] = useState<
+    any[]
+  >([]);
+
+  const [site, setSites] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [masters, setMasters] = useState<any[]>([]);
+
+  const [catid, setcatid] = useState("");
+  const [assignid, setassignid] = useState("");
+  const [supplierid, setsupplierid] = useState("");
+  const [masterid, setmasterid] = useState("");
 
   const [name, setName] = useState("");
   const [frequency, setFrequency] = useState("");
   const [startDate, setStartDate] = useState(formattedDate);
   const [endDate, setEndDate] = useState(formattedDate);
-  const [supplierId, setSupplierId] = useState("");
-  const [priorityLevel, setPriorityLevel] = useState("");
-  const [catId, setCatId] = useState("");
-  const [assignId, setAssignId] = useState("");
+
   const [lockOverdueTask, setLockOverdueTask] = useState("");
   const [ticketType, setTicketType] = useState("Question");
+
   const [cronExpression, setCronExpression] = useState("0 0 * * *");
-  
+  const [cronPeriod, setCronPeriod] = useState<"daily" | "weekly" | "monthly" | "yearly">("daily");
+  const [cronHour, setCronHour] = useState("0");
+  const [cronMinute, setCronMinute] = useState("0");
+  const [cronDayOfWeek, setCronDayOfWeek] = useState("1"); // Monday
+
   const [createNew, setCreateNew] = useState(false);
   const [createTicket, setCreateTicket] = useState(false);
   const [weightage, setWeightage] = useState(false);
 
-  const [submitDays, setSubmitDays] = useState(0);
-  const [submitHours, setSubmitHours] = useState(0);
-  const [submitMinutes, setSubmitMinutes] = useState(0);
-  const [extensionDays, setExtensionDays] = useState(0);
-  const [extensionHours, setExtensionHours] = useState(0);
-  const [extensionMinutes, setExtensionMinutes] = useState(0);
+  // schedule inputs (string state so clearing works in the UI)
+  const [submitDays, setSubmitDays] = useState<string>("");
+  const [submitHours, setSubmitHours] = useState<string>("");
+  const [submitMinutes, setSubmitMinutes] = useState<string>("");
+  const [extensionDays, setExtensionDays] = useState<string>("");
+  const [extensionHours, setExtensionHours] = useState<string>("");
+  const [extensionMinutes, setExtensionMinutes] = useState<string>("");
 
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
-  const [masters, setMasters] = useState<any[]>([]);
-  const [selectedMasterId, setSelectedMasterId] = useState("");
-  const [selectedSupervisors, setSelectedSupervisors] = useState<any[]>([]);
-  const [supervisorOptions, setSupervisorOptions] = useState<any[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const prefillKeyRef = useRef<string | null>(null);
+  const convertedSubmitMinutes =
+    toNum(submitDays) * 1440 + toNum(submitHours) * 60 + toNum(submitMinutes);
 
-  const [sections, setSections] = useState<Section[]>([
+  const convertedExtensionMinutes =
+    toNum(extensionDays) * 1440 +
+    toNum(extensionHours) * 60 +
+    toNum(extensionMinutes);
+
+  const [sections, setSections] = useState<any[]>([
     {
       group: "",
       questions: [
@@ -122,217 +130,135 @@ const ChecklistCreateForm: React.FC<ChecklistCreateFormProps> = ({
     },
   ]);
 
+  // -------------------------------
+  // Fetch dropdowns - same APIs
+  // -------------------------------
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAssignedTo = async () => {
       try {
-        const [assignedResp, sitesResp, suppliersResp, mastersResp] = await Promise.all([
-          getAssignedTo(),
-          getChecklistGroupReading(),
-          getVendors(),
-          getMasterChecklist(),
-        ]);
-
-        setAssignedUsers(assignedResp.data || []);
-        setSupervisorOptions(
-          assignedResp.data?.map((user: any) => ({
-            value: user.id,
-            label: `${user.firstname} ${user.lastname}`,
-          })) || []
-        );
-        setSites(sitesResp.data || []);
-        console.log("SITES RAW sitesResp.data:", sitesResp.data);
-console.log(
-  "SITES MAPPED siteOptions preview:",
-  (sitesResp.data || []).slice(0, 10).map((s: any) => ({
-    id: s.id,
-    name: s.name,
-  }))
-);
-        setSuppliers(suppliersResp.data || []);
-        setMasters(
-          mastersResp.data?.checklists?.map((check: any) => ({
-            value: check.id,
-            label: check.name,
-          })) || []
-        );
+        const response = await getAssignedTo();
+        setAssignedUser(response.data || []);
+        const supervisors =
+          (response.data || []).map((u: any) => ({
+            value: u.id,
+            label: `${u.firstname} ${u.lastname}`,
+          })) || [];
+        setOptionssupervisior(supervisors);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching assigned users:", error);
       }
     };
-    fetchData();
-    
+    fetchAssignedTo();
   }, []);
 
-  // Populate form from master template
   useEffect(() => {
-    if (!createNew || !selectedMasterId) {
-      return;
-    }
-
-    const fetchTemplate = async () => {
+    const fetchSiteOwners = async () => {
       try {
-        const resp = await getChecklistDetails(selectedMasterId);
-        const data = resp.data;
+        const resp = await getChecklistGroupReading();
+        setSites(resp.data || []);
+      } catch (error) {
+        console.log("Error fetching site owners:", error);
+      }
+    };
+    fetchSiteOwners();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        await getHostList(siteId);
+      } catch (e) {
+        // ignore
+      }
+    };
+    if (siteId) fetchUsers();
+  }, [siteId]);
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const supplierResp = await getVendors();
+        setSuppliers(supplierResp.data || []);
+      } catch (error) {
+        console.error("Error fetching suppliers:", error);
+        toast.error("Failed to load suppliers");
+      }
+    };
+    fetchSuppliers();
+  }, []);
+
+  useEffect(() => {
+    const fetchMasters = async () => {
+      try {
+        const masterResp = await getMasterChecklist();
+        const mastershow =
+          masterResp.data?.checklists?.map((check: any) => ({
+            value: check.id,
+            label: check.name,
+          })) || [];
+        setMasters(mastershow);
+      } catch (error) {
+        console.error("Error fetching masters:", error);
+        toast.error("Failed to load templates");
+      }
+    };
+    fetchMasters();
+  }, []);
+
+  // -------------------------------
+  // Template load (Create New)
+  // -------------------------------
+  useEffect(() => {
+    const fetchServicesChecklistDetails = async () => {
+      if (!masterid || !createNew) return;
+      try {
+        const checklistDetailsResponse = await getChecklistDetails(masterid);
+        const data = checklistDetailsResponse.data;
+
         setName(data.name || "");
         setFrequency(data.frequency || "");
         setStartDate(data.start_date || formattedDate);
         setEndDate(data.end_date || formattedDate);
         setWeightage(Boolean(data.weightage_enabled));
-        if (data.groups) {
-          setSections(
-            data.groups.map((group: any) => ({
-              group: group.group_id,
-              questions: group.questions.map((q: any) => ({
-                id: q.id,
-                name: q.name,
-                type: q.qtype,
-                options: [q.option1, q.option2, q.option3, q.option4],
-                value_types: [q.value_type1, q.value_type2, q.value_type3, q.value_type4],
-                question_mandatory: q.question_mandatory,
-                mandatory: q.question_mandatory,
-                reading: q.reading,
-                showHelpText: q.help_text_enbled,
-                help_text: q.help_text,
-                rating: q.rating,
-                weightage: q.weightage,
-                image_for_question: [],
-              })),
-            }))
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching template checklist:", error);
+
+        setSections(
+          (data.groups || []).map((group: any) => ({
+            group: group.group_id,
+            questions: (group.questions || []).map((q: any) => ({
+              name: q.name,
+              type: q.qtype,
+              options: [q.option1, q.option2, q.option3, q.option4],
+              value_types: [
+                q.value_type1,
+                q.value_type2,
+                q.value_type3,
+                q.value_type4,
+              ],
+              question_mandatory: q.question_mandatory,
+              mandatory: q.question_mandatory,
+              reading: q.reading,
+              showHelpText: q.help_text_enbled,
+              help_text: q.help_text,
+              rating: q.rating,
+              weightage: q.weightage,
+              image_for_question: [],
+            })),
+          }))
+        );
+      } catch (e) {
+        console.error(e);
         toast.error("Failed to load template checklist");
       }
     };
+    fetchServicesChecklistDetails();
+  }, [masterid, createNew, formattedDate]);
 
-    fetchTemplate();
-  }, [createNew, selectedMasterId, formattedDate]);
-
-  const applyChecklistData = (
-    data: any,
-    options: { includeCategory: boolean; includeAssigned: boolean; includeTicketType: boolean }
-  ) => {
-    setName(data.name || "");
-    setFrequency(data.frequency || "");
-    setStartDate(data.start_date || formattedDate);
-    setEndDate(data.end_date || formattedDate);
-   setSupplierId(data.supplier_id === null || data.supplier_id === undefined ? "" : String(data.supplier_id));
-
-    setPriorityLevel(data.priority_level || "");
-    setLockOverdueTask(data.lock_overdue === true ? "true" : "false");
-
-    setCreateTicket(Boolean(data.ticket_enabled));
-    setCronExpression(data?.checklist_cron?.expression || "0 0 * * *");
-    setWeightage(Boolean(data.weightage_enabled));
-
-    if (options.includeTicketType) {
-      setTicketType(data.ticket_level_type || "Question");
-    }
-
-    if (options.includeAssigned) {
-      setAssignId(data.assigned_to || "");
-    }
-
-    if (options.includeCategory) {
-      setCatId(data.category_id || "");
-    }
-
-    const totalMinutesRaw = Number(data.grace_period);
-const totalMinutes = Number.isFinite(totalMinutesRaw) ? totalMinutesRaw : 0;
-
-setSubmitDays(Math.floor(totalMinutes / (24 * 60)));
-setSubmitHours(Math.floor((totalMinutes % (24 * 60)) / 60));
-setSubmitMinutes(totalMinutes % 60);
-
-const totalExtensionRaw = Number(data.grace_period_unit);
-const totalExtensionMinutes = Number.isFinite(totalExtensionRaw) ? totalExtensionRaw : 0;
-
-setExtensionDays(Math.floor(totalExtensionMinutes / (24 * 60)));
-setExtensionHours(Math.floor((totalExtensionMinutes % (24 * 60)) / 60));
-setExtensionMinutes(totalExtensionMinutes % 60);
-
-    if (data.supervisors) {
-      const selected = data.supervisors.map((sup: any) => {
-        const id = typeof sup === "object" ? sup.id ?? sup : sup;
-        const match = supervisorOptions.find(
-          (opt) => String(opt.value) === String(id)
-        );
-        return match || { value: String(id), label: String(id) };
-      });
-      setSelectedSupervisors(selected);
-    }
-
-    if (data.groups) {
-      setSections(
-        data.groups.map((group: any) => ({
-          group: group.group_id === null || group.group_id === undefined ? "" : String(group.group_id),
-          questions: group.questions.map((q: any) => ({
-            id: q.id,
-            name: q.name,
-            type: q.qtype,
-            options: [q.option1, q.option2, q.option3, q.option4],
-            value_types: [q.value_type1, q.value_type2, q.value_type3, q.value_type4],
-            question_mandatory: q.question_mandatory,
-            mandatory: q.question_mandatory,
-            reading: q.reading,
-            showHelpText: q.help_text_enbled,
-            help_text: q.help_text,
-            rating: q.rating,
-            weightage: q.weightage,
-            image_for_question: [],
-          })),
-        }))
-      );
-    }
-  };
-
-  const getPrefillKey = (data: any) => {
-    if (!data) return null;
-    return data.id ? String(data.id) : JSON.stringify(data);
-  };
-
-  // Prefill form in edit mode
-  useEffect(() => {
-    if (!isEditMode || !existingData) {
-      return;
-    }
-
-    const nextKey = getPrefillKey(existingData);
-    if (prefillKeyRef.current === nextKey) {
-      return;
-    }
-    prefillKeyRef.current = nextKey;
-
-    applyChecklistData(existingData, {
-      includeCategory: true,
-      includeAssigned: true,
-      includeTicketType: true,
-    });
-  }, [isEditMode, existingData, formattedDate, supervisorOptions]);
-
-  // Prefill form for copy flow (create new)
-  useEffect(() => {
-    if (isEditMode || !prefillData) {
-      return;
-    }
-
-    const nextKey = getPrefillKey(prefillData);
-    if (prefillKeyRef.current === nextKey) {
-      return;
-    }
-    prefillKeyRef.current = nextKey;
-
-    applyChecklistData(prefillData, {
-      includeCategory: prefillMode !== "copy",
-      includeAssigned: prefillMode !== "copy",
-      includeTicketType: prefillMode !== "copy",
-    });
-  }, [isEditMode, prefillData, prefillMode, formattedDate, supervisorOptions]);
-
+  // -------------------------------
+  // Section/Question helpers (same)
+  // -------------------------------
   const addSection = () => {
-    setSections([
-      ...sections,
+    setSections((prev) => [
+      ...prev,
       {
         group: "",
         questions: [
@@ -356,38 +282,62 @@ setExtensionMinutes(totalExtensionMinutes % 60);
   };
 
   const removeSection = (index: number) => {
-    setSections(sections.filter((_, i) => i !== index));
+    setSections((prev) => prev.filter((_: any, i: number) => i !== index));
   };
 
   const addQuestion = (sectionIndex: number) => {
-    const updated = [...sections];
-    updated[sectionIndex].questions.push({
-      name: "",
-      type: "",
-      options: ["", "", "", ""],
-      value_types: ["", "", "", ""],
-      question_mandatory: false,
-      mandatory: false,
-      reading: false,
-      help_text: "",
-      showHelpText: false,
-      image_for_question: [],
-      weightage: "",
-      rating: false,
+    setSections((prev) => {
+      const updated = [...prev];
+      updated[sectionIndex] = { ...updated[sectionIndex] };
+      updated[sectionIndex].questions = [...updated[sectionIndex].questions];
+      updated[sectionIndex].questions.push({
+        name: "",
+        type: "",
+        options: ["", "", "", ""],
+        value_types: ["", "", "", ""],
+        question_mandatory: false,
+        mandatory: false,
+        reading: false,
+        help_text: "",
+        showHelpText: false,
+        image_for_question: [],
+        weightage: "",
+        rating: false,
+      });
+      return updated;
     });
-    setSections(updated);
   };
 
   const removeQuestion = (sectionIndex: number, questionIndex: number) => {
-    const updated = [...sections];
-    updated[sectionIndex].questions.splice(questionIndex, 1);
-    setSections(updated);
+    setSections((prev) => {
+      const updated = [...prev];
+      const section = { ...updated[sectionIndex] };
+      const questions = [...section.questions];
+      const q = { ...questions[questionIndex] };
+
+      if (q.id) {
+        q._destroy = "1";
+        questions[questionIndex] = q;
+      } else {
+        questions.splice(questionIndex, 1);
+      }
+
+      section.questions = questions;
+      updated[sectionIndex] = section;
+      return updated;
+    });
   };
 
-  const handleSectionChange = (index: number, value: string) => {
-    const updated = [...sections];
-    updated[index].group = value;
-    setSections(updated);
+  const handleSectionChange = (
+    index: number,
+    field: string,
+    value: any
+  ) => {
+    setSections((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
   const handleQuestionChange = (
@@ -395,28 +345,50 @@ setExtensionMinutes(totalExtensionMinutes % 60);
     questionIndex: number,
     field: string,
     value: any,
-    optionIndex?: number
+    optionIndex: number | null = null
   ) => {
-    const updated = [...sections];
-    const question = { ...updated[sectionIndex].questions[questionIndex] };
+    setSections((prev) => {
+      const updated = [...prev];
+      const section = { ...updated[sectionIndex] };
+      const questions = [...section.questions];
+      const q = { ...questions[questionIndex] };
 
-    if (field === "option" && optionIndex !== undefined) {
-      question.options[optionIndex] = value;
-    } else if (field === "value_type" && optionIndex !== undefined) {
-      question.value_types[optionIndex] = value;
-    } else if (field === "reading") {
-      question.reading = value;
-    } else {
-      (question as any)[field] = value;
-    }
+      if (field === "name" || field === "type") {
+        q[field] = value;
+      } else if (field === "option") {
+        const opts = [...q.options];
+        opts[optionIndex as number] = value;
+        q.options = opts;
+      } else if (field === "value_type") {
+        const vts = [...q.value_types];
+        vts[optionIndex as number] = value;
+        q.value_types = vts;
+      } else if (field === "mandatory") {
+        q.mandatory = value;
+      } else if (field === "reading") {
+        q.reading = value;
+      } else if (field === "showHelpText") {
+        q.showHelpText = value;
+      } else if (field === "rating") {
+        q.rating = value;
+      } else if (field === "help_text") {
+        q.help_text = value;
+      } else if (field === "image_for_question") {
+        q.image_for_question = Array.isArray(value) ? [...value] : [];
+      } else if (field === "weightage") {
+        q.weightage = value;
+      }
 
-    updated[sectionIndex].questions[questionIndex] = question;
-    setSections(updated);
+      questions[questionIndex] = q;
+      section.questions = questions;
+      updated[sectionIndex] = section;
+      return updated;
+    });
   };
 
-  const convertedSubmitMinutes = submitDays * 1440 + submitHours * 60 + submitMinutes;
-  const convertedExtensionMinutes = extensionDays * 1440 + extensionHours * 60 + extensionMinutes;
-
+  // -------------------------------
+  // Submit (same FormData keys)
+  // -------------------------------
   const handleSubmit = async () => {
     if (!name || !frequency) {
       return toast.error("Name and Frequency are required");
@@ -425,91 +397,126 @@ setExtensionMinutes(totalExtensionMinutes % 60);
       return toast.error("Start date must be before End date");
     }
 
-    setIsSubmitting(true);
     try {
       const formData = new FormData();
 
-      formData.append("checklist[site_id]", String(siteId));
+      formData.append("checklist[site_id]", siteId);
       formData.append("checklist[weightage_enabled]", String(weightage));
       formData.append("checklist[occurs]", "");
       formData.append("checklist[name]", name);
       formData.append("checklist[start_date]", startDate);
       formData.append("checklist[end_date]", endDate);
-      formData.append("checklist[user_id]", String(userId));
+      formData.append("checklist[user_id]", userId);
       formData.append("checklist[cron_expression]", cronExpression);
       formData.append("checklist[grace_period]", String(convertedSubmitMinutes));
-      formData.append("checklist[grace_period_unit]", String(convertedExtensionMinutes));
-      formData.append("checklist[supplier_id]", supplierId);
-      formData.append("checklist[lock_overdue]", String(lockOverdueTask === "true"));
-      if (checklistType === "soft_service") {
-        formData.append("checklist[priority_level]", priorityLevel);
-      }
+      formData.append(
+        "checklist[grace_period_unit]",
+        String(convertedExtensionMinutes)
+      );
+      formData.append("checklist[supplier_id]", supplierid);
+      formData.append(
+        "checklist[lock_overdue]",
+        String(lockOverdueTask === "true")
+      );
       formData.append("checklist[ctype]", checklistType);
       formData.append("checklist[ticket_enabled]", String(createTicket));
       formData.append("checklist[ticket_level_type]", ticketType);
-      formData.append("checklist[category_id]", catId);
-      formData.append("assigned_to", assignId);
-      formData.append("frequency", frequency);
+      formData.append("checklist[category_id]", catid);
+      formData.append("assigned_to", assignid);
 
-      selectedSupervisors.forEach((option) => {
-        formData.append("checklist[supervisior_id][]", String(option.value));
+      selectedOptionssupervisior.forEach((opt: any) => {
+        formData.append(`checklist[supervisior_id][]`, String(opt.value));
       });
 
-      sections.forEach((section) => {
-        formData.append("groups[][group]", section.group);
-        section.questions.forEach((q, qIndex) => {
-          formData.append("groups[][questions][][name]", q.name);
-          formData.append("groups[][questions][][type]", q.type);
-          formData.append("groups[][questions][][reading]", String(q.reading));
-          formData.append("groups[][questions][][question_mandatory]", String(Boolean(q.mandatory)));
-          formData.append("groups[][questions][][help_text_enbled]", String(q.showHelpText));
-          formData.append("groups[][questions][][help_text]", q.help_text || "");
-          formData.append("groups[][questions][][weightage]", q.weightage);
-          formData.append("groups[][questions][][rating]", String(q.rating));
+      formData.append("frequency", frequency);
 
-          q.options.forEach((option, optionIndex) => {
-            formData.append("groups[][questions][][options][]", option || "");
-            formData.append("groups[][questions][][value_types][]", q.value_types[optionIndex] || "");
+      sections.forEach((section: any) => {
+        formData.append(`groups[][group]`, section.group);
+
+        section.questions.forEach((q: any, questionIndex: number) => {
+          if (q.id) {
+            formData.append(`groups[][questions][][id]`, String(q.id));
+          }
+          formData.append(`groups[][questions][][name]`, q.name);
+          formData.append(`groups[][questions][][type]`, q.type);
+          formData.append(`groups[][questions][][reading]`, String(q.reading));
+          formData.append(
+            `groups[][questions][][question_mandatory]`,
+            String(q.mandatory)
+          );
+          formData.append(
+            `groups[][questions][][help_text_enbled]`,
+            String(q.showHelpText)
+          );
+          formData.append(`groups[][questions][][help_text]`, q.help_text || "");
+          formData.append(`groups[][questions][][weightage]`, String(q.weightage));
+          formData.append(`groups[][questions][][rating]`, String(q.rating));
+
+          q.options.forEach((option: any, optionIndex: number) => {
+            formData.append(`groups[][questions][][options][]`, option || "");
+            formData.append(
+              `groups[][questions][][value_types][]`,
+              q.value_types[optionIndex] || ""
+            );
           });
 
-          q.image_for_question.forEach((file) => {
-            formData.append(`groups[][questions][][image_for_question_${qIndex + 1}][]`, file);
-          });
+          if (q._destroy) {
+            formData.append(`groups[][questions][][_destroy]`, q._destroy);
+          }
+
+          if (q.image_for_question && q.image_for_question.length > 0) {
+            q.image_for_question.forEach((file: File) => {
+              formData.append(
+                `groups[][questions][][image_for_question_${questionIndex + 1}][]`,
+                file
+              );
+            });
+          }
         });
       });
 
+      let resp;
       if (isEditMode && checklistId) {
-        await editChecklist(formData, checklistId);
-        toast.success("Checklist Updated Successfully");
+        resp = await editChecklist(formData, checklistId);
+        toast.success("Checklist updated");
       } else {
-        await postChecklist(formData);
-        toast.success("Checklist Created Successfully");
+        resp = await postChecklist(formData);
+        toast.success("New Checklist Created");
       }
-
-      const destination =
-        checklistType === "ppm"
-          ? "/asset/ppm-checklist"
-          : checklistType === "soft_service"
-          ? "/soft-services/checklist"
-          : "/asset/checklist";
-      navigate(destination);
+      console.log(resp);
+      navigate("/asset/master-checklist");
     } catch (error) {
       console.error("Error:", error);
       toast.error(isEditMode ? "Failed to update checklist" : "Failed to create checklist");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const frequencyOptions = [
+  // -------------------------------
+  // Options (UI)
+  // -------------------------------
+  const routineFrequencies = [
     { value: "hourly", label: "Hourly" },
     { value: "daily", label: "Daily" },
+  ];
+
+  const ppmFrequencies = [
     { value: "weekly", label: "Weekly" },
     { value: "monthly", label: "Monthly" },
     { value: "quarterly", label: "Quarterly" },
     { value: "half yearly", label: "Half Yearly" },
     { value: "yearly", label: "Yearly" },
   ];
+
+  const frequencyOptions =
+    checklistType === "ppm" ? ppmFrequencies : routineFrequencies;
+
+  // Ensure frequency always valid for current type
+  useEffect(() => {
+    if (!frequencyOptions.find((opt) => opt.value === frequency)) {
+      setFrequency(frequencyOptions[0]?.value || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checklistType]);
 
   const questionTypeOptions = [
     { value: "multiple", label: "Multiple Choice Question" },
@@ -518,48 +525,272 @@ setExtensionMinutes(totalExtensionMinutes % 60);
     { value: "Numeric", label: "Numeric" },
   ];
 
-  const siteOptions = sites.map((s: any) => ({ value: String(s.id), label: s.name }));
-  const supplierOptions = suppliers.map((s: any) => ({ value: String(s.id), label: s.company_name }));
-  const categoryOptions = categories.map((c: any) => ({ value: String(c.id), label: c.name }));
-  const assignedOptions = assignedUsers.map((u: any) => ({ value: String(u.id), label: `${u.firstname} ${u.lastname}` }));
+  const siteOptions = (site || []).map((s: any) => ({
+    value: String(s.id),
+    label: s.name,
+  }));
+  const supplierOptions = (suppliers || []).map((s: any) => ({
+    value: String(s.id),
+    label: s.company_name,
+  }));
+  const categoryOptions = (categories || []).map((c: any) => ({
+    value: String(c.id),
+    label: c.name,
+  }));
+  const assignedOptions = (assignedUser || []).map((u: any) => ({
+    value: String(u.id),
+    label: `${u.firstname} ${u.lastname}`,
+  }));
+
+  const hours = Array.from({ length: 24 }, (_, i) => ({
+    value: String(i),
+    label: `${i.toString().padStart(2, "0")}:00`,
+  }));
+  const minutes = Array.from({ length: 60 }, (_, i) => ({
+    value: String(i),
+    label: i.toString().padStart(2, "0"),
+  }));
+  const daysOfWeek = [
+    { value: "0", label: "Sunday" },
+    { value: "1", label: "Monday" },
+    { value: "2", label: "Tuesday" },
+    { value: "3", label: "Wednesday" },
+    { value: "4", label: "Thursday" },
+    { value: "5", label: "Friday" },
+    { value: "6", label: "Saturday" },
+  ];
+
+  const syncCronExpression = (
+    period: "daily" | "weekly" | "monthly" | "yearly",
+    hourVal: string,
+    minuteVal: string,
+    dowVal: string
+  ) => {
+    if (period === "yearly") {
+      // Jan 1st
+      setCronExpression(`${minuteVal} ${hourVal} 1 1 *`);
+    } else if (period === "monthly") {
+      setCronExpression(`${minuteVal} ${hourVal} 1 * *`);
+    } else if (period === "weekly") {
+      setCronExpression(`${minuteVal} ${hourVal} * * ${dowVal}`);
+    } else {
+      setCronExpression(`${minuteVal} ${hourVal} * * *`);
+    }
+  };
+
+  useEffect(() => {
+    syncCronExpression(cronPeriod, cronHour, cronMinute, cronDayOfWeek);
+  }, [cronPeriod, cronHour, cronMinute, cronDayOfWeek]);
+
+  // preload data when editing or copying
+  useEffect(() => {
+    const data = existingData || (prefillMode === "copy" ? prefillData : null);
+    if (!data) return;
+
+    setName(data.name || "");
+    setFrequency(data.frequency || "");
+    setStartDate(data.start_date || formattedDate);
+    setEndDate(data.end_date || formattedDate);
+    setsupplierid(data.supplier_id ? String(data.supplier_id) : "");
+    setLockOverdueTask(
+      data.lock_overdue === true || data.lock_overdue === "true" ? "true" : "false"
+    );
+    setTicketType(data.ticket_level_type || "Question");
+    setCreateTicket(Boolean(data.ticket_enabled));
+    setWeightage(Boolean(data.weightage_enabled));
+    setassignid(data.assigned_to ? String(data.assigned_to) : "");
+    setcatid(data.category_id ? String(data.category_id) : "");
+
+    if (data.checklist_cron?.expression) {
+      const expr = data.checklist_cron.expression;
+      setCronExpression(expr);
+      const parts = expr.split(" ");
+      if (parts.length >= 5) {
+        const [m, h, dom, mon, dow] = parts;
+        setCronMinute(m);
+        setCronHour(h);
+
+        if (dom === "1" && mon === "1") {
+          setCronPeriod("yearly");
+        } else if (dom === "1" && mon === "*") {
+          setCronPeriod("monthly");
+        } else if (dow && dow !== "*" && dow !== "?") {
+          setCronPeriod("weekly");
+          setCronDayOfWeek(dow);
+        } else {
+          setCronPeriod("daily");
+        }
+      }
+    }
+
+    setSelectedOptionssupervisior(
+      (data.supervisors || []).map((sup: any) => ({
+        value: sup,
+        label: String(sup),
+      }))
+    );
+
+    setSections(
+      (data.groups || []).map((group: any) => ({
+        group: group.group_id,
+        questions: (group.questions || []).map((q: any) => ({
+          id: isEditMode ? q.id : undefined, // drop ids when copying
+          name: q.name,
+          type: q.qtype,
+          options: [q.option1, q.option2, q.option3, q.option4],
+          value_types: [q.value_type1, q.value_type2, q.value_type3, q.value_type4],
+          question_mandatory: q.question_mandatory,
+          mandatory: q.question_mandatory,
+          reading: q.reading,
+          showHelpText: q.help_text_enbled,
+          help_text: q.help_text,
+          rating: q.rating,
+          weightage: q.weightage,
+          image_for_question: [],
+          _destroy: "0",
+        })),
+      }))
+    );
+
+    const totalMinutes = toNum(data.grace_period);
+    const submitDaysLocal = Math.floor(totalMinutes / (24 * 60));
+    const submitHoursLocal = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const submitMinutesLocal = totalMinutes % 60;
+    setSubmitDays(String(submitDaysLocal));
+    setSubmitHours(String(submitHoursLocal));
+    setSubmitMinutes(String(submitMinutesLocal));
+
+    const totalExtensionMinutes = toNum(data.grace_period_unit);
+    const extDays = Math.floor(totalExtensionMinutes / (24 * 60));
+    const extHours = Math.floor((totalExtensionMinutes % (24 * 60)) / 60);
+    const extMinutes = totalExtensionMinutes % 60;
+    setExtensionDays(String(extDays));
+    setExtensionHours(String(extHours));
+    setExtensionMinutes(String(extMinutes));
+  }, [existingData, prefillData, prefillMode, formattedDate, isEditMode]);
+
+  const handleCronChange = (val: string | undefined) => {
+    if (!val) {
+      // Reset to defaults when user presses Clear in the cron widget
+      setCronPeriod("daily");
+      setCronHour("0");
+      setCronMinute("0");
+      setCronDayOfWeek("1");
+      setCronExpression("0 0 * * *");
+      return;
+    }
+    setCronExpression(val);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Configuration */}
-      <FormSection title="Configuration" icon={Settings}>
-        <div className="flex flex-wrap gap-6 mb-6">
-          <FormToggle label="Create New" checked={createNew} onChange={setCreateNew} />
-          <FormToggle label="Create Ticket" checked={createTicket} onChange={setCreateTicket} />
-          <FormToggle label="Weightage" checked={weightage} onChange={setWeightage} />
+      {/* Source */}
+      {!isEditMode ? (
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Source</h3>
+              <p className="text-sm text-muted-foreground">
+                Start from scratch or reuse an existing template
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCreateNew(false)}
+                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  !createNew
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:bg-accent"
+                }`}
+              >
+                Start Fresh
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateNew(true)}
+                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  createNew
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:bg-accent"
+                }`}
+              >
+                Use Template
+              </button>
+            </div>
+          </div>
+          {createNew && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">
+                  Template
+                </label>
+                <Select
+                  options={masters}
+                  value={
+                    masters.find((m: any) => String(m.value) === String(masterid)) ||
+                    null
+                  }
+                  onChange={(selected: any) =>
+                    setmasterid(selected?.value || "")
+                  }
+                  placeholder="Select from existing template"
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                />
+              </div>
+              <div className="text-sm text-muted-foreground flex items-end">
+                Selecting a template will load its groups and questions.
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground">
+            Editing existing checklist – source/template is locked.
+          </p>
+        </div>
+      )}
+
+      {/* Settings */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Settings className="w-4 h-4" /> Settings
+        </h3>
+        <div className="flex flex-wrap gap-4">
+          <FormToggle
+            label="Create Ticket"
+            checked={createTicket}
+            onChange={setCreateTicket}
+          />
+          <FormToggle
+            label="Weightage"
+            checked={weightage}
+            onChange={setWeightage}
+          />
+          <FormToggle
+            label="Lock Overdue"
+            checked={lockOverdueTask === "true"}
+            onChange={(v: any) => setLockOverdueTask(v ? "true" : "false")}
+          />
         </div>
 
-        {createNew && (
-          <div className="mb-4">
-            <label className="text-sm text-muted-foreground mb-1.5 block">Select Template</label>
-            <Select
-              options={masters}
-              value={masters.find((m: any) => String(m.value) === String(selectedMasterId)) || null}
-              onChange={(selected: any) => setSelectedMasterId(selected?.value || "")}
-              placeholder="Select from existing template"
-              className="react-select-container"
-              classNamePrefix="react-select"
-            />
-          </div>
-        )}
-
         {createTicket && (
-          <div className="mt-4 space-y-4">
+          <div className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground mb-2 block">Create Ticket At</label>
+              <label className="text-sm text-muted-foreground mb-2 block">
+                Create Ticket At
+              </label>
               <div className="flex gap-4">
                 {["Checklist", "Question"].map((type) => (
                   <label key={type} className="flex items-center gap-2">
                     <input
                       type="radio"
-                      name="ticket_type"
+                      name="ticketType"
                       value={type}
                       checked={ticketType === type}
-                      onChange={(e) => setTicketType(e.target.value)}
+                      onChange={(e: any) => setTicketType(e.target.value)}
                       className="accent-primary"
                     />
                     <span>{type} Level</span>
@@ -570,35 +801,35 @@ setExtensionMinutes(totalExtensionMinutes % 60);
             <FormGrid columns={2}>
               <FormInput
                 label="Select Assigned To"
-                name="assigned_to"
+                name="assigned_to_ticket"
                 type="select"
-                value={assignId}
-                onChange={(e) => setAssignId(e.target.value)}
+                value={assignid}
+                onChange={(e: any) => setassignid(e.target.value)}
                 options={assignedOptions}
                 placeholder="Select Assigned To"
               />
               <FormInput
                 label="Select Category"
-                name="category"
+                name="category_ticket"
                 type="select"
-                value={catId}
-                onChange={(e) => setCatId(e.target.value)}
+                value={catid}
+                onChange={(e: any) => setcatid(e.target.value)}
                 options={categoryOptions}
                 placeholder="Select Category"
               />
             </FormGrid>
           </div>
         )}
-      </FormSection>
+      </div>
 
-      {/* Basic Details */}
-      <FormSection title="Basic Details" icon={ClipboardList}>
-        <FormGrid columns={3}>
+      {/* Details */}
+      <FormSection title="Checklist Details" icon={ClipboardList}>
+        <FormGrid columns={2}>
           <FormInput
             label="Checklist Name"
             name="name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e: any) => setName(e.target.value)}
             required
             placeholder="Enter Checklist Name"
           />
@@ -607,7 +838,7 @@ setExtensionMinutes(totalExtensionMinutes % 60);
             name="frequency"
             type="select"
             value={frequency}
-            onChange={(e) => setFrequency(e.target.value)}
+            onChange={(e: any) => setFrequency(e.target.value)}
             options={frequencyOptions}
             required
             placeholder="Select Frequency"
@@ -617,143 +848,215 @@ setExtensionMinutes(totalExtensionMinutes % 60);
             name="start_date"
             type="date"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e: any) => setStartDate(e.target.value)}
+            min={formattedDate}
           />
           <FormInput
             label="End Date"
             name="end_date"
             type="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e: any) => setEndDate(e.target.value)}
+            min={formattedDate}
           />
-          {checklistType === "soft_service" && (
-            <FormInput
-              label="Priority Level"
-              name="priority_level"
-              type="select"
-              value={priorityLevel}
-              onChange={(e) => setPriorityLevel(e.target.value)}
-              options={[
-                { value: "", label: "Select Priority level" },
-                { value: "High", label: "High" },
-                { value: "Medium", label: "Medium" },
-                { value: "Low", label: "Low" },
-              ]}
-              placeholder="Select Priority"
-            />
-          )}
-        </FormGrid>
-      </FormSection>
-
-      {/* Schedules */}
-      <FormSection title="Schedules" icon={Calendar}>
-        <FormGrid columns={2}>
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Allowed time to submit</label>
-            <div className="flex gap-2">
-              <FormInput
-                label=""
-                name="submit_days"
-                type="number"
-                value={submitDays}
-                onChange={(e) => setSubmitDays(Number(e.target.value))}
-                placeholder="Days"
-              />
-              <FormInput
-                label=""
-                name="submit_hours"
-                type="number"
-                value={submitHours}
-                onChange={(e) => setSubmitHours(Number(e.target.value))}
-                placeholder="Hours"
-              />
-              <FormInput
-                label=""
-                name="submit_minutes"
-                type="number"
-                value={submitMinutes}
-                onChange={(e) => setSubmitMinutes(Number(e.target.value))}
-                placeholder="Minutes"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Extension Time</label>
-            <div className="flex gap-2">
-              <FormInput
-                label=""
-                name="extension_days"
-                type="number"
-                value={extensionDays}
-                onChange={(e) => setExtensionDays(Number(e.target.value))}
-                placeholder="Days"
-              />
-              <FormInput
-                label=""
-                name="extension_hours"
-                type="number"
-                value={extensionHours}
-                onChange={(e) => setExtensionHours(Number(e.target.value))}
-                placeholder="Hours"
-              />
-              <FormInput
-                label=""
-                name="extension_minutes"
-                type="number"
-                value={extensionMinutes}
-                onChange={(e) => setExtensionMinutes(Number(e.target.value))}
-                placeholder="Minutes"
-              />
-            </div>
-          </div>
         </FormGrid>
 
         <FormGrid columns={2} className="mt-4">
           <FormInput
-            label="Lock Overdue Task"
-            name="lock_overdue"
+            label="Categories"
+            name="categories"
             type="select"
-            value={lockOverdueTask}
-            onChange={(e) => setLockOverdueTask(e.target.value)}
-            options={[
-              { value: "true", label: "Yes" },
-              { value: "false", label: "No" },
-            ]}
-            placeholder="Select Lock Status"
+            value={catid}
+            onChange={(e: any) => setcatid(e.target.value)}
+            options={categoryOptions}
+            placeholder="Select Category"
+          />
+          <FormInput
+            label="Supplier"
+            name="supplier"
+            type="select"
+            value={supplierid}
+            onChange={(e: any) => setsupplierid(e.target.value)}
+            options={supplierOptions}
+            placeholder="Select Supplier"
+          />
+        </FormGrid>
+
+        <FormGrid columns={2} className="mt-4">
+          <FormInput
+            label="Assign To"
+            name="assign_to"
+            type="select"
+            value={assignid}
+            onChange={(e: any) => setassignid(e.target.value)}
+            options={assignedOptions}
+            placeholder="Assign To"
           />
           <div>
-            <label className="text-sm text-muted-foreground mb-1.5 block">Supervisors</label>
+            <label className="text-sm text-muted-foreground mb-1.5 block">
+              Supervisors
+            </label>
             <Select
               isMulti
-              options={supervisorOptions}
-              value={selectedSupervisors}
-              onChange={(selected) => setSelectedSupervisors(selected as any[])}
+              options={optionssupervisior}
+              value={selectedOptionssupervisior}
+              onChange={(selected: any) =>
+                setSelectedOptionssupervisior(selected || [])
+              }
               placeholder="Select Supervisors"
               className="react-select-container"
               classNamePrefix="react-select"
             />
           </div>
         </FormGrid>
+      </FormSection>
 
-        <div className="mt-4">
+      {/* Schedule */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Schedule</h3>
+        <FormGrid columns={3}>
           <FormInput
-            label="Supplier"
-            name="supplier"
-            type="select"
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-            options={supplierOptions}
-            placeholder="Select Supplier"
+            label="Submit Days"
+            name="submit_days"
+            type="number"
+            value={submitDays}
+            onChange={(e: any) => setSubmitDays(e.target.value)}
+            placeholder="Days (0 if none)"
           />
+          <FormInput
+            label="Submit Hours"
+            name="submit_hours"
+            type="number"
+            value={submitHours}
+            onChange={(e: any) => setSubmitHours(e.target.value)}
+            placeholder="Hours (0-23)"
+          />
+          <FormInput
+            label="Submit Minutes"
+            name="submit_minutes"
+            type="number"
+            value={submitMinutes}
+            onChange={(e: any) => setSubmitMinutes(e.target.value)}
+            placeholder="Minutes (0-59)"
+          />
+          <FormInput
+            label="Extension Days"
+            name="extension_days"
+            type="number"
+            value={extensionDays}
+            onChange={(e: any) => setExtensionDays(e.target.value)}
+            placeholder="Days (0 if none)"
+          />
+          <FormInput
+            label="Extension Hours"
+            name="extension_hours"
+            type="number"
+            value={extensionHours}
+            onChange={(e: any) => setExtensionHours(e.target.value)}
+            placeholder="Hours (0-23)"
+          />
+          <FormInput
+            label="Extension Minutes"
+            name="extension_minutes"
+            type="number"
+            value={extensionMinutes}
+            onChange={(e: any) => setExtensionMinutes(e.target.value)}
+            placeholder="Minutes (0-59)"
+          />
+        </FormGrid>
+      </div>
+
+      {/* Cron Setting */}
+      <FormSection title="Cron Setting" icon={Clock}>
+        <div className="border border-border rounded-2xl p-4 bg-muted/20 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <FormInput
+              label="Every"
+              name="cron_period"
+              type="select"
+              value={cronPeriod}
+              onChange={(e: any) => setCronPeriod(e.target.value)}
+              options={[
+                { value: "daily", label: "Day" },
+                { value: "weekly", label: "Week" },
+                { value: "monthly", label: "Month (1st)" },
+                { value: "yearly", label: "Year (Jan 1)" },
+              ]}
+              placeholder="Choose period"
+            />
+            <FormInput
+              label="At Hour"
+              name="cron_hour"
+              type="select"
+              value={cronHour}
+              onChange={(e: any) => setCronHour(e.target.value)}
+              options={hours}
+              placeholder="Select hour"
+            />
+            <FormInput
+              label="Minute"
+              name="cron_minute"
+              type="select"
+              value={cronMinute}
+              onChange={(e: any) => setCronMinute(e.target.value)}
+              options={minutes}
+              placeholder="Select minute"
+            />
+          </div>
+
+          {cronPeriod === "weekly" && (
+            <FormInput
+              label="Day of Week"
+              name="cron_dow"
+              type="select"
+              value={cronDayOfWeek}
+              onChange={(e: any) => setCronDayOfWeek(e.target.value)}
+              options={daysOfWeek}
+              placeholder="Select day"
+              className="max-w-xs"
+            />
+          )}
+
+          <div className="text-sm text-muted-foreground">
+            Cron Expression:{" "}
+            <span className="font-mono text-foreground">{cronExpression}</span>
+          </div>
+
+          <div className="border border-dashed border-border rounded-lg p-3 bg-muted/30">
+            <Cron value={cronExpression} setValue={handleCronChange} />
+          </div>
         </div>
       </FormSection>
 
-      {/* Questions/Groups */}
-      <FormSection title="Add New Group" icon={ClipboardList}>
-        {sections.map((section, sectionIndex) => (
-          <div key={sectionIndex} className="border border-border rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium">Group {sectionIndex + 1}</h4>
+      {/* Questions / Groups */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" /> Groups & Questions
+          </h3>
+          <Button type="button" variant="outline" size="sm" onClick={addSection}>
+            <Plus className="w-4 h-4 mr-2" /> Add Group
+          </Button>
+        </div>
+
+        {sections.map((section: any, sectionIndex: number) => (
+          <div
+            key={sectionIndex}
+            className="border border-border rounded-xl p-4 space-y-3 bg-muted/30"
+          >
+            <div className="flex items-center gap-3 justify-between">
+              <FormInput
+                label={`Group ${sectionIndex + 1}`}
+                name={`group_${sectionIndex}`}
+                type="select"
+                value={section.group}
+                onChange={(e: any) =>
+                  handleSectionChange(sectionIndex, "group", e.target.value)
+                }
+                options={siteOptions}
+                placeholder="Select Group"
+                className="flex-1"
+              />
               {sections.length > 1 && (
                 <Button
                   type="button"
@@ -766,190 +1069,260 @@ setExtensionMinutes(totalExtensionMinutes % 60);
               )}
             </div>
 
-            <FormInput
-              label="Group"
-              name={`group_${sectionIndex}`}
-              type="select"
-              value={section.group}
-              onChange={(e) => handleSectionChange(sectionIndex, e.target.value)}
-              options={siteOptions}
-              placeholder="Select Group"
-              className="mb-4"
-            />
-
-            {section.questions.map((question, questionIndex) => (
-              <div key={questionIndex} className="bg-muted/50 rounded-lg p-4 mb-3">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium">Question {questionIndex + 1}</span>
-                  {section.questions.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeQuestion(sectionIndex, questionIndex)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <FormGrid columns={2}>
-                  <FormInput
-                    label="Question"
-                    name={`question_${sectionIndex}_${questionIndex}`}
-                    value={question.name}
-                    onChange={(e) => handleQuestionChange(sectionIndex, questionIndex, "name", e.target.value)}
-                    placeholder="Enter Question"
-                  />
-                  <FormInput
-                    label="Type"
-                    name={`type_${sectionIndex}_${questionIndex}`}
-                    type="select"
-                    value={question.reading ? "Numeric" : question.type}
-                    onChange={(e) => handleQuestionChange(sectionIndex, questionIndex, "type", e.target.value)}
-                    options={questionTypeOptions}
-                    placeholder="Select Type"
-                    disabled={question.reading}
-                  />
-                </FormGrid>
-
-                {question.type === "multiple" && !question.reading && (
-                  <div className="mt-3">
-                    <label className="text-sm text-muted-foreground mb-2 block">Options</label>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      {[0, 1, 2, 3].map((optionIndex) => (
-                        <div key={optionIndex} className="flex flex-col gap-2">
-                          <FormInput
-                            label=""
-                            name={`option_${sectionIndex}_${questionIndex}_${optionIndex}`}
-                            value={question.options[optionIndex]}
-                            onChange={(e) =>
-                              handleQuestionChange(sectionIndex, questionIndex, "option", e.target.value, optionIndex)
-                            }
-                            placeholder={`Option ${optionIndex + 1}`}
-                          />
-                          <select
-                            name={`value_type_${sectionIndex}_${questionIndex}_${optionIndex}`}
-                            value={question.value_types[optionIndex]}
-                            onChange={(e) =>
-                              handleQuestionChange(
-                                sectionIndex,
-                                questionIndex,
-                                "value_type",
-                                e.target.value,
-                                optionIndex
-                              )
-                            }
-                            className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground
-                              ${question.value_types[optionIndex] === "P" ? "bg-green-100" : ""}
-                              ${question.value_types[optionIndex] === "N" ? "bg-red-100" : ""}
-                              border-border`}
-                          >
-                            <option value="">Select</option>
-                            <option value="P">P</option>
-                            <option value="N">N</option>
-                          </select>
-                        </div>
-                      ))}
-                    </div>
+            <div className="space-y-3">
+              {section.questions
+                .filter((q: any) => q._destroy !== "1")
+                .map((question: any, questionIndex: number) => (
+                <div
+                  key={questionIndex}
+                  className="bg-background border border-border rounded-lg p-3 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      Question {questionIndex + 1}
+                    </span>
+                    {section.questions.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          removeQuestion(sectionIndex, questionIndex)
+                        }
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
-                )}
 
-                <div className="flex flex-wrap gap-4 mt-3">
-                  <FormToggle
-                    label="Mandatory"
-                    checked={Boolean(question.mandatory)}
-                    onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "mandatory", v)}
-                  />
-                  <FormToggle
-                    label="Reading"
-                    checked={question.reading}
-                    onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "reading", v)}
-                  />
-                  <FormToggle
-                    label="Help Text"
-                    checked={question.showHelpText}
-                    onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "showHelpText", v)}
-                  />
-                  {weightage && (
-                    <>
-                      <FormToggle
-                        label="Rating"
-                        checked={question.rating}
-                        onChange={(v) => handleQuestionChange(sectionIndex, questionIndex, "rating", v)}
-                      />
-                      <FormInput
-                        label="Weightage"
-                        name={`weightage_${sectionIndex}_${questionIndex}`}
-                        type="number"
-                        value={question.weightage}
-                        onChange={(e) => handleQuestionChange(sectionIndex, questionIndex, "weightage", e.target.value)}
-                        placeholder="Weightage"
-                        className="w-24"
-                      />
-                    </>
-                  )}
-                </div>
-
-                {question.showHelpText && (
-                  <div className="mt-4 space-y-3">
+                  <FormGrid columns={2}>
                     <FormInput
-                      label="Help Text"
-                      name={`help_text_${sectionIndex}_${questionIndex}`}
-                      type="textarea"
-                      value={question.help_text}
-                      onChange={(e) => handleQuestionChange(sectionIndex, questionIndex, "help_text", e.target.value)}
-                      placeholder="Enter help text"
-                    />
-                    <FormInput
-                      label="Attachments"
-                      name={`help_files_${sectionIndex}_${questionIndex}`}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onFileChange={(files) =>
+                      label="Question"
+                      name={`question_${sectionIndex}_${questionIndex}`}
+                      value={question.name}
+                      onChange={(e: any) =>
                         handleQuestionChange(
                           sectionIndex,
                           questionIndex,
-                          "image_for_question",
-                          files ? Array.from(files) : []
+                          "name",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Enter Question"
+                    />
+
+                    <FormInput
+                      label="Type"
+                      name={`type_${sectionIndex}_${questionIndex}`}
+                      type="select"
+                      value={question.reading ? "Numeric" : question.type}
+                      onChange={(e: any) =>
+                        handleQuestionChange(
+                          sectionIndex,
+                          questionIndex,
+                          "type",
+                          e.target.value
+                        )
+                      }
+                      options={questionTypeOptions}
+                      placeholder="Select Type"
+                      disabled={question.reading}
+                    />
+                  </FormGrid>
+
+                  {question.type === "multiple" && !question.reading && (
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-2 block">
+                        Options
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {[0, 1, 2, 3].map((optionIndex) => (
+                          <div
+                            key={optionIndex}
+                            className="flex flex-col gap-2"
+                          >
+                            <FormInput
+                              label=""
+                              name={`option_${sectionIndex}_${questionIndex}_${optionIndex}`}
+                              value={question.options[optionIndex]}
+                              onChange={(e: any) =>
+                                handleQuestionChange(
+                                  sectionIndex,
+                                  questionIndex,
+                                  "option",
+                                  e.target.value,
+                                  optionIndex
+                                )
+                              }
+                              placeholder={`Option ${optionIndex + 1}`}
+                            />
+
+                            <select
+                              name={`value_type_${sectionIndex}_${questionIndex}_${optionIndex}`}
+                              value={question.value_types[optionIndex]}
+                              onChange={(e: any) =>
+                                handleQuestionChange(
+                                  sectionIndex,
+                                  questionIndex,
+                                  "value_type",
+                                  e.target.value,
+                                  optionIndex
+                                )
+                              }
+                              className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground border-border
+                                ${
+                                  question.value_types[optionIndex] === "P"
+                                    ? "bg-green-100"
+                                    : ""
+                                }
+                                ${
+                                  question.value_types[optionIndex] === "N"
+                                    ? "bg-red-100"
+                                    : ""
+                                }`}
+                            >
+                              <option value="">Select</option>
+                              <option value="P">P</option>
+                              <option value="N">N</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-4">
+                    <FormToggle
+                      label="Mandatory"
+                      checked={Boolean(question.mandatory)}
+                      onChange={(v: any) =>
+                        handleQuestionChange(
+                          sectionIndex,
+                          questionIndex,
+                          "mandatory",
+                          v
                         )
                       }
                     />
-                  </div>
-                )}
-              </div>
-            ))}
+                    <FormToggle
+                      label="Reading"
+                      checked={question.reading}
+                      onChange={(v: any) =>
+                        handleQuestionChange(
+                          sectionIndex,
+                          questionIndex,
+                          "reading",
+                          v
+                        )
+                      }
+                    />
+                    <FormToggle
+                      label="Help Text"
+                      checked={question.showHelpText}
+                      onChange={(v: any) =>
+                        handleQuestionChange(
+                          sectionIndex,
+                          questionIndex,
+                          "showHelpText",
+                          v
+                        )
+                      }
+                    />
 
-            <Button type="button" variant="outline" size="sm" onClick={() => addQuestion(sectionIndex)}>
-              <Plus className="w-4 h-4 mr-2" /> Add Question
-            </Button>
+                    {weightage && (
+                      <>
+                        <FormToggle
+                          label="Rating"
+                          checked={question.rating}
+                          onChange={(v: any) =>
+                            handleQuestionChange(
+                              sectionIndex,
+                              questionIndex,
+                              "rating",
+                              v
+                            )
+                          }
+                        />
+                        <FormInput
+                          label="Weightage"
+                          name={`weightage_${sectionIndex}_${questionIndex}`}
+                          type="number"
+                          value={question.weightage}
+                          onChange={(e: any) =>
+                            handleQuestionChange(
+                              sectionIndex,
+                              questionIndex,
+                              "weightage",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Weightage"
+                          className="w-28"
+                        />
+                      </>
+                    )}
+                  </div>
+
+                  {question.showHelpText && (
+                    <div className="space-y-3">
+                      <FormInput
+                        label="Help Text"
+                        name={`help_text_${sectionIndex}_${questionIndex}`}
+                        type="textarea"
+                        value={question.help_text}
+                        onChange={(e: any) =>
+                          handleQuestionChange(
+                            sectionIndex,
+                            questionIndex,
+                            "help_text",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Enter help text"
+                      />
+
+                      <FormInput
+                        label="Attachments"
+                        name={`help_files_${sectionIndex}_${questionIndex}`}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onFileChange={(files: FileList | null) =>
+                          handleQuestionChange(
+                            sectionIndex,
+                            questionIndex,
+                            "image_for_question",
+                            files ? Array.from(files) : []
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addQuestion(sectionIndex)}
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Question
+              </Button>
+            </div>
           </div>
         ))}
-
-        <Button type="button" variant="outline" onClick={addSection}>
-          <Plus className="w-4 h-4 mr-2" /> Add Group
-        </Button>
-      </FormSection>
-
-      {/* Cron Setting */}
-      <FormSection title="Cron Setting" icon={Clock}>
-        <div className="border border-dashed border-border rounded-lg p-3 bg-muted/30">
-          <Cron value={cronExpression} setValue={setCronExpression} />
-        </div>
-      </FormSection>
+      </div>
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4">
         <Button variant="outline" onClick={() => navigate(-1)}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save"}
-        </Button>
+        <Button onClick={handleSubmit}>Save</Button>
       </div>
     </div>
   );
 };
 
-export default ChecklistCreateForm;
+export default AddChecklist;
