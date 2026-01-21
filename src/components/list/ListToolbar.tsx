@@ -41,21 +41,40 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
   children,
 }) => {
   return (
-    <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 ${className}`}>
-      {/* Search */}
-      <div className="relative flex-1 max-w-md">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder={searchPlaceholder}
-          value={searchValue}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          className="w-full pl-11 pr-4 py-1.5 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-        />
-      </div>
+    <div className={`flex flex-col sm:flex-row items-center gap-3 mb-6 sm:justify-end ${className}`}>
+      <div className="w-full flex flex-col sm:flex-row items-center gap-3 sm:justify-end sm:ml-auto">
+        {/* View toggle sits first */}
+        {showViewToggle && (
+          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => onViewModeChange?.('grid')}
+              className={`p-2 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
+            >
+              <Grid size={18} />
+            </button>
+            <button
+              onClick={() => onViewModeChange?.('list')}
+              className={`p-2 ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
+            >
+              <List size={18} />
+            </button>
+          </div>
+        )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-wrap">
+        {/* Search in the middle, stretches */}
+        <div className="relative flex-1 w-full max-w-sm sm:max-w-md">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            className="w-full pl-11 pr-4 py-1.5 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+        </div>
+
+        {/* Actions align after search */}
+        <div className="flex items-center gap-2 flex-wrap">
         {showQRCode && (
           <button
             onClick={onQRCodeClick}
@@ -86,25 +105,6 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
           </button>
         )}
 
-        {showViewToggle && (
-          <div className="flex items-center border border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => onViewModeChange?.('grid')}
-              className={`p-2 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
-            >
-              <Grid size={18} />
-            </button>
-            <button
-              onClick={() => onViewModeChange?.('list')}
-              className={`p-2 ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
-            >
-              <List size={18} />
-            </button>
-          </div>
-        )}
-
-
-
         {showAddButton && (
           <button
             onClick={onAddClick}
@@ -116,6 +116,7 @@ const ListToolbar: React.FC<ListToolbarProps> = ({
         )}
 
         {children}
+      </div>
       </div>
     </div>
   );

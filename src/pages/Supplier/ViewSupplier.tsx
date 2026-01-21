@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Building2, MapPin, Landmark, FileText } from 'lucide-react';
+import { ArrowLeft, Building2, FileText, Landmark, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getVendorsDetails } from '../../api';
@@ -45,6 +45,7 @@ const ViewSupplier: React.FC = () => {
   const { id } = useParams();
   const [supplier, setSupplier] = useState<SupplierData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSupplierDetails();
@@ -54,148 +55,158 @@ const ViewSupplier: React.FC = () => {
     try {
       const response = await getVendorsDetails(id);
       setSupplier(response.data);
+      setError(null);
     } catch (error) {
       console.error('Error fetching supplier:', error);
       toast.error('Failed to fetch supplier details');
+      setError('Failed to fetch supplier details');
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="p-6 text-center text-muted-foreground">Loading...</div>;
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh] text-muted-foreground">
+        Loading supplier...
+      </div>
+    );
   }
 
   if (!supplier) {
-    return <div className="p-6 text-center text-muted-foreground">Supplier not found</div>;
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <p className="text-muted-foreground mb-3">{error || 'Supplier not found'}</p>
+        <button
+          onClick={() => navigate('/supplier')}
+          className="px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors"
+        >
+          Back to suppliers
+        </button>
+      </div>
+    );
   }
 
-  const DetailRow = ({ label, value }: { label: string; value: string | number | undefined }) => (
-    <div className="py-3 border-b border-border last:border-b-0">
-      <p className="text-sm text-muted-foreground mb-1">{label}</p>
-      <p className="text-foreground font-medium">{value || '-'}</p>
+  const InfoRow = ({ label, value }: { label: string; value: string | number | undefined }) => (
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border last:border-b-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground text-right">{value || '-'}</span>
     </div>
   );
 
   return (
     <div className="p-6">
-
-<Breadcrumb items={[
-  { label: 'FM Module', path: '/supplier' },
-  { label: 'Supplier/Vendor', path: '/supplier' },
-  { label: 'View Supplier' },
-]} />
-
-
-      {/* Company Details Section */}
-      <div className="bg-card border border-border rounded-lg p-6 mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Building2 className="w-5 h-5 text-primary" />
+      <div className="space-y-6">
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur pb-2">
+          <Breadcrumb
+            items={[
+              { label: 'FM Module', path: '/supplier' },
+              { label: 'Supplier/Vendor', path: '/supplier' },
+              { label: 'View Supplier' },
+            ]}
+          />
+          <div className="flex items-center gap-3 mt-4">
+            <button
+              onClick={() => navigate('/supplier')}
+              className="h-10 w-10 inline-flex items-center justify-center rounded-full border border-border hover:bg-muted transition-colors"
+              aria-label="Back to suppliers"
+            >
+              <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-semibold text-foreground">
+                {supplier.company_name || supplier.vendor_name || 'Supplier'}
+              </h1>
+              <p className="text-sm text-muted-foreground">Supplier details</p>
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Company Details</h2>
           </div>
-          <span className={`px-3 py-1 text-sm rounded-full ${
-            supplier.status === 'Active' 
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-          }`}>
-            {supplier.status || 'N/A'}
-          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
-          <DetailRow label="Company Name" value={supplier.company_name} />
-          <DetailRow label="Vendor Name" value={supplier.vendor_name} />
-          <DetailRow label="Primary Phone" value={supplier.mobile || supplier.primary_phone} />
-          <DetailRow label="Secondary Phone" value={supplier.secondary_phone} />
-          <DetailRow label="Primary Email" value={supplier.email || supplier.primary_email} />
-          <DetailRow label="Secondary Email" value={supplier.secondary_email} />
-          <DetailRow label="PAN" value={supplier.pan} />
-          <DetailRow label="Supplier Type" value={supplier.supplier_type_name || supplier.vendor_supplier_id} />
-          <DetailRow label="Category" value={supplier.category_name || supplier.category_id} />
-          <DetailRow label="Website" value={supplier.website || supplier.website_url} />
-          <DetailRow label="GST Number" value={supplier.gst_number} />
-        </div>
-      </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card title="Company Details" icon={<Building2 className="h-5 w-5 text-primary" />}>
+            <InfoRow label="Company Name" value={supplier.company_name} />
+            <InfoRow label="Vendor Name" value={supplier.vendor_name} />
+            <InfoRow label="Supplier Type" value={supplier.supplier_type_name || supplier.vendor_supplier_id} />
+            <InfoRow label="Category" value={supplier.category_name || supplier.category_id} />
+            <InfoRow label="Status" value={supplier.status} />
+            <InfoRow label="Supplier ID" value={supplier.id} />
+          </Card>
 
-      {/* Address Section */}
-      <div className="bg-card border border-border rounded-lg p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <MapPin className="w-5 h-5 text-primary" />
+          <Card title="Contact & Communication" icon={<MapPin className="h-5 w-5 text-primary" />}>
+            <InfoRow label="Primary Phone" value={supplier.mobile || supplier.primary_phone} />
+            <InfoRow label="Secondary Phone" value={supplier.secondary_phone} />
+            <InfoRow label="Primary Email" value={supplier.email || supplier.primary_email} />
+            <InfoRow label="Secondary Email" value={supplier.secondary_email} />
+            <InfoRow label="Website" value={supplier.website || supplier.website_url} />
+          </Card>
+
+          <Card title="Tax & Compliance" icon={<FileText className="h-5 w-5 text-primary" />}>
+            <InfoRow label="PAN" value={supplier.pan} />
+            <InfoRow label="GST Number" value={supplier.gst_number} />
+            <InfoRow label="Created On" value={supplier.created_at} />
+          </Card>
+        </div>
+
+        <Card title="Address" icon={<MapPin className="h-5 w-5 text-primary" />}>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <InfoRow label="Address Line 1" value={supplier.address_line_1 || supplier.address} />
+            <InfoRow label="Address Line 2" value={supplier.address_line_2} />
+            <InfoRow label="District" value={supplier.district} />
+            <InfoRow label="City" value={supplier.city} />
+            <InfoRow label="State" value={supplier.state} />
+            <InfoRow label="Pin Code" value={supplier.pincode} />
+            <InfoRow label="Country" value={supplier.country} />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">Address</h2>
-        </div>
+        </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
-          <DetailRow label="Address Line 1" value={supplier.address_line_1 || supplier.address} />
-          <DetailRow label="Address Line 2" value={supplier.address_line_2} />
-          <DetailRow label="District" value={supplier.district} />
-          <DetailRow label="City" value={supplier.city} />
-          <DetailRow label="State" value={supplier.state} />
-          <DetailRow label="Pin Code" value={supplier.pincode} />
-          <DetailRow label="Country" value={supplier.country} />
-        </div>
-      </div>
-
-      {/* Bank Details Section */}
-      <div className="bg-card border border-border rounded-lg p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Landmark className="w-5 h-5 text-primary" />
+        <Card title="Bank Details" icon={<Landmark className="h-5 w-5 text-primary" />}>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <InfoRow label="Account Name" value={supplier.account_name} />
+            <InfoRow label="Account Number" value={supplier.account_number} />
+            <InfoRow label="Bank & Branch Name" value={supplier.bank_branch_name} />
+            <InfoRow label="IFSC Code" value={supplier.ifsc_code} />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">Bank Details</h2>
-        </div>
+        </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
-          <DetailRow label="Account Name" value={supplier.account_name} />
-          <DetailRow label="Account Number" value={supplier.account_number} />
-          <DetailRow label="Bank & Branch Name" value={supplier.bank_branch_name} />
-          <DetailRow label="IFSC Code" value={supplier.ifsc_code} />
-        </div>
-      </div>
+        {supplier.attachment_url && (
+          <Card title="Attachments" icon={<FileText className="h-5 w-5 text-primary" />}>
+            <a
+              href={supplier.attachment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-primary hover:underline"
+            >
+              <FileText className="h-4 w-4" />
+              View Attachment
+            </a>
+          </Card>
+        )}
 
-      {/* Attachments Section */}
-      {supplier.attachment_url && (
-        <div className="bg-card border border-border rounded-lg p-6 mb-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <FileText className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Attachments</h2>
-          </div>
-
-          <a 
-            href={supplier.attachment_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-primary hover:underline"
+        <div className="flex justify-end">
+          <button
+            onClick={() => navigate(`/supplier/${id}/edit`)}
+            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
-            <FileText size={16} />
-            View Attachment
-          </a>
+            Edit
+          </button>
         </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-4">
-        <button
-          onClick={() => navigate('/supplier')}
-          className="px-6 py-2.5 border border-border text-foreground rounded-lg hover:bg-accent transition-colors"
-        >
-          Back
-        </button>
-        <button
-          onClick={() => navigate(`/supplier/${id}/edit`)}
-          className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          Edit
-        </button>
       </div>
     </div>
   );
 };
+
+const Card: React.FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode }> = ({
+  title,
+  icon,
+  children,
+}) => (
+  <div className="rounded-2xl border border-border bg-card shadow-sm">
+    <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-muted/30">
+      {icon}
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    </div>
+    <div className="p-5 space-y-3">{children}</div>
+  </div>
+);
 
 export default ViewSupplier;

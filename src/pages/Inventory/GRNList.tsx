@@ -39,14 +39,47 @@ const GRNList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getGRN();
-      const data = Array.isArray(response?.data) ? response.data : [];
-      setGrns(data);
-      setFilteredData(data);
+      const rawData = Array.isArray(response?.data)
+        ? response.data
+        : response?.data?.items || response?.data?.data || response?.data?.grn_details || [];
+
+      const normalizedData = rawData.map((item: any) => ({
+        id: item.id,
+        vendor_id: item.vendor_id,
+        vendor_name: item.vendor_name || '',
+        invoice_number: item.invoice_number || '-',
+        invoice_date: item.invoice_date || '',
+        posting_date: item.posting_date || '',
+        payment_mode: item.payment_mode || '-',
+        related_to: item.related_to || '-',
+        invoice_amount: item.invoice_amount ?? 0,
+        other_expenses: item.other_expenses ?? 0,
+        loading_expenses: item.loading_expenses ?? 0,
+        adjustment_amount: item.adjustment_amount ?? 0,
+        status: item.status || 'Pending',
+        created_at: item.created_at || '',
+        created_by: item.created_by || '',
+      })) as GRN[];
+
+      setGrns(normalizedData);
+      setFilteredData(normalizedData);
 
       // Fetch vendor names
-      const vendorIds = [...new Set(data.map((grn: GRN) => grn.vendor_id).filter(Boolean))];
+      // Build vendor map from existing data; fallback to API only if missing names
       const map: Record<number, string> = {};
-      for (const vid of vendorIds) {
+      normalizedData.forEach((grn) => {
+        if (grn.vendor_id && grn.vendor_name) {
+          map[grn.vendor_id] = grn.vendor_name;
+        }
+      });
+
+      const missingVendorIds = [...new Set(
+        normalizedData
+          .filter((grn) => grn.vendor_id && !map[grn.vendor_id])
+          .map((grn) => grn.vendor_id)
+      )];
+
+      for (const vid of missingVendorIds) {
         try {
           const vendorResp = await getVendorById(vid);
           const vendorData = vendorResp?.data;
@@ -55,6 +88,7 @@ const GRNList: React.FC = () => {
           map[vid] = 'Unknown';
         }
       }
+
       setVendorMap(map);
     } catch (error) {
       console.error('Error fetching GRNs:', error);
@@ -75,14 +109,18 @@ const GRNList: React.FC = () => {
     const dataToFilter = Array.isArray(grns) ? grns : [];
     const filtered = dataToFilter.filter((item) =>
       item.invoice_number?.toLowerCase().includes(value.toLowerCase()) ||
-      vendorMap[item.vendor_id]?.toLowerCase().includes(value.toLowerCase())
+      (vendorMap[item.vendor_id] || item.vendor_name || '')
+        .toLowerCase()
+        .includes(value.toLowerCase())
     );
     setFilteredData(filtered);
   };
 
-  const enrichedGRNs = filteredData.map((grn) => ({
+  const safeFilteredData = Array.isArray(filteredData) ? filteredData : [];
+
+  const enrichedGRNs = safeFilteredData.map((grn) => ({
     ...grn,
-    vendor_name: vendorMap[grn.vendor_id] || 'Loading...',
+    vendor_name: vendorMap[grn.vendor_id] || grn.vendor_name || 'Loading...',
   }));
 
   const columns = [
@@ -92,10 +130,10 @@ const GRNList: React.FC = () => {
       cell: (row: GRN) => (
         <button
           onClick={() => navigate(`/inventory/grn/${row.id}`)}
-          className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
           title="View"
         >
-          <Eye size={16} />
+          <Eye size={16} className="w-4 h-4" />
         </button>
       ),
     },
@@ -172,10 +210,10 @@ const GRNList: React.FC = () => {
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <button
           onClick={() => navigate(`/inventory/grn/${grn.id}`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
           title="View"
         >
-          <Eye size={16} />
+          <Eye size={16} className="w-4 h-4" />
         </button>
       </div>
     </div>

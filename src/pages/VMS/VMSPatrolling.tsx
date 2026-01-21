@@ -96,20 +96,53 @@ const VMSPatrolling: React.FC = () => {
         getPatrollingHistory(),
         getStaff(),
       ]);
-      
-      const patrollingData = patrollingRes.data || [];
-      const sortedPatrolling = Array.isArray(patrollingData)
-        ? patrollingData.sort((a: Patrolling, b: Patrolling) =>
-            new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-          )
-        : [];
+
+      // Normalize patrolling schedules
+      const patrollingRaw = Array.isArray(patrollingRes?.data)
+        ? patrollingRes.data
+        : patrollingRes?.data?.items || patrollingRes?.data?.data || patrollingRes?.data?.patrollings || patrollingRes?.data?.patrolling_schedules || [];
+
+      const normalizedPatrolling = (Array.isArray(patrollingRaw) ? patrollingRaw : []).map((p: any) => ({
+        id: p.id,
+        building_name: p.building_name || p.building?.name || '-',
+        floor_name: p.floor_name || p.floor?.name || '-',
+        unit_name: p.unit_name || p.unit?.name || '-',
+        start_time: p.start_time || p.schedule_time || '',
+        assigned_to: p.assigned_to_name || p.assigned_to || '',
+        status: p.status || 'Active',
+        start_date: p.start_date || '',
+        end_date: p.end_date || '',
+        end_time: p.end_time || '',
+        created_at: p.created_at || '',
+      })) as Patrolling[];
+
+      const sortedPatrolling = normalizedPatrolling.sort(
+        (a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+      );
+
       setPatrollings(sortedPatrolling);
       setFilteredPatrollings(sortedPatrolling);
 
-      const historyData = historyRes.data || [];
-      const sortedHistory = Array.isArray(historyData)
-        ? historyData.sort((a: PatrollingHistory, b: PatrollingHistory) => b.id - a.id)
-        : [];
+      // Normalize history logs
+      const historyRaw = Array.isArray(historyRes?.data)
+        ? historyRes.data
+        : historyRes?.data?.items || historyRes?.data?.data || historyRes?.data?.histories || [];
+
+      const normalizedHistory = (Array.isArray(historyRaw) ? historyRaw : []).map((h: any) => ({
+        id: h.id,
+        date: h.date || h.created_at || '',
+        time: h.time || h.start_time || '',
+        building_name: h.building_name || h.building?.name || '-',
+        floor_name: h.floor_name || h.floor?.name || '-',
+        unit_name: h.unit_name || h.unit?.name || '-',
+        staff_name: h.staff_name || h.assigned_to_name || h.assigned_to || '-',
+        status: h.status || 'Pending',
+        remarks: h.remarks || h.comment || '-',
+        expected_time: h.expected_time,
+        actual_time: h.actual_time,
+      })) as PatrollingHistory[];
+
+      const sortedHistory = normalizedHistory.sort((a, b) => b.id - a.id);
       setHistories(sortedHistory);
       setFilteredHistories(sortedHistory);
 
@@ -133,7 +166,7 @@ const VMSPatrolling: React.FC = () => {
       if (value.trim() === '') {
         setFilteredPatrollings(patrollings);
       } else {
-        const filtered = patrollings.filter((item) =>
+        const filtered = (patrollings || []).filter((item) =>
           item.building_name?.toLowerCase().includes(value.toLowerCase()) ||
           item.floor_name?.toLowerCase().includes(value.toLowerCase()) ||
           item.unit_name?.toLowerCase().includes(value.toLowerCase())
@@ -144,7 +177,7 @@ const VMSPatrolling: React.FC = () => {
       if (value.trim() === '') {
         setFilteredHistories(histories);
       } else {
-        const filtered = histories.filter((item) =>
+        const filtered = (histories || []).filter((item) =>
           item.building_name?.toLowerCase().includes(value.toLowerCase()) ||
           item.floor_name?.toLowerCase().includes(value.toLowerCase()) ||
           item.unit_name?.toLowerCase().includes(value.toLowerCase())
