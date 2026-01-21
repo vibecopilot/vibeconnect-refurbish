@@ -7,7 +7,7 @@ import {
 import Breadcrumb from "../../components/ui/Breadcrumb";
 import { getContactBookDetails } from "../../api";
 
-// const API_BASE = "domainPrefix";
+const API_BASE = "domainPrefix";
 // const API_TOKEN = localStorage.getItem("TOKEN");
 const DOMAIN = "https://admin.vibecopilot.ai";
 

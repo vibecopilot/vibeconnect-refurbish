@@ -20,6 +20,7 @@ import BillingSetup from './BillingSetup/BillingSetup';
 import MeterCategoryType from './MeterCategoryType/MeterCategoryType';
 import InvoiceApprovalSetup from './InvoiceApprovalSetupPages/InvoiceApprovalSetup';
 import CommunicationSetupControl from './CommunicationSetup/CommunicationSetupControl';
+import UserTreePage from './UserTree/UserTreePage';
 
 interface SetupModule {
   id: string;
@@ -125,6 +126,11 @@ const SetupPage: React.FC = () => {
         { id: 'compliance-setup', name: 'Compliance Setup', feature: 'compliance' },
         { id: 'communication', name: 'Communication Setup Control', feature: 'communication' },
       ],
+    },
+   {
+      id: 'usertree',
+      label: 'USER-TREE',
+      modules: [{ id: 'usertree', name: 'User Tree View' }],
     },
   ];
 
@@ -273,6 +279,11 @@ const SetupPage: React.FC = () => {
       return <CommunicationSetupControl />;
     }
 
+    if(activeModule==='usertree')
+    {
+      return <UserTreePage/>
+    }
+
     // Placeholder for other modules
     return (
       <div className="text-center py-12 bg-card border border-border rounded-lg">
@@ -318,35 +329,33 @@ const SetupPage: React.FC = () => {
       </div>
 
       {/* Level 2: Module Tabs (Account, Users, etc.) */}
-      {currentCategory && currentCategory.modules.length > 0 && (
-        <div className="border-b border-border bg-card">
-          <div className="w-full overflow-x-auto">
-            <div className="flex w-full min-w-max px-6">
-              {currentCategory.modules.map((module) => (
-                <button
-                  key={module.id}
-                  onClick={() => {
-                    setActiveModule(module.id);
-                    // Set default sub-tab for account
-                    if (module.id === 'account') {
-                      setActiveSubTab('floor');
-                    } else {
-                      setActiveSubTab('');
-                    }
-                  }}
-                  className={`flex-1 px-6 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
-                    activeModule === module.id
-                      ? 'border-primary text-primary bg-primary/5'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  {module.name}
-                </button>
-              ))}
-            </div>
-          </div>
+      {currentCategory &&
+  currentCategory.id !== 'usertree' &&
+  currentCategory.modules.length > 0 && (
+    <div className="border-b border-border bg-card">
+      <div className="w-full overflow-x-auto">
+        <div className="flex w-full min-w-max px-6">
+          {currentCategory.modules.map((module) => (
+            <button
+              key={module.id}
+              onClick={() => {
+                setActiveModule(module.id);
+                setActiveSubTab(module.id === 'account' ? 'floor' : '');
+              }}
+              className={`flex-1 px-6 py-3 text-sm font-medium border-b-2 ${
+                activeModule === module.id
+                  ? 'border-primary text-primary bg-primary/5'
+                  : 'border-transparent text-muted-foreground'
+              }`}
+            >
+              {module.name}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
+    </div>
+)}
+
 
       {/* Level 3: Module Content */}
       <div className="p-6">
