@@ -64,6 +64,8 @@ const [assets, setAssets] = useState<Asset[]>([]);
     unit_id: '',
   });
 
+  const [fullTextModal, setFullTextModal] = useState<string | null>(null);
+
   useEffect(() => {
     setPagination(prev => ({ ...prev, perPage, page: 1 }));
   }, [perPage]);
@@ -351,6 +353,23 @@ const handleFilterReset = () => {
     return 'in-use';
   };
 
+  const renderTruncated = (val: any, maxWidth = '150px') => {
+    if (!val) return '-';
+    return (
+      <div 
+        className="whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer hover:text-primary transition-colors"
+        style={{ maxWidth }}
+        title="Click to view full content"
+        onClick={(e) => {
+          e.stopPropagation();
+          setFullTextModal(String(val));
+        }}
+      >
+        {val}
+      </div>
+    );
+  };
+
   const allColumns: Array<TableColumn<Asset> & { id: string; label: string }> = [
     // Action column
     {
@@ -371,19 +390,26 @@ const handleFilterReset = () => {
       )
     },
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => idx + 1 },
-    { id: 'asset_number', label: 'Asset Number', key: 'asset_number', header: 'Asset Number', render: (v) => v || '-' },
-    { id: 'name', label: 'Asset Name', key: 'name', header: 'Asset Name', sortable: true, render: (v) => v || '-' },
-    { id: 'building_name', label: 'Building', key: 'building_name', header: 'Building', render: (v) => v || '-' },
-    { id: 'floor_name', label: 'Floor', key: 'floor_name', header: 'Floor', render: (v) => v || '-' },
-    { id: 'unit_name', label: 'Unit', key: 'unit_name', header: 'Unit', render: (v) => v || '-' },
-    { id: 'equipemnt_id', label: 'Equipment Id', key: 'equipemnt_id', header: 'Equipment Id', render: (v) => v || '-' },
-    { id: 'oem_name', label: 'OEM Name', key: 'oem_name', header: 'OEM Name', render: (v) => v || '-' },
-    { id: 'serial_number', label: 'Serial Number', key: 'serial_number', header: 'Serial Number', render: (v) => v || '-' },
-    { id: 'model_number', label: 'Model Number', key: 'model_number', header: 'Model Number', render: (v) => v || '-' },
-    { id: 'group_name', label: 'Group', key: 'group_name', header: 'Group', render: (v) => v || '-' },
-    { id: 'sub_group_name', label: 'Sub Group', key: 'sub_group_name', header: 'Sub Group', render: (v) => v || '-' },
-    { id: 'purchased_on', label: 'Purchase Date', key: 'purchased_on', header: 'Purchase Date', render: (v) => v || '-' },
-    { id: 'purchase_cost', label: 'Purchase Cost', key: 'purchase_cost', header: 'Purchase Cost', render: (v) => v ? `₹${v.toLocaleString()}` : '-' },
+    { id: 'asset_number', label: 'Asset Number', key: 'asset_number', header: 'Asset Number', render: (v) => renderTruncated(v, '120px') },
+    { 
+      id: 'name', 
+      label: 'Asset Name', 
+      key: 'name', 
+      header: 'Asset Name', 
+      sortable: true, 
+      render: (v) => renderTruncated(v, '200px')
+    },
+    { id: 'building_name', label: 'Building', key: 'building_name', header: 'Building', render: (v) => renderTruncated(v) },
+    { id: 'floor_name', label: 'Floor', key: 'floor_name', header: 'Floor', render: (v) => renderTruncated(v, '100px') },
+    { id: 'unit_name', label: 'Unit', key: 'unit_name', header: 'Unit', render: (v) => renderTruncated(v, '100px') },
+    { id: 'equipemnt_id', label: 'Equipment Id', key: 'equipemnt_id', header: 'Equipment Id', render: (v) => renderTruncated(v, '120px') },
+    { id: 'oem_name', label: 'OEM Name', key: 'oem_name', header: 'OEM Name', render: (v) => renderTruncated(v) },
+    { id: 'serial_number', label: 'Serial Number', key: 'serial_number', header: 'Serial Number', render: (v) => renderTruncated(v) },
+    { id: 'model_number', label: 'Model Number', key: 'model_number', header: 'Model Number', render: (v) => renderTruncated(v) },
+    { id: 'group_name', label: 'Group', key: 'group_name', header: 'Group', render: (v) => renderTruncated(v) },
+    { id: 'sub_group_name', label: 'Sub Group', key: 'sub_group_name', header: 'Sub Group', render: (v) => renderTruncated(v) },
+    { id: 'purchased_on', label: 'Purchase Date', key: 'purchased_on', header: 'Purchase Date', render: (v) => renderTruncated(v, '120px') },
+    { id: 'purchase_cost', label: 'Purchase Cost', key: 'purchase_cost', header: 'Purchase Cost', render: (v) => renderTruncated(v ? `₹${v.toLocaleString()}` : '-') },
     { id: 'critical', label: 'Critical', key: 'critical', header: 'Critical', render: (v) => v ? 'Yes' : 'No' },
     { id: 'status', label: 'Status', key: 'status', header: 'Status', render: (_, row) => <StatusBadge status={getAssetStatus(row)} /> },
     {
@@ -407,15 +433,15 @@ const handleFilterReset = () => {
         );
       }
     },
-    { id: 'capacity', label: 'Capacity', key: 'capacity', header: 'Capacity', render: (v) => v || '-' },
-    { id: 'created_at', label: 'Created On', key: 'created_at', header: 'Created On', render: (v) => v ? new Date(v).toLocaleDateString() : '-' },
-    { id: 'updated_at', label: 'Updated On', key: 'updated_at', header: 'Updated On', render: (v) => v ? new Date(v).toLocaleDateString() : '-' },
-    { id: 'warranty_start', label: 'W Start', key: 'warranty_start', header: 'W Start', render: (v) => v || '-' },
-    { id: 'installation', label: 'Installation Date', key: 'installation', header: 'Installation Date', render: (v) => v || '-' },
-    { id: 'warranty_expiry', label: 'W Expiry', key: 'warranty_expiry', header: 'W Expiry', render: (v) => v || '-' },
+    { id: 'capacity', label: 'Capacity', key: 'capacity', header: 'Capacity', render: (v) => renderTruncated(v) },
+    { id: 'created_at', label: 'Created On', key: 'created_at', header: 'Created On', render: (v) => renderTruncated(v ? new Date(v).toLocaleDateString() : '-') },
+    { id: 'updated_at', label: 'Updated On', key: 'updated_at', header: 'Updated On', render: (v) => renderTruncated(v ? new Date(v).toLocaleDateString() : '-') },
+    { id: 'warranty_start', label: 'W Start', key: 'warranty_start', header: 'W Start', render: (v) => renderTruncated(v, '120px') },
+    { id: 'installation', label: 'Installation Date', key: 'installation', header: 'Installation Date', render: (v) => renderTruncated(v, '120px') },
+    { id: 'warranty_expiry', label: 'W Expiry', key: 'warranty_expiry', header: 'W Expiry', render: (v) => renderTruncated(v, '120px') },
     { id: 'is_meter', label: 'Meter Configured', key: 'is_meter', header: 'Meter Configured', render: (v) => v ? 'Yes' : 'No' },
     { id: 'warranty', label: 'Warranty', key: 'warranty', header: 'Warranty', render: (_, row) => (row.warranty_start === null || row.warranty_start === '') ? 'No' : 'Yes' },
-    { id: 'vendor_name', label: 'Supplier', key: 'vendor_name', header: 'Supplier', render: (v) => v || '-' },
+    { id: 'vendor_name', label: 'Supplier', key: 'vendor_name', header: 'Supplier', render: (v) => renderTruncated(v) },
   ];
 
   const visibleColumns = allColumns.filter(col => !hiddenColumns.has(col.id));
@@ -703,6 +729,37 @@ const handleFilterReset = () => {
           <select value={pagination.perPage} onChange={(e) => setPagination(prev => ({ ...prev, perPage: Number(e.target.value), page: 1 }))} className="px-2 py-1.5 text-sm border border-border rounded-md bg-background">
             <option value={10}>10 / page</option><option value={12}>12 / page</option><option value={25}>25 / page</option><option value={50}>50 / page</option>
           </select>
+        </div>
+      )}
+
+      {/* Full Text Modal */}
+      {fullTextModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setFullTextModal(null)}>
+          <div 
+            className="w-full max-w-md bg-card border border-border rounded-xl shadow-xl p-6 relative animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Asset Details</h3>
+              <button 
+                className="text-2xl leading-none text-muted-foreground hover:text-foreground"
+                onClick={() => setFullTextModal(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 bg-muted/20 rounded-lg border border-border max-h-[60vh] overflow-y-auto">
+              <p className="text-sm text-foreground whitespace-pre-wrap break-words">{fullTextModal}</p>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button 
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm" 
+                onClick={() => setFullTextModal(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

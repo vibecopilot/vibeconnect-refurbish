@@ -33,9 +33,31 @@ const GDNList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getGDN();
-      const data = Array.isArray(response?.data) ? response.data : [];
-      setGdns(data);
-      filterByTab(data, activeTab);
+      const rawData = Array.isArray(response?.data)
+        ? response.data
+        : response?.data?.items || response?.data?.data || response?.data?.gdn_details || [];
+
+      const normalizedData = rawData.map((item: any) => {
+        const statusValue = typeof item.status === 'string'
+          ? item.status
+          : item.status === true
+            ? 'Completed'
+            : 'Pending';
+
+        return {
+          id: item.id,
+          gdn_date: item.gdn_date || '',
+          inventory_count: item.inventory_count ?? item.gdn_inventory_details?.length ?? 0,
+          status: statusValue,
+          description: item.description || '-',
+          created_at: item.created_at || '',
+          created_by: item.created_by || item.created_by_id?.toString() || '-',
+          handed_over_to: item.handed_over_to || '-',
+        } as GDN;
+      });
+
+      setGdns(normalizedData);
+      filterByTab(normalizedData, activeTab);
     } catch (error) {
       console.error('Error fetching GDNs:', error);
       toast.error('Failed to fetch GDNs');
@@ -51,10 +73,11 @@ const GDNList: React.FC = () => {
   }, [fetchGDNs]);
 
   const filterByTab = (data: GDN[], tab: 'gdn' | 'pending') => {
+    const safeData = Array.isArray(data) ? data : [];
     if (tab === 'pending') {
-      setFilteredData(data.filter(g => g.status?.toLowerCase() === 'pending'));
+      setFilteredData(safeData.filter(g => g.status?.toLowerCase() === 'pending'));
     } else {
-      setFilteredData(data);
+      setFilteredData(safeData);
     }
   };
 
@@ -65,9 +88,10 @@ const GDNList: React.FC = () => {
 
   const handleSearch = (value: string) => {
     setSearchText(value);
+    const base = Array.isArray(gdns) ? gdns : [];
     let dataToFilter = activeTab === 'pending' 
-      ? gdns.filter(g => g.status?.toLowerCase() === 'pending')
-      : gdns;
+      ? base.filter(g => g.status?.toLowerCase() === 'pending')
+      : base;
     const filtered = dataToFilter.filter((item) =>
       item.description?.toLowerCase().includes(value.toLowerCase()) ||
       item.id?.toString().includes(value)
@@ -82,9 +106,9 @@ const GDNList: React.FC = () => {
       cell: (row: GDN) => (
         <button
           onClick={() => navigate(`/inventory/gdn/${row.id}`)}
-          className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
         >
-          <Eye size={16} />
+          <Eye size={16} className="w-4 h-4" />
         </button>
       ),
     },
@@ -132,8 +156,8 @@ const GDNList: React.FC = () => {
         <p className="line-clamp-2">{gdn.description || '-'}</p>
       </div>
       <div className="flex justify-end pt-3 border-t border-border">
-        <button onClick={() => navigate(`/inventory/gdn/${gdn.id}`)} className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary">
-          <Eye size={16} />
+        <button onClick={() => navigate(`/inventory/gdn/${gdn.id}`)} className="text-primary hover:text-primary/80 transition-colors">
+          <Eye size={16} className="w-4 h-4" />
         </button>
       </div>
     </div>

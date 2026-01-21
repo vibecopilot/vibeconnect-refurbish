@@ -61,9 +61,25 @@ const StocksList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getInventory();
-      const data = Array.isArray(response?.data) ? response.data : [];
-      setStocks(data);
-      setFilteredData(data);
+      const rawData = Array.isArray(response?.data) ? response.data : response?.data?.items || [];
+
+      const normalizedData = rawData.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        available_quantity: item.available_quantity ?? item.quantity ?? 0,
+        rate: item.rate ?? 0,
+        group_name: item.group_name || '-',
+        sub_group_name: item.sub_group_name || '-',
+        min_stock_level: item.min_stock_level ?? item.min_stock ?? 0,
+        max_stock_level: item.max_stock_level ?? item.max_stock ?? 0,
+        created_at: item.created_at || '',
+        group_id: item.group_id,
+        sub_group_id: item.sub_group_id,
+      })) as Stock[];
+
+      setStocks(normalizedData);
+      setFilteredData(normalizedData);
     } catch (error) {
       console.error('Error fetching stocks:', error);
       toast.error('Failed to fetch stocks');
@@ -197,17 +213,17 @@ const StocksList: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(`/inventory/stocks/${row.id}`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+            className="text-primary hover:text-primary/80 transition-colors"
             title="View"
           >
-            <Eye size={16} />
+            <Eye size={16} className="w-4 h-4" />
           </button>
           <button
             onClick={() => openEditModal(row)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+            className="text-primary hover:text-primary/80 transition-colors"
             title="Edit"
           >
-            <Edit2 size={16} />
+            <Edit2 size={16} className="w-4 h-4" />
           </button>
         </div>
       ),
@@ -249,17 +265,17 @@ const StocksList: React.FC = () => {
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <button
           onClick={() => navigate(`/inventory/stocks/${stock.id}`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
           title="View"
         >
-          <Eye size={16} />
+          <Eye size={16} className="w-4 h-4" />
         </button>
         <button
           onClick={() => openEditModal(stock)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
           title="Edit"
         >
-          <Edit2 size={16} />
+          <Edit2 size={16} className="w-4 h-4" />
         </button>
       </div>
     </div>

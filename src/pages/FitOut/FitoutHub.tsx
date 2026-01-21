@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Breadcrumb from '../../components/ui/Breadcrumb';
 import TabNavigation from '../../components/ui/TabNavigation';
 import FitoutList from '../Fitout/FitoutList';
 import FitOutSetupPage from './FitOutSetupPage';
@@ -25,7 +24,6 @@ const FitoutHub: React.FC<FitoutHubProps> = ({ initialTab = 'requests' }) => {
 
   return (
     <div className="p-6">
-      <Breadcrumb items={[{ label: 'Fitout' }]} />
       <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={(tabId) => setActiveTab(tabId as 'setup' | 'requests' | 'checklist')} />
 
       {activeTab === 'setup' && (

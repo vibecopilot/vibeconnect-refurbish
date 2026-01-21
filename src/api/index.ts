@@ -1155,7 +1155,7 @@ export const getAmenitiesBooking = async () => {
 };
 
 export const getAmenitiesBookingById = async (id) => {
-  return axiosInstance.get(`/amenity_bookings.json/${id}`, {
+  return axiosInstance.get(`/amenity_bookings/${id}.json`, {
     params: {
       token: token,
     },
@@ -10579,6 +10579,32 @@ export const submitSurveyResponse = async (surveyId, data) =>
       token: token,
     },
   });
+
+
+// workspace booking 
+
+export const getPaymentBookings = async () =>
+  axiosInstance.get(`/payments.json`, {
+    params: {
+      token: token,
+    },
+  });
+
+export const postPaymentBookings = async (data) =>
+  axiosInstance.post(`/payments.json`, data, {
+    params: {
+      token: token,
+    },
+  });
+
+
+export const updateAmenityBook = async (id, data) =>
+  axiosInstance.put(`/amenity_bookings/${id}.json`, data, {
+    params: {
+      token: token,
+    },
+  });
+
 
 // Default export for backward compatibility
 export default axiosInstance;

@@ -39,6 +39,7 @@ interface ChecklistCreateFormProps {
   checklistId?: string;
   prefillData?: any;
   prefillMode?: "copy" | null;
+  ctypeOverride?: string;
 }
 
 const AddChecklist: React.FC<ChecklistCreateFormProps> = ({
@@ -48,6 +49,7 @@ const AddChecklist: React.FC<ChecklistCreateFormProps> = ({
   checklistId,
   prefillData,
   prefillMode = null,
+  ctypeOverride,
 }) => {
   const navigate = useNavigate();
 
@@ -418,7 +420,7 @@ const AddChecklist: React.FC<ChecklistCreateFormProps> = ({
         "checklist[lock_overdue]",
         String(lockOverdueTask === "true")
       );
-      formData.append("checklist[ctype]", checklistType);
+      formData.append("checklist[ctype]", ctypeOverride || checklistType);
       formData.append("checklist[ticket_enabled]", String(createTicket));
       formData.append("checklist[ticket_level_type]", ticketType);
       formData.append("checklist[category_id]", catid);

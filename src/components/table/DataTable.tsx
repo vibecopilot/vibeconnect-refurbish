@@ -100,6 +100,9 @@ const customStyles: TableStyles = {
       backgroundColor: 'hsl(var(--card))',
       borderTop: '1px solid hsl(var(--border))',
       color: 'hsl(var(--foreground))',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
   },
   noData: {

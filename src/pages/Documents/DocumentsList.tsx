@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Folder, FileText, Plus, Upload, MoreVertical, Share2, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Breadcrumb from '../../components/ui/Breadcrumb';
 import TabNavigation from '../../components/ui/TabNavigation';
 import Modal from '../../components/ui/Modal';
 import { 
@@ -363,12 +362,6 @@ const DocumentsList: React.FC = () => {
     setMenuOpen(null);
   };
 
-  // Breadcrumb items for component
-  const breadcrumbItems = breadcrumbs.map((crumb, index) => ({
-    label: crumb.name,
-    path: index < breadcrumbs.length - 1 ? '#' : undefined,
-  }));
-
   // Tabs
   const tabs = [
     { id: 'personal', label: 'Personal' },
@@ -378,8 +371,6 @@ const DocumentsList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Breadcrumb items={[{ label: 'Documents', path: '/documents' }]} />
-      
       {/* Second Level Tabs */}
       <TabNavigation
         tabs={tabs}

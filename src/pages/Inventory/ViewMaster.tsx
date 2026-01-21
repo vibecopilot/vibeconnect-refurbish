@@ -1,32 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Package, FileText, ArrowLeft, Edit2 } from 'lucide-react';
+import { Package, FileText, ArrowLeft, Edit2, Layers, Activity, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
-import PageHeader from '../../components/layout/PageHeader';
+import Breadcrumb from '../../components/ui/Breadcrumb';
 import { getInventoryDetails } from '../../api';
 
 interface MasterDetails {
   id: number;
+  site_id: number;
   name: string;
-  code: string;
-  serial_number: string;
-  item_type: string;
-  group_name: string;
-  sub_group_name: string;
-  category: string;
-  criticality: string;
-  unit: string;
-  cost: number;
-  sac_hsn_code: string;
-  min_stock_level: number;
-  min_order_level: number;
-  quantity: number;
-  status: string;
-  expiry_date: string;
-  sgst_rate: number;
-  cgst_rate: number;
-  igst_rate: number;
-  created_at: string;
+  description?: string;
+  rate?: number;
+  available_quantity?: number;
+  created_by_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  max_stock?: number;
+  min_stock?: number;
+  group_id?: number;
+  group_name?: string;
+  sub_group_id?: number;
+  sub_group_name?: string;
+  url?: string;
 }
 
 const ViewMaster: React.FC = () => {
@@ -34,6 +29,7 @@ const ViewMaster: React.FC = () => {
   const { id } = useParams();
   const [master, setMaster] = useState<MasterDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -41,8 +37,9 @@ const ViewMaster: React.FC = () => {
       try {
         const response = await getInventoryDetails(id);
         setMaster(response?.data || null);
-      } catch (error) {
-        console.error('Error fetching master details:', error);
+      } catch (err) {
+        console.error('Error fetching master details:', err);
+        setError('Failed to fetch details');
         toast.error('Failed to fetch details');
       } finally {
         setLoading(false);
@@ -51,102 +48,109 @@ const ViewMaster: React.FC = () => {
     fetchDetails();
   }, [id]);
 
+  const InfoField = ({ label, value }: { label: string; value: string | number | null | undefined }) => {
+    const display = value === null || value === undefined || value === '' ? '' : value;
+    return (
+      <div>
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        <p className="text-sm font-medium text-foreground">{display}</p>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-10 text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   if (!master) {
     return (
-      <div className="p-6">
-        <div className="text-center py-10 text-muted-foreground">Master not found</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center text-muted-foreground">{error || 'Master not found'}</div>
       </div>
     );
   }
 
-  const InfoField = ({ label, value }: { label: string; value: string | number | null | undefined }) => (
-    <div>
-      <label className="block text-sm font-medium text-muted-foreground mb-1">{label}</label>
-      <p className="text-foreground">{value || '-'}</p>
-    </div>
-  );
-
   return (
-    <div className="p-6">
-      <PageHeader
-        title="Master Details"
-        breadcrumbs={[
-          { label: 'FM Module', path: '/inventory/masters' },
-          { label: 'Inventory', path: '/inventory/masters' },
-          { label: 'Masters', path: '/inventory/masters' },
-          { label: 'View' },
-        ]}
-      />
+    <div className="min-h-screen bg-background">
+      <div className="p-6 pb-0">
+        <Breadcrumb
+          items={[
+            { label: 'FM Module' },
+            { label: 'Inventory', path: '/inventory/masters' },
+            { label: 'Masters', path: '/inventory/masters' },
+            { label: master.name || 'View' },
+          ]}
+        />
+      </div>
 
-      <div className="space-y-6">
-        {/* Basic Info Section */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Package className="w-5 h-5 text-primary" />
+      <header className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-20">
+        <div className="w-full px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/inventory/masters')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </button>
+            <div className="h-8 w-px bg-border" />
+            <div>
+              <h1 className="text-lg font-bold text-foreground">{master.name}</h1>
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" />
+                {master.url || ''}
+              </p>
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Basic Info</h2>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <InfoField label="Inventory Type" value={master.item_type} />
-            <InfoField label="Criticality" value={master.criticality} />
-            <InfoField label="Min. Order Level" value={master.min_order_level} />
-            <InfoField label="Unit" value={master.unit} />
-            <InfoField label="Expiry Date" value={master.expiry_date ? new Date(master.expiry_date).toLocaleDateString() : '-'} />
-            <InfoField label="Category" value={master.category} />
-          </div>
-        </div>
-
-        {/* Tax Section */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <FileText className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Tax Section</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <InfoField label="Name" value={master.name} />
-            <InfoField label="Code" value={master.code} />
-            <InfoField label="Serial Number" value={master.serial_number} />
-            <InfoField label="Group" value={master.group_name} />
-            <InfoField label="Subgroup" value={master.sub_group_name} />
-            <InfoField label="Quantity" value={master.quantity} />
-            <InfoField label="Min. Stock Level" value={master.min_stock_level} />
-            <InfoField label="Cost" value={master.cost} />
-            <InfoField label="SAC/HSN Code" value={master.sac_hsn_code} />
-            <InfoField label="SGST Rate" value={master.sgst_rate} />
-            <InfoField label="CGST Rate" value={master.cgst_rate} />
-            <InfoField label="IGST Rate" value={master.igst_rate} />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-4">
-          <button
-            onClick={() => navigate('/inventory/masters')}
-            className="flex items-center gap-2 px-6 py-2 border border-border text-foreground rounded-lg hover:bg-accent transition-colors"
-          >
-            <ArrowLeft size={18} />
-            Back
-          </button>
           <button
             onClick={() => navigate(`/inventory/masters/${id}/edit`)}
-            className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
-            <Edit2 size={18} />
-            Edit
+            <Edit2 className="h-4 w-4" />
+            <span className="text-sm">Edit</span>
           </button>
+        </div>
+      </header>
+
+      <div className="px-6 pb-12 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-6 bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-foreground">Basic Info</h2>
+          </div>
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoField label="Name" value={master.name} />
+            <InfoField label="Description" value={master.description} />
+            <InfoField label="Group" value={master.group_name} />
+            <InfoField label="Sub Group" value={master.sub_group_name} />
+            <InfoField label="Site ID" value={master.site_id} />
+            <InfoField label="Created By ID" value={master.created_by_id} />
+          </div>
+        </div>
+
+        <div className="lg:col-span-6 bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-foreground">Stock & Rate</h2>
+          </div>
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InfoField label="Rate" value={master.rate} />
+            <InfoField label="Available Qty" value={master.available_quantity} />
+            <InfoField label="Max Stock" value={master.max_stock} />
+            <InfoField label="Min Stock" value={master.min_stock} />
+            <InfoField
+              label="Created At"
+              value={master.created_at ? new Date(master.created_at).toLocaleString() : ''}
+            />
+            <InfoField
+              label="Updated At"
+              value={master.updated_at ? new Date(master.updated_at).toLocaleString() : ''}
+            />
+          </div>
         </div>
       </div>
     </div>

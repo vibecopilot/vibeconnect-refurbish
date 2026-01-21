@@ -66,13 +66,17 @@ import { ViewAMC, ViewMeter, ViewChecklist as ViewAssetChecklist, ViewRoutineTas
 import { MasterChecklistCreate, MasterChecklistView, MasterChecklistEdit, MasterChecklistCopy, AssociateMasterChecklist } from "./pages/Asset/MasterChecklist";
 import { TicketList, TicketCreate, TicketView, TicketEdit } from "./pages/ServiceDesk";
 import { ServiceList, CreateService, ViewService, ChecklistList, CreateChecklist as SoftServiceCreateChecklist, ViewChecklist as ViewSoftServiceChecklist, TaskList, SoftServicesOverview } from "./pages/SoftService";
+import ServiceUsageAnalytics from "./pages/SoftService/ServiceUsageAnalytics";
+import SoftServiceTaskDetails from "./pages/SoftService/SoftServiceTaskDetails";
 import {
   AmenitiesList,
   HotelBookingsList,
   BookAmenity,
-  BookHotel
+  BookHotel,
 } from "./pages/Amenities";
+import ViewHotelBooking from "./pages/Amenities/ViewHotelBooking";
 import { SpaceBookingsList, BookSpace } from "./pages/SpaceBooking";
+import ViewSpaceBooking from "./pages/SpaceBooking/ViewSpaceBooking";
 import FitoutHub from "./pages/FitOut/FitoutHub";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
@@ -85,6 +89,20 @@ import { CommunicationsLayout, EventsList, CreateEvent, ViewEvent, BroadcastList
 import { CAMLayout, CamBillingList, AddCamBilling, ViewCamBilling, ReceiptInvoiceList, AddReceiptInvoice, ViewReceiptInvoice } from "./pages/CAM";
 import { OtherBillsList, CreateOtherBill, ViewOtherBill } from "./pages/OtherBills";
 import { MastersList, CreateMaster, ViewMaster, StocksList, ViewStock, GRNList, CreateGRN, ViewGRN, GDNList, CreateGDN, ViewGDN } from "./pages/Inventory";
+import { OnDemandServiceHub } from "./pages/OnDemandService";
+import {
+  ProcurementLayout,
+  MaterialPRList,
+  CreateMaterialPR,
+  ServicePRList,
+  POList,
+  WOList,
+  GRNSRNList,
+  AutoSavedPRList,
+  PendingApprovalsList,
+  DeletionRequestsList,
+  DeletedPRsList,
+} from "./pages/Procurement";
 import Compliance from "./pages/Compliance/Compliance";
 import AddCompliance from "./pages/Compliance/AddCompliance";
 import ComplianceDetails from "./pages/Compliance/ComplianceDetails";
@@ -259,6 +277,7 @@ function App() {
         <Route path="/soft-services" element={<AuthenticatedLayout><ServiceList /></AuthenticatedLayout>} />
         <Route path="/soft-services/create" element={<AuthenticatedLayout><CreateService /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id" element={<AuthenticatedLayout><ViewService /></AuthenticatedLayout>} />
+        <Route path="/soft-services/:id/usage" element={<AuthenticatedLayout><ServiceUsageAnalytics /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id/edit" element={<AuthenticatedLayout><CreateService /></AuthenticatedLayout>} />
 
         {/* Soft Services - Checklist Tab */}
@@ -271,7 +290,8 @@ function App() {
 
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
-        <Route path="/soft-services/task/:id" element={<AuthenticatedLayout><PlaceholderPage title="Task Details" /></AuthenticatedLayout>} />
+        <Route path="/soft-services/:serviceId/task/:taskId" element={<AuthenticatedLayout><SoftServiceTaskDetails /></AuthenticatedLayout>} />
+        <Route path="/soft-services/task/:taskId" element={<AuthenticatedLayout><SoftServiceTaskDetails /></AuthenticatedLayout>} />
 
         {/* Soft Services - Overview Tab */}
         <Route path="/soft-services/overview" element={<AuthenticatedLayout><SoftServicesOverview viewMode="table" searchValue="" perPage={10} /></AuthenticatedLayout>} />
@@ -307,12 +327,14 @@ function App() {
         {/* Hotel Bookings */}
         <Route path="/amenities/hotel" element={<AuthenticatedLayout><HotelBookingsList /></AuthenticatedLayout>} />
         <Route path="/amenities/hotel/book" element={<AuthenticatedLayout><BookHotel /></AuthenticatedLayout>} />
-        <Route path="/amenities/hotel/:id" element={<AuthenticatedLayout><PlaceholderPage title="Hotel Booking Details" /></AuthenticatedLayout>} />
+        <Route path="/amenities/hotel/:id" element={<AuthenticatedLayout><ViewHotelBooking /></AuthenticatedLayout>} />
+
 
         {/* Space Booking */}
         <Route path="/space-booking" element={<AuthenticatedLayout><SpaceBookingsList /></AuthenticatedLayout>} />
         <Route path="/space-booking/book" element={<AuthenticatedLayout><BookSpace /></AuthenticatedLayout>} />
-        <Route path="/space-booking/:id" element={<AuthenticatedLayout><PlaceholderPage title="Space Booking Details" /></AuthenticatedLayout>} />
+        <Route path="/space-booking/:id" element={<AuthenticatedLayout><ViewSpaceBooking /></AuthenticatedLayout>} />
+
 
         {/* F&B - Restaurant & Pantry Management */}
         <Route path="/fb" element={<AuthenticatedLayout><FBLayout /></AuthenticatedLayout>}>
@@ -334,14 +356,13 @@ function App() {
         <Route path="/documents/shared" element={<AuthenticatedLayout><DocumentsList /></AuthenticatedLayout>} />
 
         {/* Fitout */}
-        {/* TEMP: Bypass AppHeader/ProtectedRoute for Fitout to debug hang */}
-        <Route path="/fitout" element={<FitoutHub />} />
-        <Route path="/fitout/setup/page" element={<FitoutHub initialTab="setup" />} />
-        <Route path="/fitout/request/list" element={<FitoutHub initialTab="requests" />} />
-        <Route path="/fitout/checklist/list" element={<FitoutHub initialTab="checklist" />} />
-        <Route path="/fitout/create" element={<PlaceholderPage title="Create Fitout Request" />} />
-        <Route path="/fitout/:id" element={<PlaceholderPage title="Fitout Details" />} />
-        <Route path="/fitout/:id/edit" element={<PlaceholderPage title="Edit Fitout Request" />} />
+        <Route path="/fitout" element={<AuthenticatedLayout><FitoutHub /></AuthenticatedLayout>} />
+        <Route path="/fitout/setup/page" element={<AuthenticatedLayout><FitoutHub initialTab="setup" /></AuthenticatedLayout>} />
+        <Route path="/fitout/request/list" element={<AuthenticatedLayout><FitoutHub initialTab="requests" /></AuthenticatedLayout>} />
+        <Route path="/fitout/checklist/list" element={<AuthenticatedLayout><FitoutHub initialTab="checklist" /></AuthenticatedLayout>} />
+        <Route path="/fitout/create" element={<AuthenticatedLayout><PlaceholderPage title="Create Fitout Request" /></AuthenticatedLayout>} />
+        <Route path="/fitout/:id" element={<AuthenticatedLayout><PlaceholderPage title="Fitout Details" /></AuthenticatedLayout>} />
+        <Route path="/fitout/:id/edit" element={<AuthenticatedLayout><PlaceholderPage title="Edit Fitout Request" /></AuthenticatedLayout>} />
 
         {/* Calendar */}
         <Route path="/calendar" element={<AuthenticatedLayout><CalendarPage /></AuthenticatedLayout>} />
@@ -438,9 +459,23 @@ function App() {
         <Route path="/safety/permit/:id" element={<AuthenticatedLayout><ViewPermit /></AuthenticatedLayout>} />
         <Route path="/safety/permit/:id/edit" element={<AuthenticatedLayout><CreatePermit /></AuthenticatedLayout>} />
 
-        {/* Finance Module - Under Development Pages */}
-        <Route path="/finance/procurement" element={<AuthenticatedLayout><PlaceholderPage title="Procurement" /></AuthenticatedLayout>} />
-
+        {/* Procurement Module - Tabbed Layout */}
+        <Route path="/finance/procurement" element={<AuthenticatedLayout><ProcurementLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/finance/procurement/material-pr" replace />} />
+          <Route path="material-pr" element={<MaterialPRList />} />
+          <Route path="material-pr/create" element={<CreateMaterialPR />} />
+          <Route path="material-pr/:id" element={<CreateMaterialPR />} />
+          <Route path="material-pr/:id/edit" element={<CreateMaterialPR />} />
+          <Route path="service-pr" element={<ServicePRList />} />
+          <Route path="po" element={<POList />} />
+          <Route path="wo" element={<WOList />} />
+          <Route path="grn-srn" element={<GRNSRNList />} />
+          <Route path="auto-saved-pr" element={<AutoSavedPRList />} />
+          <Route path="pending-approvals" element={<PendingApprovalsList />} />
+          <Route path="deletion-requests" element={<DeletionRequestsList />} />
+          <Route path="deleted-prs" element={<DeletedPRsList />} />
+        </Route>
+        
         {/* Other Bills - Finance Module */}
         <Route path="/finance/other-bills" element={<AuthenticatedLayout><OtherBillsList /></AuthenticatedLayout>} />
         <Route path="/finance/other-bills/create" element={<AuthenticatedLayout><CreateOtherBill /></AuthenticatedLayout>} />
@@ -489,7 +524,7 @@ function App() {
         <Route path="/crm/communications/forum/hidden" element={<AuthenticatedLayout><PlaceholderPage title="Hidden Forum" /></AuthenticatedLayout>} />
 
         {/* Booking Management - On Demand Service */}
-        <Route path="/booking/on-demand-service" element={<AuthenticatedLayout><PlaceholderPage title="On Demand Service" /></AuthenticatedLayout>} />
+        <Route path="/booking/on-demand-service" element={<AuthenticatedLayout><OnDemandServiceHub /></AuthenticatedLayout>} />
 
         {/* Inventory - FM Module */}
         <Route path="/inventory" element={<Navigate to="/inventory/masters" replace />} />

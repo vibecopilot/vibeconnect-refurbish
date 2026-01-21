@@ -41,9 +41,31 @@ const MastersList: React.FC = () => {
     setLoading(true);
     try {
       const response = await getInventory();
-      const data = Array.isArray(response?.data) ? response.data : [];
-      setMasters(data);
-      setFilteredData(data);
+      const rawData = Array.isArray(response?.data) ? response.data : response?.data?.items || [];
+
+      const normalizedData = rawData.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        code: item.code || '-',
+        serial_number: item.serial_number || '-',
+        item_type: item.item_type || '-',
+        group_name: item.group_name || '-',
+        sub_group_name: item.sub_group_name || '-',
+        category: item.category || '-',
+        criticality: item.criticality || '-',
+        unit: item.unit || '-',
+        cost: item.cost ?? item.rate ?? 0,
+        sac_hsn_code: item.sac_hsn_code || '-',
+        min_stock_level: item.min_stock_level ?? item.min_stock ?? 0,
+        min_order_level: item.min_order_level ?? item.max_stock ?? 0,
+        quantity: item.quantity ?? item.available_quantity ?? 0,
+        status: item.status || 'N/A',
+        expiry_date: item.expiry_date || item.updated_at || '',
+        created_at: item.created_at || '',
+      })) as Master[];
+
+      setMasters(normalizedData);
+      setFilteredData(normalizedData);
     } catch (error) {
       console.error('Error fetching masters:', error);
       toast.error('Failed to fetch masters');
@@ -76,17 +98,17 @@ const MastersList: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(`/inventory/masters/${row.id}`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+            className="text-primary hover:text-primary/80 transition-colors"
             title="View"
           >
-            <Eye size={16} />
+            <Eye size={16} className="w-4 h-4" />
           </button>
           <button
             onClick={() => navigate(`/inventory/masters/${row.id}/edit`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+            className="text-primary hover:text-primary/80 transition-colors"
             title="Edit"
           >
-            <Edit2 size={16} />
+            <Edit2 size={16} className="w-4 h-4" />
           </button>
         </div>
       ),
@@ -154,17 +176,17 @@ const MastersList: React.FC = () => {
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <button
           onClick={() => navigate(`/inventory/masters/${master.id}`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
           title="View"
         >
-          <Eye size={16} />
+          <Eye size={16} className="w-4 h-4" />
         </button>
         <button
           onClick={() => navigate(`/inventory/masters/${master.id}/edit`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
+          className="text-primary hover:text-primary/80 transition-colors"
           title="Edit"
         >
-          <Edit2 size={16} />
+          <Edit2 size={16} className="w-4 h-4" />
         </button>
       </div>
     </div>

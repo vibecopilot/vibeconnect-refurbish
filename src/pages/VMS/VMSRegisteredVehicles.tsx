@@ -38,12 +38,55 @@ const VMSRegisteredVehicles: React.FC = () => {
     setError(null);
     try {
       const response = await getRegisteredVehicle();
-      const data = response.data;
-      const sortedData = Array.isArray(data) 
-        ? data.sort((a: RegisteredVehicle, b: RegisteredVehicle) => 
-            new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-          )
-        : [];
+
+      const rawData = Array.isArray(response?.data)
+        ? response.data
+        : response?.data?.items || response?.data?.data || response?.data?.registered_vehicles || [];
+
+      const getNameFromAny = (val: any) => {
+        if (typeof val === 'string') return val;
+        if (val && typeof val === 'object') {
+          const composite = [val.firstname, val.lastname].filter(Boolean).join(' ').trim();
+          if (composite) return composite;
+          if (typeof val.name === 'string') return val.name;
+        }
+        return '';
+      };
+
+      const safeText = (val: any) => {
+        if (typeof val === 'string') return val;
+        if (val && typeof val === 'object') {
+          if (typeof val.name === 'string') return val.name;
+        }
+        return '-';
+      };
+
+      const normalized = (Array.isArray(rawData) ? rawData : []).map((item: any) => {
+        const ownerObj = item.user || item.owner || item.user_details || {};
+        const ownerName =
+          getNameFromAny(item.user_name) ||
+          getNameFromAny(item.owner_name) ||
+          getNameFromAny(ownerObj);
+
+        return {
+          id: item.id,
+          vehicle_number: safeText(item.vehicle_number || item.registration_number || item.vehicle_no),
+          slot_name: safeText(item.slot_name || item.parking_slot_name),
+          sticker_number: safeText(item.sticker_number || item.sticker_no),
+          user_name: ownerName || '-',
+          unit_name: safeText(item.unit_name || item.unit?.name),
+          created_at: item.created_at || '',
+          category: safeText(item.category),
+          vehicle_category: safeText(item.vehicle_category || item.category),
+          vehicle_type: safeText(item.vehicle_type),
+          registration_number: safeText(item.registration_number || item.vehicle_number || item.vehicle_no),
+          insurance_number: safeText(item.insurance_number),
+        } as RegisteredVehicle;
+      });
+
+      const sortedData = normalized.sort(
+        (a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+      );
       setVehicles(sortedData);
       setFilteredVehicles(sortedData);
     } catch (err) {
@@ -65,7 +108,7 @@ const VMSRegisteredVehicles: React.FC = () => {
     if (value.trim() === '') {
       setFilteredVehicles(vehicles);
     } else {
-      const filtered = vehicles.filter((item) =>
+      const filtered = (vehicles || []).filter((item) =>
         item.vehicle_number?.toLowerCase().includes(value.toLowerCase()) ||
         item.slot_name?.toLowerCase().includes(value.toLowerCase()) ||
         item.sticker_number?.toLowerCase().includes(value.toLowerCase())
@@ -101,10 +144,10 @@ const VMSRegisteredVehicles: React.FC = () => {
       width: '100px',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <Link to={`/vms/registered-vehicles/${row.id}`} className="text-muted-foreground hover:text-primary">
+          <Link to={`/vms/registered-vehicles/${row.id}`} className="text-primary hover:text-primary/80">
             <Eye className="w-4 h-4" />
           </Link>
-          <Link to={`/vms/registered-vehicles/${row.id}/edit`} className="text-muted-foreground hover:text-primary">
+          <Link to={`/vms/registered-vehicles/${row.id}/edit`} className="text-primary hover:text-primary/80">
             <Edit2 className="w-4 h-4" />
           </Link>
         </div>

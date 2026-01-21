@@ -120,7 +120,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
   const allColumns: Array<TableColumn<PPMActivity> & { id: string; label: string }> = [
     { id: 'id', label: 'S.No', key: 'id', header: 'S.No', width: '80px', render: (_val, _row, idx) => startIndex + idx + 1 },
     { id: 'view', label: 'View', key: 'view', header: 'View', width: '80px', render: (_v, row) => (
-      <Link to={`/asset/routine-task/${row.asset_id}/${row.id}`} className="inline-flex items-center justify-center text-primary hover:text-primary/80" aria-label="View details">
+      <Link to={`/asset/ppm-activity/${row.asset_id}/${row.id}`} className="inline-flex items-center justify-center text-primary hover:text-primary/80" aria-label="View details">
         <Eye className="w-4 h-4" />
       </Link>
     ) },
@@ -154,6 +154,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
     setSelectedStatus('all');
     setPagination(prev => ({ ...prev, page: 1 }));
     setError(null);
+    navigate('/asset/ppm-activity');
   };
 
   if (loading && activities.length === 0) {
@@ -286,7 +287,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
                 { label: 'Status', value: activity.status || '-' },
                 { label: 'Assigned To', value: activity.assigned_to_name || '-' },
               ]}
-              viewPath={`/asset/routine-task/${activity.asset_id}/${activity.id}`}
+              viewPath={`/asset/ppm-activity/${activity.asset_id}/${activity.id}`}
             />
           ))}
         </div>
@@ -294,7 +295,7 @@ const PPMActivityList: React.FC<PPMActivityListProps> = ({
         <DataTable
           columns={visibleColumns}
           data={activities}
-          viewPath={(row) => `/asset/routine-task/${row.asset_id}/${row.id}`}
+          viewPath={(row) => `/asset/ppm-activity/${row.asset_id}/${row.id}`}
         />
       )}
 
