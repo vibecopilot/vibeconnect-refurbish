@@ -9,6 +9,7 @@ export const API_URL = "https://admin.vibecopilot.ai";
 export const vibeMedia = "https://admin.vibecopilot.ai/api/media/";
 export const hrmsDomain = "https://api.hrms.vibecopilot.ai/";
 import DigestFetch from "digest-fetch";
+import { Search } from "lucide-react";
 // import DigestAuth from "@mhoc/axios-digest-auth";
 // import AxiosDigestAuth from "@mhoc/axios-digest-auth"; // Removed - package has ES module issues
 // export const hrmsDomain = "http://13.126.205.205";
@@ -29,7 +30,7 @@ export const getTicketDashboard = async () =>
     },
   });
 //Assets
-export const getPerPageSiteAsset = async (page:number, perPage:number, search = '', cardFilter = '') =>
+export const getPerPageSiteAsset = async (page: number, perPage: number, search = '', cardFilter = '') =>
   axiosInstance.get('/site_assets.json', {
     params: {
       token: token,
@@ -39,8 +40,8 @@ export const getPerPageSiteAsset = async (page:number, perPage:number, search = 
       ...(cardFilter ? { card_filter: cardFilter } : {}),
     },
   });
-  
-export const downloadQrCode = async (ids:number) =>
+
+export const downloadQrCode = async (ids: number) =>
   axiosInstance.get(`/site_assets/print_qr_codes?asset_ids=${ids}`, {
     responseType: "blob",
     params: {
@@ -103,8 +104,8 @@ export const postAuditScheduled = async (data) =>
       "Content-Type": "multipart/form-data",
     },
   });
-  // Accept optional pagination params (page, per_page) and any additional query params
-  export const getAuditScheduled = (
+// Accept optional pagination params (page, per_page) and any additional query params
+export const getAuditScheduled = (
   page: number = 1,
   perPage: number = 12,
   search: string = ""
@@ -118,20 +119,24 @@ export const postAuditScheduled = async (data) =>
     },
   });
 };
+export const getAuditScheduledById = (id: string | number) => {
+  return axiosInstance.get(`/audits/${id}.json`, {
+    params: { token },
+  });
+};
+
 
 export const getAuditStatuses = () =>
   axios.get('/audit/status-list');
 
 
-    export const putAuditScheduled = async (data,id) =>
+export const putAuditScheduled = async (data, id) =>
   axiosInstance.put(`/audits/${id}.json`, data, {
     params: {
       token: token,
     },
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
   });
+
 export const EditSiteAsset = async (data, id) =>
   axiosInstance.put(`/site_assets/${id}.json`, data, {
     params: {
@@ -1009,14 +1014,21 @@ export const getInventoryDetails = async (id) =>
     },
   });
 
-export const getChecklist = async () => {
-  return axiosInstance.get("/activities.json", {
+
+export const getChecklist = (
+  page: number = 1,
+  perPage: number = 12
+) => {
+  return axiosInstance.get('/activities.json', {
     params: {
+      token,
+      page,
+      per_page: perPage,
       "q[checklist_ctype_eq]": "routine",
-      token: token,
     },
   });
 };
+
 
 export const getChecklistPaged = async (page = 1, perPage = 10, search = '') =>
   axiosInstance.get('/checklists.json', {
@@ -1028,7 +1040,7 @@ export const getChecklistPaged = async (page = 1, perPage = 10, search = '') =>
     },
   });
 
-export const getChecklistTemplate = async () => 
+export const getChecklistTemplate = async () =>
   axiosInstance.get("/checklists/download_template", {
     params: {
       token: token,

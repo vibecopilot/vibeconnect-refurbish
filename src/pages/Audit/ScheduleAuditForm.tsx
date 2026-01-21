@@ -4,7 +4,7 @@ import { ClipboardList, Plus, Calendar, X, RotateCcw, Save, Loader2 } from 'luci
 import toast from 'react-hot-toast';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
-import { getAssignedTo, getVendors, getVendorCategory, postAuditScheduled } from '../../api';
+import { getAssignedTo, getVendors, getVendorCategory, postAuditScheduled ,getChecklist } from '../../api';
 import { getItemInLocalStorage } from '../../utils/localStorage';
 
 const scheduleTypes = ['Asset', 'Services', 'Vendor', 'Training', 'Compliance'];
@@ -104,7 +104,8 @@ const ScheduleAuditForm: React.FC = () => {
       const [usersRes, categoriesRes, suppliersRes] = await Promise.all([
         getAssignedTo(),
         getVendorCategory(),
-        getVendors()
+        getVendors(),
+        getChecklist(),
       ]);
 
       setAssignedUsers(
@@ -288,7 +289,7 @@ const ScheduleAuditForm: React.FC = () => {
       payload.append('audit[vendor_name]', formData.vendor_name || '');
       payload.append('audit[training_name]', formData.training_name || '');
 
-      payload.append('audit[site_id]',SITEID || '');
+      payload.append('audit[site_id]', SITEID || '');
       if (formData.category_id) {
         payload.append('audit[category]', formData.category_id);
       }
@@ -357,13 +358,15 @@ const ScheduleAuditForm: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Breadcrumb items={[
-        { label: 'FM Module', path: '/audit' },
-        { label: 'Audit', },
-        { label: 'Operational' },
-        { label: 'Scheduled' },
-        { label: 'Create' }
-      ]} />
+      <Breadcrumb
+        items={[
+          { label: "FM Module", path: "/audit" },
+          { label: "Audit", path: "/audit" },
+          { label: "Operational",path:"/audit" },
+          { label: "Scheduled", path: "/audit/operational/scheduled" },
+          { label: "Edit" },
+        ]}
+      />
 
       <form onSubmit={handleSubmit}>
         {/* Toggle Section */}

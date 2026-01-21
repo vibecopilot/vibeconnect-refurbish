@@ -46,7 +46,7 @@ const VendorConductedList: React.FC = () => {
         total_score: v.total_score || 0,
         evaluation_score: v.evaluation_score || 0,
         percentage: v.percentage || 0,
-        status: v.status || 'Active',
+        status: v.status ,
       }));
       setData(mappedData);
       setFilteredData(mappedData);
@@ -139,6 +139,7 @@ const VendorConductedList: React.FC = () => {
     { name: 'DATE & TIME', selector: (row: VendorConductedAudit) => row.date_time ? new Date(row.date_time).toLocaleString() : '-', sortable: true },
     { name: 'CONDUCTED BY', selector: (row: VendorConductedAudit) => row.conducted_by_name || '-', sortable: true },
     { name: 'TOTAL SCORE', selector: (row: VendorConductedAudit) => row.total_score || '-', sortable: true },
+    {name:'STATUS', selector: (row: VendorConductedAudit) => row.status || '-', sortable: true },
     { name: 'EVALUATION SCORE', selector: (row: VendorConductedAudit) => row.evaluation_score || '-', sortable: true },
     { name: '%', selector: (row: VendorConductedAudit) => row.percentage ? `${row.percentage}%` : '-', sortable: true },
   ];
@@ -167,6 +168,7 @@ const VendorConductedList: React.FC = () => {
         <div className="flex gap-4">
           <p>Total: {item.total_score || '-'}</p>
           <p>Eval: {item.evaluation_score || '-'}</p>
+          <p>Status: {item.status || '-'}</p>
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-3 border-t border-border">
@@ -185,7 +187,6 @@ const VendorConductedList: React.FC = () => {
 
   return (
     <div>
-      {/* Status Filters */}
       {/* Status Filters */}
 <div className="flex gap-2 mb-4 flex-wrap">
   {statusFilters.map((filter) => (
