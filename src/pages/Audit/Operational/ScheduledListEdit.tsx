@@ -1,293 +1,875 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, Edit2, ClipboardList } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ClipboardList, Plus, Calendar, X, RotateCcw, Save, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ListToolbar from '../../../components/list/ListToolbar';
-import DataTable from '../../../components/table/DataTable';
-import { getRoutineTask } from '../../../api';
-import { useViewMode } from '../../../hooks/useViewMode';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
+import { getItemInLocalStorage } from '../../../utils/localStorage';
+import { getAssignedTo, getVendorCategory, getVendors, putAuditScheduled, getAuditScheduledById } from '../../../api';
 
-interface ScheduledAudit {
-  id: number;
+// Constants
+const scheduleTypes = ['Asset', 'Services', 'Vendor', 'Training', 'Compliance'];
+const checklistTypes = ['Individual', 'Asset Group'];
+const frequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'One Time'];
+const priorities = ['Low', 'Medium', 'High', 'Critical'];
+const scanTypes = ['QR Code', 'NFC', 'Manual'];
+const inputTypes = ['Text', 'Number', 'Dropdown', 'Checkbox', 'Date', 'File Upload', 'Rating'];
+
+const SITEID = getItemInLocalStorage("SITEID");
+
+interface FormData {
+  audit_for: string;
   activity_name: string;
-  task_name: string;
-  assigned_to: string;
-  assigned_to_name: string;
-  created_at: string;
-  status: string;
+  description: string;
+  allow_observations: boolean;
+  checklist_type: string;
+  asset_name: string;
+  service_name: string;
+  vendor_name: string;
+  training_name: string;
+  assign_to: string;
+  scan_type: string;
+  plan_duration: string;
+  priority: string;
+  email_trigger_rule: string;
+  supervisors: string;
+  category_id: string;
+  look_overdue_task: string;
+  frequency: string;
+  start_from: string;
+  end_at: string;
+  supplier_id: string;
+  create_new: boolean;
+  create_task: boolean;
+  weightage: boolean;
 }
-const tableData: ScheduledAudit[] = [
-  {
-    id: 1,
-    activity_name: "Fire Safety Inspection",
-    task_name: "Check Fire Extinguishers",
-    assigned_to: "U001",
-    assigned_to_name: "Kunal Patil",
-    created_at: "2023-12-10T10:30:00Z",
-    status: "Open",
-  },
-];
 
-
-const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
+interface TaskItem {
+  id: number | string; // Allow string for temporary IDs (Date.now()) and number for DB IDs
+  group: string;
+  subgroup: string;
+  task: string;
+  input_type: string;
+  mandatory: boolean;
+  reading: boolean;
+  help_text: boolean;
+}
 
 const ScheduledListEdit: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { viewMode, setViewMode, recordsPerPage } = useViewMode();
-  const [data, setData] = useState<ScheduledAudit[]>([]);
-  const [filteredData, setFilteredData] = useState<ScheduledAudit[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('All');
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [originalFormData, setOriginalFormData] = useState<FormData | null>(null);
+  
+  const [formData, setFormData] = useState<FormData>({
+    audit_for: 'Asset',
+    activity_name: '',
+    description: '',
+    allow_observations: false,
+    checklist_type: 'Individual',
+    asset_name: '',
+    service_name: '',
+    vendor_name: '',
+    training_name: '',
+    assign_to: '',
+    scan_type: '',
+    plan_duration: '',
+    priority: 'Medium',
+    email_trigger_rule: '',
+    supervisors: '',
+    category_id: '',
+    look_overdue_task: '',
+    frequency: 'Daily',
+    start_from: '',
+    end_at: '',
+    supplier_id: '',
+    create_new: true,
+    create_task: false,
+    weightage: false,
+  });
+
+  const [assignedUsers, setAssignedUsers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+
+  // ================= FETCH DATA =================
+  useEffect(() => {
+    const init = async () => {
+      await fetchDropdownData();
+      if (id) {
+        await fetchAuditDetails(id);
+      } else {
+        setFetching(false);
+      }
+    };
+    init();
+  }, [id]);
+
+  const fetchDropdownData = async () => {
     try {
-      const response = await getRoutineTask();
-      const items = Array.isArray(response?.data) ? response.data : [];
-      setData(items);
-      setFilteredData(items);
-    } catch (error) {
-      toast.error('Failed to fetch scheduled audits');
-      setData([]);
-      setFilteredData([]);
+      const [usersRes, categoriesRes, suppliersRes] = await Promise.all([
+        getAssignedTo(),
+        getVendorCategory(),
+        getVendors()
+      ]);
+
+      setAssignedUsers(
+        Array.isArray(usersRes?.data) ? usersRes.data : usersRes?.data?.data || []
+      );
+      setCategories(
+        Array.isArray(categoriesRes?.data)
+          ? categoriesRes.data
+          : categoriesRes?.data?.data || []
+      );
+      setSuppliers(
+        Array.isArray(suppliersRes?.data)
+          ? suppliersRes.data
+          : suppliersRes?.data?.data || []
+      );
+    } catch (err) {
+      console.error("Failed to fetch dropdown data", err);
+      toast.error("Failed to load dropdown data");
+    }
+  };
+
+  const fetchAuditDetails = async (auditId: string) => {
+    try {
+      setFetching(true);
+      const res = await getAuditScheduledById(auditId);
+      const data = res.data;
+
+      const newFormData: FormData = {
+        audit_for: data.audit_for || "Asset",
+        activity_name: data.activity_name || "",
+        description: data.description || "",
+        allow_observations: Boolean(data.allow_observations),
+        checklist_type: data.checklist_type || "Individual",
+        asset_name: data.asset_name ?? "",
+        service_name: data.service_name ?? "",
+        vendor_name: data.vendor_name ?? "",
+        training_name: data.training_name ?? "",
+        assign_to: data.assign_to ? String(data.assign_to) : "",
+        scan_type: data.scan_type ?? "",
+        plan_duration: data.plan_duration ? String(data.plan_duration) : "",
+        priority: data.priority || "Medium",
+        email_trigger_rule: data.email_trigger_rule ?? "",
+        supervisors: data.supervisors ? String(data.supervisors) : "",
+        category_id: data.category ? String(data.category) : "",
+        look_overdue_task: data.look_overdue_task ?? "",
+        frequency: data.frequency || "Daily",
+        start_from: data.start_from ? data.start_from.split("T")[0] : "",
+        end_at: data.end_at ? data.end_at.split("T")[0] : "",
+        supplier_id: data.select_supplier ? String(data.select_supplier) : "",
+        create_new: data.create_new ?? false,
+        create_task: (data.audit_tasks || []).length > 0,
+        weightage: data.weightage ?? false,
+      };
+
+      setFormData(newFormData);
+      setOriginalFormData(newFormData);
+
+      const mappedTasks: TaskItem[] = (data.audit_tasks || []).map((t: any) => ({
+        id: t.id,
+        group: String(t.group ?? ""),
+        subgroup: String(t.sub_group ?? ""), // API uses sub_group, Form uses subgroup
+        task: t.task ?? "",
+        input_type: t.input_type ?? "Text",
+        mandatory: Boolean(t.mandatory),
+        reading: Boolean(t.reading),
+        help_text: Boolean(t.help_text),
+      }));
+      setTasks(mappedTasks);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load audit details");
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  // ================= HANDLERS =================
+
+  const addTask = () => {
+    setFormData(prev => ({ ...prev, create_task: true }));
+    setTasks(prev => [
+      ...prev,
+      {
+        id: Date.now(), // Temporary ID
+        group: '',
+        subgroup: '',
+        task: '',
+        input_type: 'Text',
+        mandatory: false,
+        reading: false,
+        help_text: false,
+      },
+    ]);
+  };
+
+  const updateTask = (id: number | string, field: keyof TaskItem, value: any) => {
+    setTasks(prev => prev.map(task =>
+      task.id === id ? { ...task, [field]: value } : task
+    ));
+  };
+
+  const removeTask = (id: number | string) => {
+    setTasks(prev => prev.filter(task => task.id !== id));
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleScheduleTypeChange = (type: string) => {
+    setFormData(prev => ({
+      ...prev,
+      audit_for: type,
+      asset_name: '',
+      service_name: '',
+      vendor_name: '',
+      training_name: '',
+    }));
+  };
+
+  const handleChecklistTypeChange = (type: string) => {
+    setFormData(prev => ({ ...prev, checklist_type: type }));
+  };
+
+  const handleReset = () => {
+    if (originalFormData) {
+      setFormData(originalFormData);
+      toast("Form reset to original values");
+    } else {
+      // Fallback if no original data
+      setFormData({
+        audit_for: 'Asset',
+        activity_name: '',
+        description: '',
+        allow_observations: false,
+        checklist_type: 'Individual',
+        asset_name: '',
+        service_name: '',
+        vendor_name: '',
+        training_name: '',
+        assign_to: '',
+        scan_type: '',
+        plan_duration: '',
+        priority: 'Medium',
+        email_trigger_rule: '',
+        supervisors: '',
+        category_id: '',
+        look_overdue_task: '',
+        frequency: 'Daily',
+        start_from: '',
+        end_at: '',
+        supplier_id: '',
+        create_new: true,
+        create_task: false,
+        weightage: false,
+      });
+      setTasks([]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.activity_name.trim()) {
+      toast.error('Activity Name is required');
+      return;
+    }
+
+    if (formData.create_task && tasks.length === 0) {
+      toast.error('At least one task is required');
+      return;
+    }
+    if (formData.create_task) {
+      const invalidTask = tasks.some(t => !t.group || !t.task || !t.input_type);
+      if (invalidTask) {
+        toast.error('Please fill all required task fields');
+        return;
+      }
+    }
+
+    setLoading(true);
+
+    try {
+      const payload = new FormData();
+
+      // -------------------------
+      // BASE FIELDS
+      // -------------------------
+      const baseFields = [
+        'audit_for',
+        'activity_name',
+        'description',
+        'allow_observations',
+        'checklist_type',
+        'assign_to',
+        'scan_type',
+        'plan_duration',
+        'priority',
+        'email_trigger_rule',
+        'supervisors',
+        'frequency',
+        'start_from',
+        'end_at',
+        'create_new',
+        'create_task',
+        'weightage',
+      ];
+
+      baseFields.forEach((key) => {
+        const value = (formData as any)[key];
+        if (value !== '' && value !== null && value !== undefined) {
+          payload.append(
+            `audit[${key}]`,
+            typeof value === 'boolean' ? (value ? '1' : '0') : String(value)
+          );
+        }
+      });
+
+      payload.append('audit[asset_name]', formData.asset_name || '');
+      payload.append('audit[service_name]', formData.service_name || '');
+      payload.append('audit[vendor_name]', formData.vendor_name || '');
+      payload.append('audit[training_name]', formData.training_name || '');
+
+      payload.append('audit[site_id]', SITEID || '');
+      
+      if (formData.category_id) {
+        payload.append('audit[category]', formData.category_id);
+      }
+
+      if (formData.supplier_id) {
+        payload.append('audit[select_supplier]', formData.supplier_id);
+      }
+
+      if (formData.look_overdue_task) {
+        payload.append('audit[look_overdue_task]', formData.look_overdue_task);
+      }
+
+      if (tasks.length > 0) {
+        payload.append('audit[create_task]', '1');
+        tasks.forEach((task, index) => {
+          payload.append(`audit[audit_tasks][][${index}][group]`, task.group);
+          payload.append(`audit[audit_tasks][][${index}][sub_group]`, task.subgroup);
+          payload.append(`audit[audit_tasks][][${index}][task]`, task.task);
+          payload.append(`audit[audit_tasks][][${index}][input_type]`, task.input_type);
+          payload.append(`audit[audit_tasks][][${index}][mandatory]`, task.mandatory ? '1' : '0');
+          payload.append(`audit[audit_tasks][][${index}][reading]`, task.reading ? '1' : '0');
+          payload.append(`audit[audit_tasks][][${index}][help_text]`, task.help_text ? '1' : '0');
+        });
+      }
+
+      // CALL API
+      await putAuditScheduled(payload, id!);
+
+      toast.success('Audit updated successfully');
+      navigate('/audit/operational/scheduled');
+
+    } catch (error: any) {
+      console.error(error);
+      // Display error message from backend if available
+      const errorMsg = error?.response?.data?.message || error?.response?.data?.error || 'Something went wrong';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleSearch = (value: string) => {
-    setSearchText(value);
-    applyFilters(value, activeFilter);
   };
 
-  const handleFilterChange = (filter: string) => {
-    setActiveFilter(filter);
-    applyFilters(searchText, filter);
-  };
-
-  const applyFilters = (search: string, filter: string) => {
-    let filtered = Array.isArray(data) ? data : [];
-
-    if (search) {
-      filtered = filtered.filter((item) =>
-        item.activity_name?.toLowerCase().includes(search.toLowerCase()) ||
-        item.task_name?.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    if (filter !== 'All') {
-      filtered = filtered.filter((item) =>
-        item.status?.toLowerCase() === filter.toLowerCase()
-      );
-    }
-
-    setFilteredData(filtered);
-  };
-
-  const handleExport = () => {
-    const dataToExport = Array.isArray(filteredData) ? filteredData : [];
-    const csvContent = [
-      ['ID', 'Activity', 'Task', 'Assigned To', 'Created On', 'Status'].join(','),
-      ...dataToExport.map(item => [
-        item.id,
-        item.activity_name || '',
-        item.task_name || '',
-        item.assigned_to_name || '',
-        item.created_at ? new Date(item.created_at).toLocaleDateString() : '',
-        item.status || ''
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'operational_scheduled_audits.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('Exported successfully');
-  };
-
-  const columns = [
-    {
-      name: 'ACTION',
-      width: '100px',
-      cell: (row: ScheduledAudit) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(`/audit/operational/scheduled/${row.id}`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-            title="View"
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            onClick={() => navigate(`/audit/operational/scheduled/${row.id}/edit`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-        </div>
-      ),
-    },
-    { name: 'ID', selector: (row: ScheduledAudit) => row.id, sortable: true, width: '80px' },
-    { name: 'ACTIVITY', selector: (row: ScheduledAudit) => row.activity_name || '-', sortable: true },
-    { name: 'TASK', selector: (row: ScheduledAudit) => row.task_name || '-', sortable: true },
-    { name: 'ASSIGNED TO', selector: (row: ScheduledAudit) => row.assigned_to_name || '-', sortable: true },
-    { name: 'CREATED ON', selector: (row: ScheduledAudit) => row.created_at ? new Date(row.created_at).toLocaleDateString() : '-', sortable: true },
-  ];
-
-  const AuditCard = ({ item }: { item: ScheduledAudit }) => (
-    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <ClipboardList className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{item.activity_name || 'N/A'}</h3>
-            <p className="text-sm text-muted-foreground">ID: {item.id}</p>
-          </div>
-        </div>
-        <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-          item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-            item.status === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-          }`}>
-          {item.status || 'N/A'}
-        </span>
+  if (fetching) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
-      <div className="space-y-1 text-sm text-muted-foreground mb-4">
-        <p>Task: {item.task_name || '-'}</p>
-        <p>Assigned To: {item.assigned_to_name || '-'}</p>
-        <p>Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</p>
-      </div>
-      <div className="flex justify-end gap-2 pt-3 border-t border-border">
-        <button
-          onClick={() => navigate(`/audit/operational/scheduled/${item.id}`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-          title="View"
-        >
-          <Eye size={16} />
-        </button>
-        <button
-          onClick={() => navigate(`/audit/operational/scheduled/${item.id}/edit`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-          title="Edit"
-        >
-          <Edit2 size={16} />
-        </button>
-      </div>
-    </div>
-  );
-
-  const safeFilteredData = Array.isArray(filteredData) ? filteredData : [];
+    );
+  }
 
   return (
-    <div>
-      {/* Status Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {statusFilters.map((filter) => (
-          <button
-            key={filter}
-            onClick={() => handleFilterChange(filter)}
-            className={`px-3 py-1.5 text-sm transition-colors relative ${activeFilter === filter
-              ? 'text-primary font-medium'
-              : 'text-muted-foreground hover:text-foreground'
-              }`}
-          >
-            {filter}
-            {activeFilter === filter && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary transition-all" />
-            )}
-          </button>
-        ))}
-      </div>
-      <ListToolbar
-        searchPlaceholder="Search audits..."
-        searchValue={searchText}
-        onSearchChange={handleSearch}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        showViewToggle
-        showAddButton
-        addButtonLabel="Add"
-        onAddClick={() => navigate('/audit/operational/scheduled/create')}
-        showFilter={false}
-        showExport
-        onExportClick={handleExport}
+    <div className="p-6">
+      <Breadcrumb
+        items={[
+          { label: "FM Module", path: "/audit" },
+          { label: "Audit", path: "/audit" },
+          { label: "Operational", path: "/audit" },
+          { label: "Scheduled", path: "/audit/operational/scheduled" },
+          { label: "Edit" },
+        ]}
       />
 
+      <form onSubmit={handleSubmit}>
+        {/* Toggle Section */}
+        <div className="flex gap-6 mb-6 mt-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="create_new"
+              checked={formData.create_new}
+              onChange={handleInputChange}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+            />
+            <span className="text-sm font-medium text-foreground">Create New</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="create_task"
+              checked={formData.create_task}
+              onChange={handleInputChange}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+            />
+            <span className="text-sm font-medium text-foreground">Create Task</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="weightage"
+              checked={formData.weightage}
+              return onChange={handleInputChange} // Changed from checked to onChange for testing
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+            />
+            <span className="text-sm font-medium text-foreground">Weightage</span>
+          </label>
+        </div>
 
-
-        {/* TABLE */}
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-100 text-gray-500 uppercase text-[11px]">
-              <th className="px-4 py-3 text-left">Action</th>
-              <th className="px-4 py-3 text-left">ID</th>
-              <th className="px-4 py-3 text-left">Activity</th>
-              <th className="px-4 py-3 text-left">Task</th>
-              <th className="px-4 py-3 text-left">Assigned To</th>
-              {/* <th className="px-4 py-3 text-left">Assigned To name</th> */}
-              <th className="px-4 py-3 text-left">Created On</th>
-            
-          </thead>
-
-          <tbody>
-            {tableData.map((row) => (
-              <tr
-                key={row.id}
-                className="border-b last:border-none hover:bg-muted/50"
-              >
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() =>
-                      navigate(`/audit/operational/scheduled/view/${row.id}`)
-                    }
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                    title="View"
-                  >
-                    <Eye size={16} />
-                  </button>
-                </td>
-
-                <td className="px-4 py-3">{row.id}</td>
-                <td className="px-4 py-3">{row.activity_name}</td>
-                <td className="px-4 py-3">{row.task_name}</td>
-                <td className="px-4 py-3">{row.assigned_to}</td>
-                {/* <td className="px-4 py-3">{row.assigned_to_name}</td> */}
-                <td className="px-4 py-3">{row.created_at}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* PAGINATION */}
-        <div className="flex items-center justify-end gap-4 px-4 py-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            Rows per page:
-            <select className="border rounded px-1 py-0.5">
-              <option>10</option>
-            </select>
+        {/* Basic Info Section */}
+        <div className="bg-card border border-border rounded-lg p-6 mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <ClipboardList className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">Basic Info</h2>
           </div>
 
-          <div>1–1 of 1</div>
+          {/* Schedule For Buttons */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-foreground mb-3">Schedule For</label>
+            <div className="flex flex-wrap gap-2">
+              {scheduleTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleScheduleTypeChange(type)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${formData.audit_for === type
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-accent'
+                    }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <div className="flex items-center gap-2">
-            <button disabled className="opacity-50">{"<<"}</button>
-            <button disabled className="opacity-50">{"<"}</button>
-            <button disabled className="opacity-50">{">"}</button>
-            <button disabled className="opacity-50">{">>"}</button>
+          <div className="grid grid-cols-1 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Activity Name *</label>
+              <input
+                type="text"
+                name="activity_name"
+                value={formData.activity_name}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter Activity Name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Enter Description"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="allow_observations"
+                checked={formData.allow_observations}
+                onChange={handleInputChange}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-foreground">Allow Observations</span>
+            </label>
           </div>
         </div>
-    </div>
 
+        {/* Task Section */}
+        <div className="bg-card border border-border rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-foreground">Task</h2>
+            <button
+              type="button"
+              onClick={addTask}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+            >
+              <Plus size={16} />
+              Add Section
+            </button>
+          </div>
+
+          {tasks.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No tasks added yet. Click "Add Section" to add tasks.</p>
+          ) : (
+            <div className="space-y-6">
+              {tasks.map((task, index) => (
+                <div key={task.id} className="p-4 border border-border rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-medium text-foreground">Task {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeTask(task.id)}
+                      className="text-sm text-destructive hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Group</label>
+                      <select
+                        value={task.group}
+                        onChange={(e) => updateTask(task.id, 'group', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select Group</option>
+                        <option value="general">General</option>
+                        <option value="safety">Safety</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">SubGroup</label>
+                      <select
+                        value={task.subgroup}
+                        onChange={(e) => updateTask(item.id, 'subgroup', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select SubGroup</option>
+                        <option value="sub1">SubGroup 1</option>
+                        <option value="sub2">SubGroup 2</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Task</label>
+                      <input
+                        type="text"
+                        value={task.task}
+                        onChange={(e) => updateTask(task.id, 'task', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Enter Task"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Input Type</label>
+                      <select
+                        value={task.input_type}
+                        onChange={(e) => updateTask(item.id, 'input_type', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {inputTypes.map((type) => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={task.mandatory}
+                        onChange={(e) => updateTask(task.id, 'mandatory', e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-foreground">Mandatory</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={task.reading}
+                        onChange={(e) => updateTask(item.id, 'reading', e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-foreground">Reading</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={task.help_text}
+                        onChange={(e) => updateTask(task.id, 'help_text', e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-foreground">Help Text</span>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Schedule Section */}
+        <div className="bg-card border border-border rounded-lg p-6 mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Calendar className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text listEdit mb-2">Schedule</h2>
+          </div>
+
+          {/* Checklist Type Radio */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-foreground mb-3">Checklist Type</label>
+            <div className="flex gap-4">
+              {checklistTypes.map((type) => (
+                <label key={type} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="checklist_type"
+                    checked={formData.checklist_type === type}
+                    onChange={() => handleChecklistTypeChange(type)}
+                    className="w-4 h-4 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-foreground">{type}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Assign To</label>
+              <select
+                name="assign_to"
+                value={formData.assign_to}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                {assignedUsers.map((user) => (
+                  <option key={user.id} value={user.id}>{user.firstname} {user.lastname}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Scan Type</label>
+              <select
+                name="scan_type"
+                value={formData.scan_type}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                {scanTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text font-medium text-foreground mb-2">Plan Duration</label>
+              <select
+                name="plan_duration"
+                value={formData.plan_duration}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                <option value="15">15 mins</option>
+                <option value="30">30 mins</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Priority</label>
+              <select
+                name="priority"
+                value={formData.priority}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {priorities.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Email Trigger Rule</label>
+              <select
+                name="email_trigger_rule"
+                value={formData.email_trigger_rule}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                <option value="on_create">On Create</option>
+                <option value="on_complete">On Complete</option>
+                <option value="on_overdue">On Overdue</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Supervisors</label>
+              <select
+                name="supervisors"
+                value={formData.supervisors}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                {assignedUsers.map((user) => (
+                  <option key={user.id} value={user.id}>{user.firstname} {user.lastname}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Category</label>
+              <select
+                name="category_id"
+                value={formData.category_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Lock Overdue Task</label>
+              <select
+                name="look_overdue_task"
+                value={formData.look_overdue_task}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Frequency</label>
+              <select
+                name="frequency"
+                value={formData.frequency}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {frequencies.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Start From</label>
+              <input
+                type="date"
+                name="start_from"
+                value={formData.start_from}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">End At</label>
+              <input
+                type="date"
+                name="end_at"
+                value={formData.end_at}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:- facing-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Select Supplier</label>
+              <select
+                name="supplier_id"
+                value={formData.supplier_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.vendor_name || s.company_name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
+          <button
+            type="button"
+            onClick={() => navigate('/audit/operational/scheduledaudit')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-black hover:bg-primary/90 rounded-lg border border-gray-300 transition-colors"
+          >
+            <X className="w-4 h-4" />
+            Cancel
+          </button>
+          {/* Reset button commented out as per user request */}
+          {/* <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </button> */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Update
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

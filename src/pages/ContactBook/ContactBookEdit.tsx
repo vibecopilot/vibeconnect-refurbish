@@ -143,8 +143,7 @@ const ContactBookEdit: React.FC = () => {
             if (data.logo?.length) {
                 setExistingLogos(data.logo.map((l: any) => ({ id: l.id, document: l.document })));
             }
-
-            // Set existing documents
+            
             // Set existing documents
             if (data.contact_books_attachment?.length) {
                 setExistingDocuments(

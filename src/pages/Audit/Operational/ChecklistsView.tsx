@@ -12,57 +12,58 @@ import {
   Clock,
   CheckCircle,
 } from "lucide-react";
-import { getAuditScheduledById } from "../../../api";
+import { getChecklist } from "../../../api";
 
 interface AuditTask {
   id: number;
-  group: number;
-  sub_group: number;
+  group: string;
+  sub_group: string;
   task: string;
   input_type: string;
   mandatory: boolean;
   reading: boolean;
+  help_text?: boolean;
 }
 
-interface ScheduledAudit {
+interface ChecklistData {
   id: number;
-  audit_for: string;
   activity_name: string;
+  name: string;
   description: string;
   checklist_type: string;
-  priority: string | null;
-  frequency: string | null;
-  scan_type: string | null;
-  plan_duration: number | null;
-  start_from: string | null;
-  end_at: string | null;
+  for_type?: string;
   allow_observations: boolean;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  audit_tasks?: AuditTask[];
   asset_name?: string | null;
   service_name?: string | null;
   vendor_name?: string | null;
-  created_at: string;
-  updated_at: string;
-  audit_tasks: AuditTask[];
 }
 
 /* ================= COMPONENT ================= */
 
-const ScheduledListView: React.FC = () => {
+const ChecklistView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [audit, setAudit] = useState<ScheduledAudit | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) fetchAudit();
+    if (id) fetchChecklist();
   }, [id]);
 
-  const fetchAudit = async () => {
+  const fetchChecklist = async () => {
     try {
       setLoading(true);
-      const res = await getAuditScheduledById(id!);
-      setAudit(res.data);
+      const res = await getChecklist(1, 10, { id });
+      // Handle the response based on your API structure
+      const data = Array.isArray(res.data) ? res.data[0] : res.data;
+      setChecklist(data);
+    } catch (error) {
+      console.error("Error fetching checklist:", error);
     } finally {
       setLoading(false);
     }
@@ -76,21 +77,21 @@ const ScheduledListView: React.FC = () => {
     );
   }
 
-  if (!audit) {
-    return <div className="text-center p-6">Audit not found</div>;
+  if (!checklist) {
+    return <div className="text-center p-6">Checklist not found</div>;
   }
 
   /* ================= RENDER ================= */
 
   return (
     <div className="p-6">
-        <Breadcrumb
+      <Breadcrumb
         items={[
           { label: "FM Module", path: "/audit" },
           { label: "Audit", path: "/audit" },
           { label: "Operational", path: "/audit" },
-          { label: "Scheduled", path: "/audit/operational/scheduled" },
-          { label: "Edit" },
+          { label: "Checklists", path: "/audit/operational/checklists" },
+          { label: "View" },
         ]}
       />
 
@@ -105,22 +106,22 @@ const ScheduledListView: React.FC = () => {
           </button>
 
           <div>
-            <h1 className="text-2xl font-bold">{audit.activity_name}</h1>
+            <h1 className="text-2xl font-bold">{checklist.activity_name}</h1>
             <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
-              <span># {audit.id}</span>
+              <span># {checklist.id}</span>
               <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                {audit.audit_for}
+                {checklist.checklist_type}
               </span>
             </div>
           </div>
         </div>
 
         <Link
-          to={`/audit/operational/scheduled/edit/${audit.id}`}
+          to={`/audit/operational/checklists/${checklist.id}/edit`}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg"
         >
           <Edit className="w-4 h-4" />
-          Edit Audit
+          Edit Checklist
         </Link>
       </div>
 
@@ -129,51 +130,62 @@ const ScheduledListView: React.FC = () => {
         {/* ===== MAIN CONTENT ===== */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Audit Info */}
-          <Card title="Audit Information" icon={<FileText className="w-5 h-5" />}>
+          {/* Checklist Info */}
+          <Card title="Checklist Information" icon={<FileText className="w-5 h-5" />}>
             <InfoGrid>
-              <Info label="Checklist Type" value={audit.checklist_type} />
-              <Info label="Priority" value={audit.priority || "-"} />
-              <Info label="Frequency" value={audit.frequency || "-"} />
-              <Info label="Scan Type" value={audit.scan_type || "-"} />
-              <Info label="Plan Duration" value={audit.plan_duration ? `${audit.plan_duration} mins` : "-"} />
-              <Info label="Start Date" value={audit.start_from?.split("T")[0] || "-"} />
-              <Info label="End Date" value={audit.end_at?.split("T")[0] || "-"} />
+              <Info label="Activity Name" value={checklist.activity_name} />
+              <Info label="Asset/Service Name" value={checklist.name || "-"} />
+              <Info label="Checklist Type" value={checklist.checklist_type} />
+              <Info label="For Type" value={checklist.for_type || "-"} />
+              <Info label="Status" value={checklist.status || "-"} />
+              <Info label="Observations" value={checklist.allow_observations ? "Allowed" : "Not Allowed"} />
             </InfoGrid>
           </Card>
 
           {/* Description */}
           <Card title="Description" icon={<ClipboardList className="w-5 h-5" />}>
             <p className="text-sm text-foreground whitespace-pre-wrap">
-              {audit.description || "No description provided."}
+              {checklist.description || "No description provided."}
             </p>
           </Card>
 
           {/* Tasks */}
           <Card
-            title={`Tasks (${audit.audit_tasks.length})`}
+            title={`Tasks (${checklist.audit_tasks?.length || 0})`}
             icon={<Layers className="w-5 h-5" />}
           >
-            <div className="space-y-4">
-              {audit.audit_tasks.map((task, index) => (
-                <div
-                  key={task.id}
-                  className="border rounded-lg p-4 bg-muted/50"
-                >
-                  <p className="font-medium">
-                    {index + 1}. {task.task}
-                  </p>
-                  <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                    <span>Input: {task.input_type}</span>
-                    {task.mandatory && (
-                      <span className="flex items-center gap-1 text-green-600">
-                        <CheckCircle className="w-4 h-4" /> Mandatory
-                      </span>
-                    )}
+            {checklist.audit_tasks && checklist.audit_tasks.length > 0 ? (
+              <div className="space-y-4">
+                {checklist.audit_tasks.map((task, index) => (
+                  <div
+                    key={task.id}
+                    className="border rounded-lg p-4 bg-muted/50"
+                  >
+                    <p className="font-medium">
+                      {index + 1}. {task.task}
+                    </p>
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                      {task.group && <span>Group: {task.group}</span>}
+                      {task.sub_group && <span>SubGroup: {task.sub_group}</span>}
+                      <span>Input: {task.input_type}</span>
+                      {task.mandatory && (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle className="w-4 h-4" /> Mandatory
+                        </span>
+                      )}
+                      {task.reading && (
+                        <span className="text-blue-600">Reading</span>
+                      )}
+                      {task.help_text && (
+                        <span className="text-orange-600">Help Text</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No tasks added yet.</p>
+            )}
           </Card>
         </div>
 
@@ -182,21 +194,22 @@ const ScheduledListView: React.FC = () => {
           {/* Quick Info */}
           <Card title="Quick Info" icon={<Flag className="w-5 h-5" />}>
             <div className="space-y-3">
-              <SidebarItem label="Audit For" value={audit.audit_for} />
-              <SidebarItem label="Priority" value={audit.priority || "-"} />
+              <SidebarItem label="Checklist Type" value={checklist.checklist_type} />
+              <SidebarItem label="For Type" value={checklist.for_type || "-"} />
+              <SidebarItem label="Status" value={checklist.status || "-"} />
               <SidebarItem
                 label="Observations"
-                value={audit.allow_observations ? "Allowed" : "Not Allowed"}
+                value={checklist.allow_observations ? "Allowed" : "Not Allowed"}
               />
+              <SidebarItem label="Total Tasks" value={checklist.audit_tasks?.length.toString() || "0"} />
             </div>
           </Card>
-
 
           {/* Timeline */}
           <Card title="Timeline" icon={<Calendar className="w-5 h-5" />}>
             <div className="space-y-3">
-              <TimelineItem label="Created at" value={audit.created_at} />
-              <TimelineItem label="Updated at" value={audit.updated_at} />
+              <TimelineItem label="Created at" value={checklist.created_at} />
+              <TimelineItem label="Updated at" value={checklist.updated_at} />
             </div>
           </Card>
         </div>
@@ -205,7 +218,7 @@ const ScheduledListView: React.FC = () => {
   );
 };
 
-export default ScheduledListView;
+export default ChecklistView;
 
 /* ================= UI HELPERS ================= */
 

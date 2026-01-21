@@ -571,13 +571,13 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
           </Link>
         </div>
 
-        {/* Settings Icon */}
+        {/* Settings Icon
         <button
           onClick={() => navigate('/setup')}
           className="p-2 hover:bg-accent rounded-lg transition-colors"
         >
           <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
+        </button> */}
 
         {/* Right Side Controls */}
         <div className="flex items-center gap-4">
@@ -630,9 +630,12 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             )}
           </div>
           {/* Settings Icon */}
-          <button className="p-2 hover:bg-accent rounded-lg transition-colors">
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </button>
+           <button
+          onClick={() => navigate('/setup')}
+          className="p-2 hover:bg-accent rounded-lg transition-colors"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
 
           {/* User Dropdown */}
           <div className="relative" ref={userDropdownRef}>

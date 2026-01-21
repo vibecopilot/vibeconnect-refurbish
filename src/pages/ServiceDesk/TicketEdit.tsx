@@ -54,7 +54,7 @@ const TicketEdit: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [assignedUsers, setAssignedUsers] = useState<AssignedUser[]>([]);
@@ -84,11 +84,11 @@ const TicketEdit: React.FC = () => {
     const storedCategories = getItemInLocalStorage('categories') || [];
     const storedStatuses = getItemInLocalStorage('STATUS') || [];
     const storedUsers = getItemInLocalStorage('assignedUsers') || [];
-    
+
     setCategories(storedCategories);
     setStatuses(storedStatuses);
     setAssignedUsers(storedUsers);
-    
+
     if (id) {
       fetchTicketDetails();
     }
@@ -101,7 +101,7 @@ const TicketEdit: React.FC = () => {
       const response = await serviceDeskService.getTicketById(id);
       const data = response.data;
       setTicketInfo(data);
-      
+
       setFormData({
         category_type_id: String(data.category_type_id || ''),
         sub_category_id: String(data.sub_category_id || ''),
@@ -133,10 +133,8 @@ const TicketEdit: React.FC = () => {
 
   const fetchSubCategories = async (categoryId: number) => {
     try {
-      // In real app, fetch from API
-      // const response = await fetchSubCategories(categoryId);
-      // setSubCategories(response.data.sub_categories);
-      setSubCategories([]);
+      const res = await serviceDeskService.getSubCategories(categoryId);
+      setSubCategories(res.data?.sub_categories || []);
     } catch (error) {
       console.error('Error fetching sub-categories:', error);
     }
@@ -153,7 +151,7 @@ const TicketEdit: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'category_type_id') {
       handleCategoryChange(value);
     } else {
@@ -187,7 +185,7 @@ const TicketEdit: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.heading) {
       toast.error('Please provide a title');
       return;
@@ -233,7 +231,10 @@ const TicketEdit: React.FC = () => {
 
       await serviceDeskService.updateTicket(id!, updateData);
       toast.success('Ticket updated successfully');
-      navigate(`/service-desk/${id}`);
+
+      // ✅ go back to list & force server re-fetch
+      navigate('/service-desk', { state: { refresh: true } });
+
     } catch (error) {
       console.error('Error updating ticket:', error);
       toast.error('Failed to update ticket');
@@ -374,9 +375,9 @@ const TicketEdit: React.FC = () => {
                 type="select"
                 value={formData.assigned_to_id}
                 onChange={handleChange}
-                options={assignedUsers.map(u => ({ 
-                  value: String(u.id), 
-                  label: `${u.firstname} ${u.lastname || ''}`.trim() 
+                options={assignedUsers.map(u => ({
+                  value: String(u.id),
+                  label: `${u.firstname} ${u.lastname || ''}`.trim()
                 }))}
                 placeholder="Select Assignee"
               />
@@ -386,9 +387,9 @@ const TicketEdit: React.FC = () => {
                 type="select"
                 value={formData.territory_manager_id}
                 onChange={handleChange}
-                options={assignedUsers.map(u => ({ 
-                  value: String(u.id), 
-                  label: `${u.firstname} ${u.lastname || ''}`.trim() 
+                options={assignedUsers.map(u => ({
+                  value: String(u.id),
+                  label: `${u.firstname} ${u.lastname || ''}`.trim()
                 }))}
                 placeholder="Select Approval Authority"
               />
@@ -410,6 +411,7 @@ const TicketEdit: React.FC = () => {
                 onChange={handleChange}
                 options={categories.map(c => ({ value: String(c.id), label: c.name }))}
                 placeholder="Select Category"
+                required
               />
               <FormInput
                 label="Sub Category"
@@ -418,7 +420,7 @@ const TicketEdit: React.FC = () => {
                 value={formData.sub_category_id}
                 onChange={handleChange}
                 options={subCategories.map(s => ({ value: String(s.id), label: s.name }))}
-                placeholder="Select Sub Category"
+                placeholder="Sub Category"
                 disabled={!formData.category_type_id}
               />
               <FormInput
@@ -546,7 +548,7 @@ const TicketEdit: React.FC = () => {
               className="px-6 py-2.5 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
             >
               Cancel
-            </button>            
+            </button>
             <button
               type="submit"
               disabled={saving}
