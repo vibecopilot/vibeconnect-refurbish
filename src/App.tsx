@@ -81,6 +81,20 @@ import FitoutHub from "./pages/FitOut/FitoutHub";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
 import { PermitList, CreatePermit, ViewPermit } from "./pages/Permit/index";
+import {
+  SafetyLayout,
+  SafetyDashboard,
+  SafetyMeasuresList,
+  CreateSafetyMeasure,
+  ViewSafetyMeasure,
+  SafetyChecklistsList,
+  CreateSafetyChecklist,
+  ViewSafetyChecklist,
+  ExecuteSafetyChecklist,
+  SafetyInspectionsList,
+  CreateSafetyInspection,
+  ViewSafetyInspection,
+} from "./pages/Safety";
 import { CalendarPage, PlanMyCalendar } from "./pages/Calendar/index";
 import { MailRoomLayout, DeliveryVendorList, CreateVendor, ViewVendor, InboundList, CreateInboundPackage, ViewInbound, OutboundList, CreateOutboundPackage, ViewOutbound } from "./pages/MailRoom/index";
 import { SupplierList, CreateSupplier, ViewSupplier } from "./pages/Supplier";
@@ -461,8 +475,32 @@ function App() {
         <Route path="/admin/add-invoice-approval-setup" element={<AuthenticatedLayout><AddInvoiceApprovalsSetup /></AuthenticatedLayout>} />
         <Route path="/admin/edit-invoice-approval-setup/:id" element={<AuthenticatedLayout><EditInvoiceApprovalsSetup /></AuthenticatedLayout>} />
 
-        {/* Safety Module - Under Development Pages */}
-        <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />
+        {/* Safety Module - Tabbed Layout */}
+        <Route path="/safety/module" element={<AuthenticatedLayout><SafetyLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/safety/module/dashboard" replace />} />
+          <Route path="dashboard" element={<SafetyDashboard />} />
+          
+          {/* Safety Measures */}
+          <Route path="safety-measures" element={<SafetyMeasuresList />} />
+          <Route path="safety-measures/create" element={<CreateSafetyMeasure />} />
+          <Route path="safety-measures/:id" element={<ViewSafetyMeasure />} />
+          <Route path="safety-measures/:id/edit" element={<CreateSafetyMeasure />} />
+          
+          {/* Safety Checklists */}
+          <Route path="safety-checklists" element={<SafetyChecklistsList />} />
+          <Route path="safety-checklists/create" element={<CreateSafetyChecklist />} />
+          <Route path="safety-checklists/:id" element={<ViewSafetyChecklist />} />
+          <Route path="safety-checklists/:id/edit" element={<CreateSafetyChecklist />} />
+          <Route path="safety-checklists/:id/execute" element={<ExecuteSafetyChecklist />} />
+          
+          {/* Safety Inspections */}
+          <Route path="safety-inspections" element={<SafetyInspectionsList />} />
+          <Route path="safety-inspections/create" element={<CreateSafetyInspection />} />
+          <Route path="safety-inspections/:id" element={<ViewSafetyInspection />} />
+          <Route path="safety-inspections/:id/edit" element={<CreateSafetyInspection />} />
+        </Route>
+
+        {/* Training Module - Placeholder (will be implemented next) */}
         <Route path="/safety/training" element={<AuthenticatedLayout><PlaceholderPage title="Training" /></AuthenticatedLayout>} />
 
         {/* Permit - Safety Module */}
