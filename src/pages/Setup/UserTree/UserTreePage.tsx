@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     Search,
     RefreshCw,
@@ -11,8 +11,8 @@ import {
     Edit,
     Eye
 } from 'lucide-react';
-// IMPORTING THE API FUNCTIONS YOU REQUESTED
-import { getBuildings, getFloors, getSetupUsers, getUnits } from '../../../api';
+
+import { getSetupUsersByBuilding, getFloors, getSetupUsers, getUnits, getBuildings, getSetupUsersByUnit, getSetupUsersByFloor, getSetupUsersByMemberType } from '../../../api';
 
 // Types
 interface Option {
@@ -21,7 +21,7 @@ interface Option {
 }
 
 interface UserRow {
-    id: string;
+    id: number;
     name: string;
     mobile: string;
     email: string;
@@ -31,6 +31,7 @@ interface UserRow {
     ownership: string;
     units_count: number;
 }
+
 
 const UserTreePage: React.FC = () => {
     const navigate = useNavigate();
@@ -48,6 +49,8 @@ const UserTreePage: React.FC = () => {
     const [floors, setFloors] = useState<Option[]>([]);
     const [units, setUnits] = useState<Option[]>([]);
     const [users, setUsers] = useState<UserRow[]>([]);
+    const { userId } = useParams<{ userId: string }>();
+
 
     // --- 1. Initial Load: Fetch Buildings ---
     useEffect(() => {
@@ -55,32 +58,23 @@ const UserTreePage: React.FC = () => {
             setLoading(true);
             try {
                 const response = await getBuildings();
-                
-                // ROBUST FIX FOR API DATA STRUCTURE
-                // Case 1: Direct Array in response.data
+
                 let userList = [];
                 if (Array.isArray(response.data)) {
                     userList = response.data;
-                    console.log("Response Data is a Direct Array. Using directly.");
-                } 
-                // Case 2: Object in response.data (Nested like { users: [...] })
+                }
                 else if (typeof response.data === 'object' && response.data !== null) {
                     if (Array.isArray(response.data.users)) {
                         userList = response.data.users;
-                        console.log("Response Data is an Object. Found users inside response.data.users");
                     } else if (Array.isArray(response.data.data)) {
-                         // Fallback for flat object
-                         userList = response.data;
-                         console.log("Response Data is an Object. Mapping keys (flat object fallback)");
-                    } else {
-                        console.warn("Unknown response structure. Keys:", Object.keys(response.data || {}));
+                        userList = response.data;
                     }
                 }
-                
-                setBuildings(userList.length > 0 ? userList.map(b => ({ id: b.id, name: b.name })) : []);
+
+                setBuildings(userList.length > 0 ? userList.map((b: any) => ({ id: b.id, name: b.name })) : []);
             } catch (error) {
                 console.error("Error fetching buildings:", error);
-                setBuildings([]); 
+                setBuildings([]);
             } finally {
                 setLoading(false);
             }
@@ -94,7 +88,6 @@ const UserTreePage: React.FC = () => {
         if (!selectedBuilding) {
             setFloors([]);
             setUnits([]);
-            setUsers([]); // Clear users if building changes
             return;
         }
 
@@ -102,33 +95,23 @@ const UserTreePage: React.FC = () => {
             try {
                 const response = await getFloors(selectedBuilding);
                 let data = [];
-                
-                // ROBUST FIX FOR API DATA STRUCTURE
+
                 if (Array.isArray(response.data)) {
                     data = response.data;
-                    console.log("Floors: Array detected in response.data");
                 } else if (typeof response.data === 'object' && response.data !== null) {
-                    // Common nested structure
-                    if (Array.isArray(response.data)) {
-                         data = response.data;
-                    } else if (response.data.floors) {
-                         data = response.data.floors;
+                    if (Array.isArray(response.data.floors)) {
+                        data = response.data.floors;
                     } else {
-                         // Last resort: Try iterating the object keys
-                         console.warn("No 'floors' or array found in object.");
-                         const keys = Object.keys(response.data);
-                         if (keys.length > 0) {
-                             data = response.data[keys[0]]; // Just take the first key
-                         } else {
-                             data = [];
-                         }
+                        const keys = Object.keys(response.data);
+                        if (keys.length > 0) data = response.data[keys[0]];
+                        else data = [];
                     }
                 }
-                
-                setFloors(data.length > 0 ? data.map(f => ({ id: f.id, name: f.name })) : []);
+
+                setFloors(data.length > 0 ? data.map((f: any) => ({ id: f.id, name: f.name })) : []);
             } catch (error) {
                 console.error("Error fetching floors:", error);
-                setFloors([]); 
+                setFloors([]);
             }
         };
 
@@ -139,7 +122,6 @@ const UserTreePage: React.FC = () => {
     useEffect(() => {
         if (!selectedFloor) {
             setUnits([]);
-            setUsers([]);
             return;
         }
 
@@ -148,31 +130,26 @@ const UserTreePage: React.FC = () => {
                 const response = await getUnits(selectedFloor);
                 let data = [];
 
-                // ROBUST FIX FOR API DATA STRUCTURE
                 if (Array.isArray(response.data)) {
                     data = response.data;
-                    console.log("Units: Array detected in response.data");
                 } else if (typeof response.data === 'object' && response.data !== null) {
                     if (Array.isArray(response.data.units)) {
                         data = response.data.units;
                     } else {
-                        // Try to find an array inside
                         const keys = Object.keys(response.data);
                         for (const key of keys) {
                             if (Array.isArray(response.data[key])) {
                                 data = response.data[key];
-                                console.log(`Found array inside response.data.${key}`);
                                 break;
                             }
                         }
-                        if (data.length === 0) console.warn("No array found in object.");
                     }
                 }
 
-                setUnits(data.length > 0 ? data.map(u => ({ id: u.id, name: u.name })) : []);
+                setUnits(data.length > 0 ? data.map((u: any) => ({ id: u.id, name: u.name })) : []);
             } catch (error) {
                 console.error("Error fetching units:", error);
-                setUnits([]); 
+                setUnits([]);
             }
         };
 
@@ -193,96 +170,94 @@ const UserTreePage: React.FC = () => {
         }
     };
 
-    // --- 4. Handle Search (Fetch Users) ---
+    const getPrimarySite = (item: any) => {
+        if (Array.isArray(item.user_sites) && item.user_sites.length > 0) {
+            return item.user_sites[0];
+        }
+        return null;
+    };
+
+    const matchesFilters = (item: any) => {
+        const site = getPrimarySite(item);
+        if (!site) return false;
+
+        if (selectedBuilding && String(site.build_id) !== String(selectedBuilding)) return false;
+        if (selectedFloor && String(site.floor_id) !== String(selectedFloor)) return false;
+        if (selectedUnit && String(site.unit_id) !== String(selectedUnit)) return false;
+
+        return true;
+    };
+
     const handleSearch = async () => {
         setFetchingData(true);
-        setUsers([]); // Clear previous results
-        
+        setUsers([]);
+
         try {
-            // Construct params
-            const params: any = {};
-            
-            if (selectedBuilding) params.building_id = selectedBuilding;
-            if (selectedFloor) params.floor_id = selectedFloor;
-            if (selectedUnit) params.unit_id = selectedUnit;
-            if (memberType) params.ownership = memberType;
-
-            console.log("Fetching users with params:", params);
-
-            // USE getSetupUsers API
-            const response = await getSetupUsers(params);
-
-            console.log("Raw API Response:", response);
-            console.log("Response Data Type:", typeof response.data);
-            console.log("Response Data Keys:", response.data ? Object.keys(response.data) : 'N/A');
-
-            // SAFETY CHECK: Ensure we always have an array to map
-            let userList: UserRow[] = [];
-            
-            // STRATEGY 1: Check if response.data is directly an Array
-            if (Array.isArray(response.data)) {
-                userList = response.data; // Direct assignment
-                console.log("Response Data is a Direct Array. Using directly.");
-            } 
-            // STRATEGY 2: Check if response.data is an Object containing an array (e.g., { users: [...] })
-            else if (typeof response.data === 'object' && response.data !== null) {
-                // Try standard nested properties
-                if (Array.isArray(response.data.users)) {
-                    userList = response.data.users;
-                    console.log("Response Data is an Object. Found users inside response.data.users");
-                } else if (Array.isArray(response.data.data)) {
-                     // Fallback: Iterate all keys to find an array
-                    for (const key of Object.keys(response.data)) {
-                        if (Array.isArray(response.data[key])) {
-                            userList = response.data[key];
-                            console.log(`Found array inside response.data.${key}`);
-                            break;
-                        }
-                    }
-                    if (userList.length === 0) console.warn("No array found in object.");
-                }
-            } else {
-                console.warn("Unknown response structure.");
-                userList = []; // Fallback
+            let response;
+            if (selectedUnit) {
+                response = await getSetupUsersByUnit(
+                    'users',
+                    selectedUnit
+                );
+            }
+            else if (selectedFloor) {
+                response = await getSetupUsersByFloor(
+                    'users',
+                    selectedFloor
+                );
+            }
+            else if (selectedBuilding && memberType) {
+                response = await getSetupUsersByMemberType(
+                    'users',
+                    selectedBuilding,
+                    memberType
+                );
+            }
+            else if (selectedBuilding) {
+                response = await getSetupUsersByBuilding(
+                    'users',
+                    selectedBuilding
+                );
+            }
+            else {
+                return;
             }
 
-            console.log("Final User List for mapping:", userList);
+            let userList: any[] = [];
 
-            // Map API response to UserRow interface
-            // Adjust these keys (name, mobile, etc.) to match your actual backend response
-            const mappedUsers = userList.map((item: any) => {
-                // Check if item is an object, not an array element
-                const userObj = item; // If items are objects, use them directly
-                
-                // If items are primitives (strings), handle differently (rare, but assuming objects based on your logs)
-                // Assuming your user objects are simple strings or simple objects, we access properties safely
-                // Use the name from the selected building/floor/unit lists for display
-                const buildingName = buildings.find(b => b.id === selectedBuilding)?.name || '-';
-                const floorName = floors.find(f => f.id === selectedFloor)?.name || '-';
-                const unitName = units.find(u => u.id === selectedUnit)?.name || '-';
-                
+            if (Array.isArray(response.data)) {
+                userList = response.data;
+            } else if (response.data?.users) {
+                userList = response.data.users;
+            }
+
+            const mappedUsers: UserRow[] = userList.map((item: any) => {
+                const site = item.sites?.[0];
+                const unit = site?.units?.[0];
+
                 return {
                     id: item.id,
-                    name: userObj.name || userObj.first_name || '-', 
-                    mobile: userObj.mobile || userObj.phone || '-', 
-                    email: userObj.email || '-', 
-                    building: buildingName,
-                    floor: floorName,
-                    unit: unitName,
-                    ownership: userObj.ownership || memberType || 'Not Assigned',
-                    units_count: 0,
+                    name: item.name || '-',
+                    mobile: item.mobile || '-',
+                    email: item.email || '-',
+                    building: unit?.building || '-',
+                    floor: unit?.floor || '-',
+                    unit: unit?.unit_name || '-',
+                    ownership: unit?.ownership || 'Not Assigned',
+                    units_count: site?.units?.length || 0,
                 };
             });
 
-            setUsers(mappedUsers);
 
+            setUsers(mappedUsers);
         } catch (error) {
-            console.error("Error fetching users:", error);
-            alert("Failed to fetch users. Check console for details.");
+            console.error('Error fetching users:', error);
         } finally {
             setFetchingData(false);
         }
     };
+
+
 
     // Handle Reset
     const handleReset = () => {
@@ -308,7 +283,7 @@ const UserTreePage: React.FC = () => {
                         <p className="text-sm text-gray-500 mt-1">Manage building occupants and ownership</p>
                     </div>
                     <div className="flex gap-2">
-                        <button 
+                        <button
                             onClick={handleReset}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
@@ -321,7 +296,7 @@ const UserTreePage: React.FC = () => {
                 {/* FILTER SECTION */}
                 <div className="p-6 bg-gray-50/50 border-b border-gray-100">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
-                        
+
                         {/* Building Filter */}
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Building</label>
@@ -332,7 +307,7 @@ const UserTreePage: React.FC = () => {
                                     value={selectedBuilding}
                                     onChange={(e) => {
                                         setSelectedBuilding(e.target.value);
-                                        setSelectedFloor(''); // Reset child
+                                        setSelectedFloor('');
                                         setSelectedUnit('');
                                     }}
                                 >
@@ -356,7 +331,7 @@ const UserTreePage: React.FC = () => {
                                     value={selectedFloor}
                                     onChange={(e) => {
                                         setSelectedFloor(e.target.value);
-                                        setSelectedUnit(''); // Reset child
+                                        setSelectedUnit('');
                                         setUsers([]);
                                     }}
                                     disabled={!selectedBuilding}
@@ -398,14 +373,13 @@ const UserTreePage: React.FC = () => {
                             <div className="relative">
                                 <Shield className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                                 <select
-                                    className="w-full pl-9 pr-4 py-2 text-sm bg-white border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none cursor-pointer hover:border-gray-400 transition-colors"
+                                    className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                                     value={memberType}
                                     onChange={(e) => setMemberType(e.target.value)}
                                 >
                                     <option value="">All Types</option>
                                     <option value="Owner">Owner</option>
-                                    <option value="Tenant">Vendor</option>
-                                    <option value="Family">Family</option>
+                                    <option value="Tenant">Tenant</option>
                                 </select>
                             </div>
                         </div>
@@ -414,7 +388,7 @@ const UserTreePage: React.FC = () => {
                         <button
                             onClick={handleSearch}
                             disabled={fetchingData}
-                            className="h-[38px] flex items-center justify-center gap-2 px-6 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="h-[38px] flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white text-md font-medium rounded-lg hover:bg-purple-800 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {fetchingData ? (
                                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -430,8 +404,8 @@ const UserTreePage: React.FC = () => {
                 <div className="overflow-x-auto">
                     {fetchingData ? (
                         <div className="p-12 flex flex-col items-center justify-center text-gray-400">
-                           <RefreshCw className="w-8 h-8 animate-spin mb-2" />
-                           <span>Loading Users...</span>
+                            <RefreshCw className="w-8 h-8 animate-spin mb-2" />
+                            <span>Loading Users...</span>
                         </div>
                     ) : users.length > 0 ? (
                         <table className="min-w-full text-sm text-left">
@@ -449,20 +423,21 @@ const UserTreePage: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {users.map((row) => (
-                                    <tr 
-                                        key={row.id} 
+                                    <tr
+                                        key={row.id}
                                         className="hover:bg-gray-50 transition-colors group"
                                     >
                                         {/* Actions */}
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <button 
-                                                    onClick={() => navigate(`/audit/vendor/scheduled/${row.id}`)}
-                                                    className="p-1.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+                                                <button
+                                                    onClick={() => navigate(`/setup/user-tree/view/${row.id}`)}
+                                                    className="p-1.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-full"
                                                     title="View"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
+
                                                 <button className="p-1.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors" title="Edit">
                                                     <Edit className="w-4 h-4" />
                                                 </button>
@@ -470,7 +445,9 @@ const UserTreePage: React.FC = () => {
                                         </td>
 
                                         {/* Name */}
-                                        <td className="px-6 py-4">{row.name}</td>
+                                        <td className="px-6 py-4 text-gray-600">
+                                            {row.name}
+                                        </td>
 
                                         {/* Mobile */}
                                         <td className="px-6 py-4 text-gray-600">{row.mobile}</td>
@@ -479,7 +456,7 @@ const UserTreePage: React.FC = () => {
                                         <td className="px-6 py-4 text-gray-600">{row.email}</td>
 
                                         {/* Building */}
-                                        <td className="px-6 py-4 text-gray-700 font-medium">{row.building}</td>
+                                        <td className="px-6 py-4 text-gray-600">{row.building}</td>
 
                                         {/* Floor */}
                                         <td className="px-6 py-4 text-gray-600">{row.floor}</td>
@@ -509,12 +486,12 @@ const UserTreePage: React.FC = () => {
                 {/* PAGINATION (Static for UI) */}
                 {users.length > 0 && (
                     <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                         <span className="text-sm text-gray-500">Showing 1 to {users.length} of {users.length} entries</span>
-                         <div className="flex gap-1">
-                           <button className="px-3 py-1.5 text-sm border rounded bg-white text-gray-500 disabled:opacity-50">Previous</button>
-                           <button className="px-3 py-1.5 text-sm border rounded bg-slate-900 text-white font-medium">1</button>
-                           <button className="px-3 py-1.5 text-sm border rounded bg-white text-gray-500 disabled:opacity-50">Next</button>
-                         </div>
+                        <span className="text-sm text-gray-500">Showing 1 to {users.length} of {users.length} entries</span>
+                        <div className="flex gap-1">
+                            <button className="px-3 py-1.5 text-sm border rounded bg-white text-gray-500 disabled:opacity-50">Previous</button>
+                            <button className="px-3 py-1.5 text-sm border rounded bg-slate-900 text-white font-medium">1</button>
+                            <button className="px-3 py-1.5 text-sm border rounded bg-white text-gray-500 disabled:opacity-50">Next</button>
+                        </div>
                     </div>
                 )}
             </div>

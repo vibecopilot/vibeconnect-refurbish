@@ -198,6 +198,9 @@ import { ProtectedRoute } from './routes';
 import { ContactBook, ContactBookCreate, ContactBookEdit, ContactBookView } from "./pages/ContactBook";
 import ScheduledListView from "./pages/Audit/Operational/ScheduledListView";
 import ScheduledListEdit from "./pages/Audit/Operational/ScheduledListEdit";
+import ChecklistsList from "./pages/Audit/Operational/ChecklistsList.tsx";
+import ChecklistView from "./pages/Audit/Operational/ChecklistsView.tsx";
+import UserTreeViewPage from "./pages/Setup/UserTree/UserTreeViewPage.tsx"
 
 // Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -461,9 +464,11 @@ function App() {
           <Route path="vendor/conducted" element={<VendorConducted />} />
         </Route>
         <Route path="/audit/operational/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
-         <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduledListView /></AuthenticatedLayout>} />
-         <Route path="/audit/operational/scheduled/edit/:id" element={<AuthenticatedLayout><ScheduledListEdit /></AuthenticatedLayout>} />
-          <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduledListView /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/scheduled/edit/:id" element={<AuthenticatedLayout><ScheduledListEdit /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/checklists/view/:id" element={<AuthenticatedLayout><ChecklistView /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/checklists/edit/:id" element={<AuthenticatedLayout><ChecklistsList /></AuthenticatedLayout>} />
         <Route path="/audit/vendor/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
 
         {/* Compliance - FM Module */}
@@ -558,6 +563,8 @@ function App() {
         <Route path="/admin/invoice-approval-setup" element={<AuthenticatedLayout><InvoiceApprovalSetup /></AuthenticatedLayout>} />
         <Route path="/admin/add-invoice-approval-setup" element={<AuthenticatedLayout><AddInvoiceApprovalsSetup /></AuthenticatedLayout>} />
         <Route path="/admin/edit-invoice-approval-setup/:id" element={<AuthenticatedLayout><EditInvoiceApprovalsSetup /></AuthenticatedLayout>} />
+        {/* <Route path="/setup/user-tree" element={<AuthenticatedLayout><UserTreePage/></AuthenticatedLayout>} /> */}
+        <Route path="/setup/user-tree/view/:id" element={<AuthenticatedLayout><UserTreeViewPage /></AuthenticatedLayout>} />
 
         {/* Safety Module - Tabbed Layout */}
         <Route path="/safety/module" element={<AuthenticatedLayout><SafetyLayout /></AuthenticatedLayout>}>
@@ -643,7 +650,7 @@ function App() {
           <Route path="deletion-requests" element={<DeletionRequestsList />} />
           <Route path="deleted-prs" element={<DeletedPRsList />} />
         </Route>
-        
+
         {/* Other Bills - Finance Module */}
         <Route path="/finance/other-bills" element={<AuthenticatedLayout><OtherBillsList /></AuthenticatedLayout>} />
         <Route path="/finance/other-bills/create" element={<AuthenticatedLayout><CreateOtherBill /></AuthenticatedLayout>} />

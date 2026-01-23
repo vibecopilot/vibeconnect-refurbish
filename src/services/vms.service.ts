@@ -1,4 +1,5 @@
 import axiosInstance from '../api/axiosInstance';
+import axiosInstance from '../api/axiosInstance';
 import { getItemInLocalStorage } from '../utils/localStorage';
 
 const getToken = () => getItemInLocalStorage<string>('TOKEN');
@@ -102,6 +103,8 @@ export const vmsService = {
     });
   },
 
+
+
   // Create new visitor
   createVisitor: async (data: Partial<Visitor>) => {
     return axiosInstance.post('/visitors.json', data, {
@@ -198,5 +201,18 @@ export const vmsService = {
     });
   },
 };
+
+export const getAllVisitorsByUserId = (
+  userId: number
+) => {
+  return axiosInstance.get("/visitors.json", {
+    params: {
+      token: getToken(),
+      "q[hosts_user_id_eq]": userId,
+    },
+  });
+};
+
+
 
 export default vmsService;
