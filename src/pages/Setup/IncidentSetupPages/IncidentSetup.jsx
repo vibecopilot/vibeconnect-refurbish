@@ -16,6 +16,10 @@ import SecondarySubCategorySetup from "./IncidentSecSubCatSetup";
 import SecondarySubSubCategorySetup from "./SecondarySubSubCategorySetup";
 import SecondarySubSubSubCat from "./SecondarySubSubSubCat";
 import CAPASetup from "./CAPASetup";
+import SubstandardActSetup from "./SubstandardActSetup";
+import SubstandardConditionSetup from "./SubstandardConditionSetup";
+import PreventiveActionSetup from "./PreventiveActionSetup";
+import CorrectiveActionSetup from "./CorrectiveActionSetup";
 import FormSection from "../../../components/ui/FormSection";
 import TabNavigation from "../../../components/ui/TabNavigation";
 
@@ -35,6 +39,10 @@ const IncidentSetup = () => {
             { id: "injured", label: "Who got injured" },
             { id: "damageCategory", label: "Property Damage Category" },
             { id: "rcaCategory", label: "RCA Category" },
+            { id: "substandardAct", label: "Substandard Act" },
+            { id: "substandardCondition", label: "Substandard Condition" },
+            { id: "preventiveAction", label: "Preventive Action" },
+            { id: "correctiveAction", label: "Corrective Action" },
             { id: "capa", label: "CAPA" },
           ]}
           activeTab={page}
@@ -58,6 +66,10 @@ const IncidentSetup = () => {
         {page === "injured" && <InjurySetup />}
         {page === "damageCategory" && <PropertyDamageCategorySetup />}
         {page === "rcaCategory" && <RCACategorySetup />}
+        {page === "substandardAct" && <SubstandardActSetup />}
+        {page === "substandardCondition" && <SubstandardConditionSetup />}
+        {page === "preventiveAction" && <PreventiveActionSetup />}
+        {page === "correctiveAction" && <CorrectiveActionSetup />}
         {page === "capa" && <CAPASetup />}
       </FormSection>
     </section>

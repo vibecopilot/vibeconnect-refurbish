@@ -75,6 +75,7 @@ import {
   BookHotel,
 } from "./pages/Amenities";
 import ViewHotelBooking from "./pages/Amenities/ViewHotelBooking";
+import ViewAmenityBooking from "./pages/Amenities/ViewAmenityBooking";
 import { SpaceBookingsList, BookSpace } from "./pages/SpaceBooking";
 import ViewSpaceBooking from "./pages/SpaceBooking/ViewSpaceBooking";
 import FitoutHub from "./pages/FitOut/FitoutHub";
@@ -95,6 +96,18 @@ import {
   CreateSafetyInspection,
   ViewSafetyInspection,
 } from "./pages/Safety";
+import {
+  TrainingLayout,
+  TrainingDashboard,
+  TrainingProgramsList,
+  CreateTrainingProgram,
+  ViewTrainingProgram,
+  TrainingSessionsList,
+  CreateTrainingSession,
+  ViewTrainingSession,
+  TrainingMaterialsList,
+  ViewTrainingMaterial,
+} from "./pages/Training";
 import { CalendarPage, PlanMyCalendar } from "./pages/Calendar/index";
 import { MailRoomLayout, DeliveryVendorList, CreateVendor, ViewVendor, InboundList, CreateInboundPackage, ViewInbound, OutboundList, CreateOutboundPackage, ViewOutbound } from "./pages/MailRoom/index";
 import { SupplierList, CreateSupplier, ViewSupplier } from "./pages/Supplier";
@@ -139,8 +152,10 @@ import SampleResultSurvey from "./pages/SubPages/survey/SampleResultSurvey.tsx";
 import EditTemplateSurvey from "./pages/SubPages/survey/EditTemplateSurvey.tsx";
 import CreateTemplateSurvey from "./pages/SubPages/survey/CreateTemplateSurvey.tsx";
 import SurveyResponseForm from "./pages/SubPages/survey/SurveyResponseForm";
-import SetupPage from "./pages/Setup/SetupPage";
-import AccountPage from "./pages/Setup/Account/AccountPage";
+// Setup Module - Layout and Pages
+import SetupLayout from "./pages/Setup/SetupLayout";
+import FloorPage from "./pages/Setup/Account/FloorPage";
+import UnitPage from "./pages/Setup/Account/UnitPage";
 import UsersPage from "./pages/Setup/users/UsersPage";
 import CreateUserPage from "./pages/Setup/users/CreateUserPage";
 import AddressesSetup from "./pages/Setup/AddressSetup/AddressSetup";
@@ -152,6 +167,23 @@ import EditFMUserSetupNew from "./pages/Setup/EditFMUserSetupNew";
 import InvoiceApprovalSetup from "./pages/Setup/InvoiceApprovalSetupPages/InvoiceApprovalSetup";
 import AddInvoiceApprovalsSetup from "./pages/Setup/InvoiceApprovalSetupPages/AddInvoiceApprovalSetup";
 import EditInvoiceApprovalsSetup from "./pages/Setup/InvoiceApprovalSetupPages/EditInvoiceApprovalSet";
+import UserRolesSetup from "./pages/Setup/UserRolesSetup";
+import AssetGroupPage from "./pages/Setup/AssetStock/AssetGroupPage";
+import MeterCategoryType from "./pages/Setup/MeterCategoryType/MeterCategoryType";
+import TicketPage from "./pages/Setup/Ticket/TicketPage";
+import BusinessSetup from "./pages/SubPages/BusinessSetup";
+import SupplierSetup from "./pages/Setup/Supplier/SupplierSetup";
+import VisitorSetup from "./pages/Setup/VisitorSetup";
+import SetupBookingFacility from "./pages/SubPages/SetupBookingFacility";
+import ParkingSetup from "./pages/Setup/ParkingSetup";
+import FBSetup from "./pages/FoodsBeverage/FBSetup";
+import { SetupFB } from "./pages/FoodsBeverage/SetupFB";
+import BillingSetup from "./pages/Setup/BillingSetup/BillingSetup";
+import PermitSetup from "./pages/Setup/PermitSetup";
+import IncidentSetup from "./pages/Setup/IncidentSetupPages/IncidentSetup";
+import { ComplianceSetup as RevampComplianceSetup } from "./pages/RevampCompliance/ComplianceSetup";
+import CommunicationSetupControl from "./pages/Setup/CommunicationSetup/CommunicationSetupControl";
+import UserTreePage from "./pages/Setup/UserTree/UserTreePage";
 // Placeholder pages for other modules
 // Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -350,7 +382,7 @@ function App() {
         {/* Amenities Booking - standalone pages */}
         <Route path="/amenities" element={<AuthenticatedLayout><AmenitiesList /></AuthenticatedLayout>} />
         <Route path="/amenities/book" element={<AuthenticatedLayout><BookAmenity /></AuthenticatedLayout>} />
-        <Route path="/amenities/bookings/:id" element={<AuthenticatedLayout><PlaceholderPage title="Booking Details" /></AuthenticatedLayout>} />
+        <Route path="/amenities/bookings/:id" element={<AuthenticatedLayout><ViewAmenityBooking /></AuthenticatedLayout>} />
         
         {/* Hotel Bookings */}
         <Route path="/amenities/hotel" element={<AuthenticatedLayout><HotelBookingsList /></AuthenticatedLayout>} />
@@ -460,11 +492,63 @@ function App() {
         {/* Public Survey Response Form - No Auth Required */}
         <Route path="/survey/:id/respond" element={<SurveyResponseForm />} />
 
-        {/* Setup - System Configuration */}
-        <Route path="/setup" element={<AuthenticatedLayout><SetupPage /></AuthenticatedLayout>} />
-        <Route path="/setup/account" element={<AuthenticatedLayout><AccountPage /></AuthenticatedLayout>} />
-        <Route path="/setup/users" element={<AuthenticatedLayout><UsersPage /></AuthenticatedLayout>} />
-        <Route path="/setup/users/create" element={<AuthenticatedLayout><CreateUserPage /></AuthenticatedLayout>} />
+        {/* Setup - System Configuration (Nested Routes) */}
+        <Route path="/setup" element={<AuthenticatedLayout><SetupLayout /></AuthenticatedLayout>}>
+          {/* General Category */}
+          <Route path="general/account/floor" element={<FloorPage />} />
+          <Route path="general/account/unit" element={<UnitPage />} />
+          <Route path="general/users" element={<UsersPage />} />
+          <Route path="general/users/create" element={<CreateUserPage />} />
+          <Route path="general/user-roles" element={<UserRolesSetup />} />
+          <Route path="general/fm-user" element={<FMUserSetupNew />} />
+          <Route path="general/fm-user/add" element={<AddFMUserSetupNew />} />
+          <Route path="general/fm-user/:id" element={<EditFMUserSetupNew />} />
+
+          {/* FM Module Category */}
+          <Route path="fm-module/asset-group" element={<AssetGroupPage />} />
+          <Route path="fm-module/master-checklist" element={<PlaceholderPage title="Master Checklist" />} />
+          <Route path="fm-module/meter-category" element={<MeterCategoryType />} />
+
+          {/* Service Desk Category */}
+          <Route path="service-desk/ticket" element={<TicketPage />} />
+
+          {/* CRM Category */}
+          <Route path="crm/contact-category" element={<BusinessSetup />} />
+          <Route path="crm/supplier" element={<SupplierSetup />} />
+          <Route path="crm/visitor" element={<VisitorSetup />} />
+          <Route path="crm/visitor-alerts" element={<PlaceholderPage title="Visitor Alerts" />} />
+
+          {/* Value Added Services Category */}
+          <Route path="value-added/workspace-booking" element={<SetupBookingFacility />} />
+          <Route path="value-added/fnb" element={<PlaceholderPage title="F&B Setup" />} />
+
+          {/* Finance Category */}
+          <Route path="finance/invoice-approval" element={<InvoiceApprovalSetup />} />
+          <Route path="finance/invoice-approval/add" element={<AddInvoiceApprovalsSetup />} />
+          <Route path="finance/invoice-approval/:id" element={<EditInvoiceApprovalsSetup />} />
+          <Route path="finance/billing" element={<BillingSetup />} />
+          <Route path="finance/addresses" element={<AddressesSetup />} />
+          <Route path="finance/addresses/add" element={<AddAddressesSetup />} />
+          <Route path="finance/addresses/:id" element={<EditAddressesSetup />} />
+          <Route path="finance/sac-hsn" element={<PlaceholderPage title="SAC/HSN Setup" />} />
+
+          {/* Booking Management Category */}
+          <Route path="booking/parking" element={<ParkingSetup />} />
+          <Route path="booking/fb-setup" element={<SetupFB />} />
+
+          {/* Transitioning Category */}
+          <Route path="transitioning/permit" element={<PermitSetup />} />
+          <Route path="transitioning/incidents" element={<IncidentSetup />} />
+
+          {/* Compliance Category */}
+          <Route path="compliance/communication" element={<CommunicationSetupControl />} />
+          <Route path="compliance/revamp-compliance" element={<RevampComplianceSetup />} />
+
+          {/* User Tree Category */}
+          <Route path="usertree/usertree" element={<UserTreePage />} />
+        </Route>
+
+        {/* Legacy Admin Routes (for backward compatibility) */}
         <Route path="/admin/addresses-setup" element={<AuthenticatedLayout><AddressesSetup /></AuthenticatedLayout>} />
         <Route path="/admin/add-addresses-setup" element={<AuthenticatedLayout><AddAddressesSetup /></AuthenticatedLayout>} />
         <Route path="/admin/edit-addresses-setup/:id" element={<AuthenticatedLayout><EditAddressesSetup /></AuthenticatedLayout>} />
@@ -500,8 +584,30 @@ function App() {
           <Route path="safety-inspections/:id/edit" element={<CreateSafetyInspection />} />
         </Route>
 
-        {/* Training Module - Placeholder (will be implemented next) */}
-        <Route path="/safety/training" element={<AuthenticatedLayout><PlaceholderPage title="Training" /></AuthenticatedLayout>} />
+        {/* Training Module - Tabbed Layout */}
+        <Route path="/training/module" element={<AuthenticatedLayout><TrainingLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/training/module/dashboard" replace />} />
+          <Route path="dashboard" element={<TrainingDashboard />} />
+          
+          {/* Training Programs */}
+          <Route path="training-programs" element={<TrainingProgramsList />} />
+          <Route path="training-programs/create" element={<CreateTrainingProgram />} />
+          <Route path="training-programs/:id" element={<ViewTrainingProgram />} />
+          <Route path="training-programs/:id/edit" element={<CreateTrainingProgram />} />
+          
+          {/* Training Sessions */}
+          <Route path="training-sessions" element={<TrainingSessionsList />} />
+          <Route path="training-sessions/create" element={<CreateTrainingSession />} />
+          <Route path="training-sessions/:id" element={<ViewTrainingSession />} />
+          <Route path="training-sessions/:id/edit" element={<CreateTrainingSession />} />
+          
+          {/* Training Materials */}
+          <Route path="training-materials" element={<TrainingMaterialsList />} />
+          <Route path="training-materials/:id" element={<ViewTrainingMaterial />} />
+        </Route>
+
+        {/* Training Module - Legacy route (redirects to new structure) */}
+        <Route path="/safety/training" element={<Navigate to="/training/module/dashboard" replace />} />
 
         {/* Permit - Safety Module */}
         <Route path="/safety/permit" element={<AuthenticatedLayout><PermitList /></AuthenticatedLayout>} />

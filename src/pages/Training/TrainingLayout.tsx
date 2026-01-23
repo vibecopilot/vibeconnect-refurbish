@@ -3,26 +3,26 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 
 const tabs = [
-  { id: 'dashboard', label: 'Dashboard', path: '/safety/module/dashboard' },
-  { id: 'safety-measures', label: 'Safety Measures', path: '/safety/module/safety-measures' },
-  { id: 'safety-checklists', label: 'Safety Templates/Test', path: '/safety/module/safety-checklists' },
-  { id: 'safety-inspections', label: 'Safety Inspections', path: '/safety/module/safety-inspections' },
+  { id: 'dashboard', label: 'Dashboard', path: '/training/module/dashboard' },
+  { id: 'training-programs', label: 'Training Programs', path: '/training/module/training-programs' },
+  { id: 'training-sessions', label: 'Training Sessions', path: '/training/module/training-sessions' },
+  { id: 'training-materials', label: 'Training Materials', path: '/training/module/training-materials' },
 ];
 
-const SafetyLayout: React.FC = () => {
+const TrainingLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
   const currentTab = tabs.find(tab => location.pathname.startsWith(tab.path));
   const breadcrumbItems = [
-    { label: 'Safety', path: '/safety/module' },
-    { label: 'Safety Module' },
+    { label: 'Training', path: '/training/module' },
+    { label: 'Training Module' },
     ...(currentTab ? [{ label: currentTab.label }] : []),
   ];
 
   // Default to dashboard if on base route
   React.useEffect(() => {
-    if (location.pathname === '/safety/module' || location.pathname === '/safety/module/') {
+    if (location.pathname === '/training/module' || location.pathname === '/training/module/') {
       navigate(tabs[0].path, { replace: true });
     }
   }, [location.pathname, navigate]);
@@ -58,4 +58,4 @@ const SafetyLayout: React.FC = () => {
   );
 };
 
-export default SafetyLayout;
+export default TrainingLayout;
