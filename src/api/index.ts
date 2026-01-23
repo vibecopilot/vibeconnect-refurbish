@@ -3263,6 +3263,128 @@ export const getOutsideUsers = async (vibeUserId) => {
   }
 };
 
+export const getSetupUsersByUnit = async (type, unit_id) =>
+  axiosInstance.get("users/user_dropdown.json", {
+    params: {
+      token: token,
+      type,
+      unit_id,
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
+  });
+
+export const getSetupUsersByFloor = async (type, floor_id) =>
+  axiosInstance.get("users/user_dropdown.json", {
+    params: {
+      token: token,
+      type,
+      floor_id,
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
+  });
+
+export const getSetupUsersByBuilding = async (type, building_id) =>
+  axiosInstance.get("users/user_dropdown.json", {
+    params: {
+      token: token,
+      type,
+      building_id,
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
+  });
+
+export const getSetupUsersByMemberType = async (type, building_id, ownership) =>
+  axiosInstance.get("users/user_dropdown.json", {
+    params: {
+      token: token,
+      type,
+      building_id,
+      ownership,
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
+  });
+
+export const getUsersByID = async (id) =>
+  axiosInstance.get(`/users.json`, {
+    params: {
+      token: token, 
+      "q[id_eq]": id,
+    },
+  });
+
+  //usertree visitors
+
+
+export const getAllVisitorsByUserId = (
+  userId: number,
+  page = 1,
+  perPage = 10
+) => {
+  return axiosInstance.get('/visitors.json', {
+    params: {
+      token: token,
+      page,
+      per_page: perPage,
+      'q[hosts_user_id_eq]': userId,
+    },
+  });
+};
+
+  //user tree amenities
+export const getAmenitiesBookedByUserId = async (id) => {
+  return axiosInstance.get(`/amenity_bookings.json`, {
+    params: {
+      token: token,
+      "q[user_id_eq]": id,
+    },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache", // Older HTTP/1.0 caches
+      Expires: "0", // Immediately expires the cached response
+    },
+  });
+};
+
+//user tree event
+export const getEventsCreatedByUserId = async (id) =>
+  axiosInstance.get(`/events.json`, {
+    params: {
+      token: token,
+      "q[created_by_id_eq]": id,
+    },
+  });
+
+  export const getBroadCastCreatedByUserId = async (id) =>
+  axiosInstance.get("/notices.json", {
+    params: {
+      token: token,
+      created_by_id: id,
+      // token: "775d6ae27272741669a65456ea10cc56cd4cce2bb99287b6",
+    },
+  });
+
+  export const fetchUserComplaintsById = async (user_id) =>
+  axiosInstance.get(`/pms/admin/complaints.json?q[id_user_eq]=${user_id}`, {
+    params: {
+      token: token,
+    },
+  });
 // vibe Create calendar event
 export const postNewCalendarEvent = async (data) => {
   try {
@@ -3370,6 +3492,14 @@ export const UpdateVibeTask = async (data) => {
     throw error;
   }
 };
+export const getAmenityBookNotification = async () =>
+  axiosInstance.get("/amenity_bookings/notification_amenity.json", {
+    params: {
+      token: token,
+    },
+  });
+
+
 // vibeMyBoardTask
 export const getVibeMyBoardTask = async (userId) => {
   try {
@@ -3627,7 +3757,6 @@ export const getVibeBackground = async (userId) => {
   try {
     const response = await vibeAuth.get(
       `/api/employee/get_bg_image/?user_id=${userId}`,
-
       {
         headers: {
           "Content-Type": "multipart/form-data",

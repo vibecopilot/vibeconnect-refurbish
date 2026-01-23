@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     Search,
     RefreshCw,
@@ -12,7 +12,7 @@ import {
     Eye
 } from 'lucide-react';
 
-import { getBuildings, getFloors, getSetupUsers, getUnits } from '../../../api';
+import { getSetupUsersByBuilding, getFloors, getSetupUsers, getUnits, getBuildings, getSetupUsersByUnit, getSetupUsersByFloor, getSetupUsersByMemberType } from '../../../api';
 
 // Types
 interface Option {
@@ -21,9 +21,8 @@ interface Option {
 }
 
 interface UserRow {
-    id: string;
-    firstname: string;
-    lastname: string;
+    id: number;
+    name: string;
     mobile: string;
     email: string;
     building: string;
@@ -32,6 +31,7 @@ interface UserRow {
     ownership: string;
     units_count: number;
 }
+
 
 const UserTreePage: React.FC = () => {
     const navigate = useNavigate();
@@ -49,6 +49,8 @@ const UserTreePage: React.FC = () => {
     const [floors, setFloors] = useState<Option[]>([]);
     const [units, setUnits] = useState<Option[]>([]);
     const [users, setUsers] = useState<UserRow[]>([]);
+    const { userId } = useParams<{ userId: string }>();
+
 
     // --- 1. Initial Load: Fetch Buildings ---
     useEffect(() => {
@@ -169,87 +171,92 @@ const UserTreePage: React.FC = () => {
     };
 
     const getPrimarySite = (item: any) => {
-    if (Array.isArray(item.user_sites) && item.user_sites.length > 0) {
-        return item.user_sites[0];
-    }
-    return null;
-};
-
-const matchesFilters = (item: any) => {
-    const site = getPrimarySite(item);
-    if (!site) return false;
-
-    if (selectedBuilding && String(site.build_id) !== String(selectedBuilding)) return false;
-    if (selectedFloor && String(site.floor_id) !== String(selectedFloor)) return false;
-    if (selectedUnit && String(site.unit_id) !== String(selectedUnit)) return false;
-
-    return true;
-};
-
-   const handleSearch = async () => {
-    setFetchingData(true);
-    setUsers([]);
-
-    try {
-        // ✅ ALWAYS call API
-        const params = {
-            type: 'users',
-        };
-
-        console.log('Calling API with params:', params);
-
-        const response = await getSetupUsers(params);
-
-        let userList: any[] = [];
-
-        if (Array.isArray(response.data)) {
-            userList = response.data;
-        } else if (response.data?.users) {
-            userList = response.data.users;
+        if (Array.isArray(item.user_sites) && item.user_sites.length > 0) {
+            return item.user_sites[0];
         }
+        return null;
+    };
 
-        // ✅ APPLY FILTER ONLY IF USER SELECTED SOMETHING
-        const hasAnyFilter =
-            selectedBuilding || selectedFloor || selectedUnit;
+    const matchesFilters = (item: any) => {
+        const site = getPrimarySite(item);
+        if (!site) return false;
 
-        const finalUsers = hasAnyFilter
-            ? userList.filter(matchesFilters)
-            : userList;
+        if (selectedBuilding && String(site.build_id) !== String(selectedBuilding)) return false;
+        if (selectedFloor && String(site.floor_id) !== String(selectedFloor)) return false;
+        if (selectedUnit && String(site.unit_id) !== String(selectedUnit)) return false;
 
-        const mappedUsers: UserRow[] = finalUsers.map((item: any) => {
-            const site = getPrimarySite(item);
+        return true;
+    };
 
-            return {
-                id: item.id,
-                firstname: item.firstname || '-',
-                lastname: item.lastname || '-',
-                mobile: item.mobile || '-',
-                email: item.email || '-',
+    const handleSearch = async () => {
+        setFetchingData(true);
+        setUsers([]);
 
-                building: item.building?.name || '-',
-                floor: item.floor?.name || '-',
-                unit: item.unit?.name || '-',
+        try {
+            let response;
+            if (selectedUnit) {
+                response = await getSetupUsersByUnit(
+                    'users',
+                    selectedUnit
+                );
+            }
+            else if (selectedFloor) {
+                response = await getSetupUsersByFloor(
+                    'users',
+                    selectedFloor
+                );
+            }
+            else if (selectedBuilding && memberType) {
+                response = await getSetupUsersByMemberType(
+                    'users',
+                    selectedBuilding,
+                    memberType
+                );
+            }
+            else if (selectedBuilding) {
+                response = await getSetupUsersByBuilding(
+                    'users',
+                    selectedBuilding
+                );
+            }
+            else {
+                return;
+            }
 
-                ownership:
-                    site?.ownership_type ||
-                    site?.ownership ||
-                    item.user_type ||
-                    'Not Assigned',
+            let userList: any[] = [];
 
-                units_count: Array.isArray(item.user_sites)
-                    ? item.user_sites.length
-                    : 0,
-            };
-        });
+            if (Array.isArray(response.data)) {
+                userList = response.data;
+            } else if (response.data?.users) {
+                userList = response.data.users;
+            }
 
-        setUsers(mappedUsers);
+            const mappedUsers: UserRow[] = userList.map((item: any) => {
+                const site = item.sites?.[0];
+                const unit = site?.units?.[0];
 
-    } catch (error) {
-        console.error("Error fetching users:", error);
-    } finally {
-        setFetchingData(false);
-    }
-};
+                return {
+                    id: item.id,
+                    name: item.name || '-',
+                    mobile: item.mobile || '-',
+                    email: item.email || '-',
+                    building: unit?.building || '-',
+                    floor: unit?.floor || '-',
+                    unit: unit?.unit_name || '-',
+                    ownership: unit?.ownership || 'Not Assigned',
+                    units_count: site?.units?.length || 0,
+                };
+            });
+
+
+            setUsers(mappedUsers);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        } finally {
+            setFetchingData(false);
+        }
+    };
+
 
 
     // Handle Reset
@@ -372,8 +379,7 @@ const matchesFilters = (item: any) => {
                                 >
                                     <option value="">All Types</option>
                                     <option value="Owner">Owner</option>
-                                    <option value="Tenant">Vendor</option>
-                                    <option value="Family">Family</option>
+                                    <option value="Tenant">Tenant</option>
                                 </select>
                             </div>
                         </div>
@@ -382,7 +388,7 @@ const matchesFilters = (item: any) => {
                         <button
                             onClick={handleSearch}
                             disabled={fetchingData}
-                            className="h-[38px] flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white text-md font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="h-[38px] flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white text-md font-medium rounded-lg hover:bg-purple-800 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {fetchingData ? (
                                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -425,12 +431,13 @@ const matchesFilters = (item: any) => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => navigate(`/audit/vendor/scheduled/${row.id}`)}
-                                                    className="p-1.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+                                                    onClick={() => navigate(`/setup/user-tree/view/${row.id}`)}
+                                                    className="p-1.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-full"
                                                     title="View"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
+
                                                 <button className="p-1.5 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors" title="Edit">
                                                     <Edit className="w-4 h-4" />
                                                 </button>
@@ -439,9 +446,8 @@ const matchesFilters = (item: any) => {
 
                                         {/* Name */}
                                         <td className="px-6 py-4 text-gray-600">
-                                            {row.firstname} {row.lastname}
+                                            {row.name}
                                         </td>
-
 
                                         {/* Mobile */}
                                         <td className="px-6 py-4 text-gray-600">{row.mobile}</td>

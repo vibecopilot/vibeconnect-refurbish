@@ -1179,7 +1179,6 @@ const TicketList: React.FC = () => {
           />
         )
       )}
-
       {tickets.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 p-4 bg-card border border-border rounded-lg">
           <div className="text-sm text-muted-foreground">

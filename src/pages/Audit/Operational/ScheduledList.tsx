@@ -32,7 +32,7 @@ interface ScheduledAudit {
   }[];
 }
 
-const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
+const statusFilters = ['All','Low','High','Medium'];
 
 const ScheduledList: React.FC = () => {
   const navigate = useNavigate();
@@ -64,24 +64,24 @@ const ScheduledList: React.FC = () => {
       const rawItems = Array.isArray(raw) ? raw : raw.data || raw.audits || raw.items || [];
 
       const items: ScheduledAudit[] = rawItems.map((it: any) => ({
-      id: it.id,
-      audit_for: it.audit_for,
-      activity_name: it.activity_name,
-      description: it.description,
-      checklist_type: it.checklist_type,
-      priority: it.priority,
-      frequency: it.frequency,
-      assign_to: it.assign_to,
-      scan_type: it.scan_type,
-      plan_duration: it.plan_duration,
-      email_trigger_rule: it.email_trigger_rule,
-      look_overdue_task: it.look_overdue_task,
-      start_from: it.start_from,
-      end_at: it.end_at,
-      select_supplier: it.select_supplier,
-      created_at: it.created_at,
-      status: it.status,
-      audit_tasks: it.audit_tasks || [],
+        id: it.id,
+        audit_for: it.audit_for,
+        activity_name: it.activity_name,
+        description: it.description,
+        checklist_type: it.checklist_type,
+        priority: it.priority,
+        frequency: it.frequency,
+        assign_to: it.assign_to,
+        scan_type: it.scan_type,
+        plan_duration: it.plan_duration,
+        email_trigger_rule: it.email_trigger_rule,
+        look_overdue_task: it.look_overdue_task,
+        start_from: it.start_from,
+        end_at: it.end_at,
+        select_supplier: it.select_supplier,
+        created_at: it.created_at,
+        status: it.status,
+        audit_tasks: it.audit_tasks || [],
       }));
 
 
@@ -114,6 +114,19 @@ const ScheduledList: React.FC = () => {
       setLoading(false);
     }
   };
+  const getPriorityClasses = (priority?: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return 'bg-red-100 text-red-700';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'low':
+        return 'bg-green-100 text-green-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -187,165 +200,171 @@ const ScheduledList: React.FC = () => {
     }
   };
 
-const columns = [
-  {
-    name: 'Action',
-    width: '100px',
-    cell: (row: ScheduledAudit) => (
-      <div className="flex items-center">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/audit/operational/scheduled/view/${row.id}`);
-          }}
-          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+  const columns = [
+    {
+      name: 'Action',
+      width: '100px',
+      cell: (row: ScheduledAudit) => (
+        <div className="flex items-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/audit/operational/scheduled/view/${row.id}`);
+            }}
+            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+          >
+            <Eye size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/audit/operational/scheduled/edit/${row.id}`);
+            }}
+            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
+          >
+            <Edit2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+    { name: 'ID', selector: row => row.id, sortable: true, width: '80px' },
+    { name: 'Activity', selector: row => row.activity_name || '-', sortable: true },
+
+    {
+      name: 'Task',
+      selector: row =>
+        row.audit_tasks?.length
+          ? row.audit_tasks.map(t => t.task).join(', ')
+          : '-',
+      sortable: false,
+    },
+
+    {
+      name: 'Assigned To',
+      selector: row => row.assign_to ?? '-',
+      sortable: true,
+    },
+
+    {
+      name: 'Created On',
+      selector: row =>
+        row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : '-',
+      sortable: true,
+    },
+
+    { name: 'Audit For', selector: row => row.audit_for || '-', sortable: true },
+    { name: 'Checklist Type', selector: row => row.checklist_type || '-', sortable: true },
+    {
+      name: 'Priority',
+      sortable: true,
+      cell: (row: ScheduledAudit) => (
+        <span
+          className={`px-2 py-0.5 text-xs rounded-full font-medium ${getPriorityClasses(
+            row.priority
+          )}`}
         >
-          <Eye size={16} />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/audit/operational/scheduled/edit/${row.id}`);
-          }}
-          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
-        >
-          <Edit2 size={16} />
-        </button>
-      </div>
-    ),
-  },
-  { name: 'ID', selector: row => row.id, sortable: true, width: '80px' },
-  { name: 'Activity', selector: row => row.activity_name || '-', sortable: true },
+          {row.priority || '-'}
+        </span>
+      ),
+    },
 
-  {
-    name: 'Task',
-    selector: row =>
-      row.audit_tasks?.length
-        ? row.audit_tasks.map(t => t.task).join(', ')
-        : '-',
-    sortable: false,
-  },
 
-  {
-    name: 'Assigned To',
-    selector: row => row.assign_to ?? '-',
-    sortable: true,
-  },
-
-  {
-    name: 'Created On',
-    selector: row =>
-      row.created_at
-        ? new Date(row.created_at).toLocaleDateString()
-        : '-',
-    sortable: true,
-  },
-
-  { name: 'Status', selector: row => row.status || '-', sortable: true },
-  { name: 'Audit For', selector: row => row.audit_for || '-', sortable: true },
-  { name: 'Checklist Type', selector: row => row.checklist_type || '-', sortable: true },
-  { name: 'Priority', selector: row => row.priority || '-', sortable: true },
-
-  {
-    name: 'Start From',
-    selector: row =>
-      row.start_from
-        ? new Date(row.start_from).toLocaleDateString()
-        : '-',
-    sortable: true,
-  },
-  {
-    name: 'End At',
-    selector: row =>
-      row.end_at
-        ? new Date(row.end_at).toLocaleDateString()
-        : '-',
-    sortable: true,
-  },
-];
+    {
+      name: 'Start From',
+      selector: row =>
+        row.start_from
+          ? new Date(row.start_from).toLocaleDateString()
+          : '-',
+      sortable: true,
+    },
+    {
+      name: 'End At',
+      selector: row =>
+        row.end_at
+          ? new Date(row.end_at).toLocaleDateString()
+          : '-',
+      sortable: true,
+    },
+  ];
 
 
   const AuditCard = ({ item }: { item: ScheduledAudit }) => (
-  <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-shadow">
-    {/* Header */}
-    <div className="flex justify-between items-start mb-3">
-      {/* <div className="p-2 bg-primary/10 rounded-lg"> <ClipboardList className="w-4 h-4 text-primary" /> </div> */}
-      <div>
-        <h3 className="font-semibold text-foreground text-sm">
-          {item.activity_name || 'N/A'}
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          {item.id}
-        </p>
+    <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-shadow">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-3">
+        {/* <div className="p-2 bg-primary/10 rounded-lg"> <ClipboardList className="w-4 h-4 text-primary" /> </div> */}
+        <div>
+          <h3 className="font-semibold text-foreground text-sm">
+            {item.activity_name || 'N/A'}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {item.id}
+          </p>
+        </div>
+        <span
+          className={`px-2 py-0.5 text-xs rounded-full font-medium ${getPriorityClasses(
+            item.priority
+          )}`}
+        >
+          {item.priority || '-'}
+        </span>
+
+
       </div>
 
-      <span
-        className={`px-2 py-0.5 text-xs rounded-full font-medium
-          ${
-            item.status === 'Completed'
-              ? 'bg-green-100 text-green-700'
-              : item.status === 'Pending'
-              ? 'bg-yellow-100 text-yellow-700'
-              : item.status === 'Open'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-700'
-          }`}
-      >
-        {item.status}
-      </span>
-    </div>
+      {/* Body (2-column like image) */}
+      <div className="flex justify-between">
+        <span className="text-muted-foreground text-sm mt-2">Task</span>
+        <span className="font-medium text-sm text-foreground text-right truncate max-w-[140px]">
+          {item.audit_tasks?.length
+            ? item.audit_tasks.map(t => t.task).join(', ')
+            : '-'}
+        </span>
+      </div>
 
-    {/* Body (2-column like image) */}
-    <div className="flex justify-between">
-  <span className="text-muted-foreground">Task</span>
-  <span className="font-medium text-foreground text-right truncate max-w-[140px]">
-    {item.audit_tasks?.length
-      ? item.audit_tasks.map(t => t.task).join(', ')
-      : '-'}
-  </span>
-</div>
-
-<div className="flex justify-between">
-  <span className="text-muted-foreground">Assigned</span>
-  <span className="font-medium text-foreground">
-    {item.assign_to ?? '-'}
-  </span>
-</div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground text-sm mt-1">Assigned</span>
+        <span className="font-medium text-foreground text-sm ">
+          {item.assign_to ?? '-'}
+        </span>
+      </div>
 
 
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Created</span>
-        <span className="font-medium text-foreground">
+        <span className="text-muted-foreground text-sm mt-1">Created</span>
+        <span className="font-medium text-foreground text-sm ">
           {item.created_at
             ? new Date(item.created_at).toLocaleDateString()
             : '-'}
         </span>
       </div>
-  
-    {/* Footer actions */}
-    <div className="flex items-center gap-4 pt-3 mt-3 border-t border-border text-sm">
-      <button
-        onClick={() =>
-          navigate(`/audit/operational/scheduled/view/${item.id}`)
-        }
-        className="flex items-center gap-1 text-purple-700 hover:text-primary"
-      >
-        <Eye className="w-4 h-4" />
-        View
-      </button>
 
-      <button
-        onClick={() =>
-          navigate(`/audit/operational/scheduled/edit/${item.id}`)
-        }
-        className="flex items-center gap-1 text-purple-700 hover:text-primary"
-      >
-        <Edit2 className="w-4 h-4" />
-        Edit
-      </button>
+      {/* Footer actions */}
+      <div className="flex items-center gap-4 pt-3 mt-3 border-t border-border text-sm">
+        <button
+          onClick={() =>
+            navigate(`/audit/operational/scheduled/view/${item.id}`)
+          }
+          className="flex items-center gap-1 text-purple-700 hover:text-primary"
+        >
+          <Eye className="w-4 h-4" />
+          View
+        </button>
+
+        <button
+          onClick={() =>
+            navigate(`/audit/operational/scheduled/edit/${item.id}`)
+          }
+          className="flex items-center gap-1 text-purple-700 hover:text-primary"
+        >
+          <Edit2 className="w-4 h-4" />
+          Edit
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
 
 
   return (
@@ -424,6 +443,7 @@ const columns = [
           onRowClicked={(row: any) => navigate(`/audit/operational/scheduled/view/${row.id}`)}
           selectableRows
           className="mt-4"
+
         />
       )}
 

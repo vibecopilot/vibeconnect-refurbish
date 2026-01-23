@@ -130,7 +130,7 @@ const SetupPage: React.FC = () => {
    {
       id: 'usertree',
       label: 'USER-TREE',
-      modules: [{ id: 'usertree', name: 'User Tree View' }],
+      modules: [{ id: 'usertree', name: 'User Tree View',feature: '' }],
     },
   ];
 

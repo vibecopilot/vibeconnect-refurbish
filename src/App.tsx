@@ -150,6 +150,8 @@ import ScheduledListView from "./pages/Audit/Operational/ScheduledListView";
 import ScheduledListEdit from "./pages/Audit/Operational/ScheduledListEdit";
 import ChecklistsList from "./pages/Audit/Operational/ChecklistsList.tsx";
 import ChecklistView from "./pages/Audit/Operational/ChecklistsView.tsx";
+import UserTreeViewPage from "./pages/Setup/UserTree/UserTreeViewPage.tsx"
+import UserTreePage from "./pages/Setup/UserTree/UserTreePage.tsx";
 
 // Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -222,7 +224,7 @@ function App() {
         <Route path="/asset/create" element={<AuthenticatedLayout><NewAssetExperimental /></AuthenticatedLayout>} />
         <Route path="/asset/:id" element={<AuthenticatedLayout><AssetDetailsBentoView /></AuthenticatedLayout>} />
         <Route path="/asset/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
-        
+
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/amc/create" element={<AuthenticatedLayout><AddAMC /></AuthenticatedLayout>} />
@@ -262,7 +264,7 @@ function App() {
 
         {/* PPM Calendar */}
         <Route path="/asset/ppm-calendar" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        
+
         {/* Stock Items */}
         <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/stock-items/:id" element={<AuthenticatedLayout><ViewStockItem /></AuthenticatedLayout>} />
@@ -404,8 +406,8 @@ function App() {
         <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduledListView /></AuthenticatedLayout>} />
         <Route path="/audit/operational/scheduled/edit/:id" element={<AuthenticatedLayout><ScheduledListEdit /></AuthenticatedLayout>} />
         <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
-        <Route path="/audit/operational/checklists/view/:id" element={<AuthenticatedLayout><ChecklistView/></AuthenticatedLayout>} />
-        <Route path="/audit/operational/checklists/edit/:id" element={<AuthenticatedLayout><ChecklistsList/></AuthenticatedLayout>} />
+        <Route path="/audit/operational/checklists/view/:id" element={<AuthenticatedLayout><ChecklistView /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/checklists/edit/:id" element={<AuthenticatedLayout><ChecklistsList /></AuthenticatedLayout>} />
         <Route path="/audit/vendor/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
 
         {/* Compliance - FM Module */}
@@ -448,6 +450,8 @@ function App() {
         <Route path="/admin/invoice-approval-setup" element={<AuthenticatedLayout><InvoiceApprovalSetup /></AuthenticatedLayout>} />
         <Route path="/admin/add-invoice-approval-setup" element={<AuthenticatedLayout><AddInvoiceApprovalsSetup /></AuthenticatedLayout>} />
         <Route path="/admin/edit-invoice-approval-setup/:id" element={<AuthenticatedLayout><EditInvoiceApprovalsSetup /></AuthenticatedLayout>} />
+        <Route path="/setup/user-tree" element={<AuthenticatedLayout><UserTreePage/></AuthenticatedLayout>} />
+        <Route path="/setup/user-tree/view/:id" element={<AuthenticatedLayout><UserTreeViewPage /></AuthenticatedLayout>} />
 
         {/* Safety Module - Under Development Pages */}
         <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />
@@ -475,7 +479,7 @@ function App() {
           <Route path="deletion-requests" element={<DeletionRequestsList />} />
           <Route path="deleted-prs" element={<DeletedPRsList />} />
         </Route>
-        
+
         {/* Other Bills - Finance Module */}
         <Route path="/finance/other-bills" element={<AuthenticatedLayout><OtherBillsList /></AuthenticatedLayout>} />
         <Route path="/finance/other-bills/create" element={<AuthenticatedLayout><CreateOtherBill /></AuthenticatedLayout>} />

@@ -166,12 +166,12 @@ const VendorScheduledList: React.FC = () => {
             <p className="text-sm text-muted-foreground">ID: {item.id}</p>
           </div>
         </div>
-        <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-          item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-            item.status === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+        <span className={`px-2 py-1 text-xs rounded-full ${item.priority === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+          item.priority === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+            item.priority === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
               'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
           }`}>
-          {item.status || 'N/A'}
+          {item.priority || 'N/A'}
         </span>
       </div>
       <div className="space-y-1 text-sm text-muted-foreground mb-4">
