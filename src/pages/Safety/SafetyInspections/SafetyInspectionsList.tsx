@@ -6,44 +6,38 @@ import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import DataCard from '../../../components/ui/DataCard';
 import StatusBadge from '../../../components/ui/StatusBadge';
 
-// Interface matching API response structure
-interface ServicePR {
+interface SafetyInspection {
   id: string | number;
-  pr_no: string;
-  reference_no: string;
-  contractor_name: string;
-  created_by: string;
-  created_on: string;
-  last_approved_by: string | null;
-  approved_status: string;
-  pr_amount: string | number;
-  is_active: boolean;
+  inspection_id: string;
+  safety_measure_name: string;
+  inspector_name: string;
+  inspection_date: string;
+  status: 'Pending' | 'Completed' | 'Failed';
+  score: number | null;
+  next_inspection_date: string;
 }
 
-const ServicePRList: React.FC = () => {
+const SafetyInspectionsList: React.FC = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchValue, setSearchValue] = useState('');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ServicePR[]>([]);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [data, setData] = useState<SafetyInspection[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage: 10, total: 0, totalPages: 0 });
 
-  // TODO: Replace with actual API call when ready
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Static data for now - replace with API call
-      // const response = await getServicePRList(pagination.page, pagination.perPage, { search: searchValue });
+      // TODO: Replace with actual API call
+      // const response = await getSafetyInspectionsList(pagination.page, pagination.perPage, { search: searchValue });
       // setData(response.data);
       // setPagination(prev => ({ ...prev, total: response.total, totalPages: response.total_pages }));
       
-      // Static placeholder data
-      const mockData: ServicePR[] = [];
+      const mockData: SafetyInspection[] = [];
       setData(mockData);
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }));
     } catch (error) {
-      console.error('Error fetching Service PR:', error);
+      console.error('Error fetching Safety Inspections:', error);
       setData([]);
     } finally {
       setLoading(false);
@@ -59,26 +53,26 @@ const ServicePRList: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handleView = (row: ServicePR) => {
-    navigate(`/finance/procurement/service-pr/${row.id}`);
+  const handleView = (row: SafetyInspection) => {
+    navigate(`/safety/module/safety-inspections/${row.id}`);
   };
 
-  const handleEdit = (row: ServicePR) => {
-    navigate(`/finance/procurement/service-pr/${row.id}/edit`);
+  const handleEdit = (row: SafetyInspection) => {
+    navigate(`/safety/module/safety-inspections/${row.id}/edit`);
   };
 
   const handleAdd = () => {
-    navigate('/finance/procurement/service-pr/create');
-  };
-
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export Service PR');
+    navigate('/safety/module/safety-inspections/create');
   };
 
   const handleFilter = () => {
     // TODO: Implement filter functionality
-    console.log('Filter Service PR');
+    console.log('Filter Safety Inspections');
+  };
+
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    console.log('Export Safety Inspections');
   };
 
   const formatDate = (dateString: string) => {
@@ -94,92 +88,58 @@ const ServicePRList: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: string | number) => {
-    if (!amount) return '0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
   const getStatusType = (status: string): 'pending' | 'approved' | 'rejected' => {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('approved')) return 'approved';
-    if (statusLower.includes('rejected')) return 'rejected';
+    if (status === 'Completed') return 'approved';
+    if (status === 'Failed') return 'rejected';
     return 'pending';
   };
 
-  // Table columns
-  const columns: TableColumn<ServicePR>[] = [
+  const columns: TableColumn<SafetyInspection>[] = [
     {
-      key: 'id',
-      header: 'ID',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value}</span>,
-    },
-    {
-      key: 'pr_no',
-      header: 'PR No.',
+      key: 'inspection_id',
+      header: 'Inspection ID',
       sortable: true,
       render: (value) => <span className="text-sm font-medium text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'reference_no',
-      header: 'Reference No.',
+      key: 'safety_measure_name',
+      header: 'Safety Measure',
       sortable: true,
       render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'contractor_name',
-      header: 'Supplier Name',
+      key: 'inspector_name',
+      header: 'Inspector Name',
       sortable: true,
       render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'created_by',
-      header: 'Created By',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
-    },
-    {
-      key: 'created_on',
-      header: 'Created On',
+      key: 'inspection_date',
+      header: 'Inspection Date',
       sortable: true,
       render: (value) => <span className="text-sm text-muted-foreground">{formatDate(value)}</span>,
     },
     {
-      key: 'last_approved_by',
-      header: 'Last Approved By',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
-    },
-    {
-      key: 'approved_status',
-      header: 'Approved Status',
+      key: 'status',
+      header: 'Status',
       sortable: true,
       render: (value) => <StatusBadge status={getStatusType(String(value))} label={String(value)} />,
     },
     {
-      key: 'pr_amount',
-      header: 'PR Amount',
+      key: 'score',
+      header: 'Score/Result',
       sortable: true,
-      render: (value) => <span className="text-sm font-medium text-foreground">₹{formatCurrency(value)}</span>,
+      render: (value) => (
+        <span className="text-sm font-medium text-foreground">
+          {value !== null && value !== undefined ? `${value}%` : '-'}
+        </span>
+      ),
     },
     {
-      key: 'is_active',
-      header: 'Active/Inactive',
+      key: 'next_inspection_date',
+      header: 'Next Inspection Date',
       sortable: true,
-      render: (value) => {
-        // For Active/Inactive, we'll use a simple badge since StatusBadge doesn't have 'active'/'inactive' types
-        const isActive = Boolean(value);
-        return (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            isActive 
-              ? 'bg-success-light text-success' 
-              : 'bg-error-light text-error'
-          }`}>
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
-        );
-      },
+      render: (value) => <span className="text-sm text-foreground">{formatDate(value)}</span>,
     },
   ];
 
@@ -193,9 +153,8 @@ const ServicePRList: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <ListToolbar
-        searchPlaceholder="Search Service PR..."
+        searchPlaceholder="Search Safety Inspections..."
         searchValue={searchValue}
         onSearchChange={handleSearch}
         viewMode={viewMode}
@@ -204,29 +163,28 @@ const ServicePRList: React.FC = () => {
         onExport={handleExport}
         showViewToggle={true}
         onAdd={handleAdd}
-        addLabel="Create Service PR"
+        addLabel="Create Safety Inspection"
       />
 
-      {/* Content */}
       {viewMode === 'table' ? (
         <>
           <DataTable
             columns={columns}
             data={data}
             getRowId={(row) => String(row.id)}
-            viewPath={(row) => `/finance/procurement/service-pr/${row.id}`}
+            viewPath={(row) => `/safety/module/safety-inspections/${row.id}`}
             onView={handleView}
             showActions={true}
           />
           {data.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 bg-card border-t border-border">
               <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground mb-3">No Service PR Found</p>
+              <p className="text-sm text-muted-foreground mb-3">No Safety Inspections Found</p>
               <button
                 onClick={handleAdd}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
               >
-                Create Service PR
+                Create Safety Inspection
               </button>
             </div>
           )}
@@ -234,13 +192,13 @@ const ServicePRList: React.FC = () => {
       ) : data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
           <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No Service PR Found</h3>
-          <p className="text-muted-foreground mb-4">Get started by creating a new Service PR</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">No Safety Inspections Found</h3>
+          <p className="text-muted-foreground mb-4">Get started by creating a new Safety Inspection</p>
           <button
             onClick={handleAdd}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
           >
-            Create Service PR
+            Create Safety Inspection
           </button>
         </div>
       ) : (
@@ -248,24 +206,21 @@ const ServicePRList: React.FC = () => {
           {data.map((item) => (
             <DataCard
               key={item.id}
-              title={item.pr_no || `PR #${item.id}`}
-              subtitle={item.contractor_name}
-              viewPath={`/finance/procurement/service-pr/${item.id}`}
-              editPath={`/finance/procurement/service-pr/${item.id}/edit`}
+              title={item.inspection_id || `Inspection #${item.id}`}
+              subtitle={item.safety_measure_name}
+              viewPath={`/safety/module/safety-inspections/${item.id}`}
+              editPath={`/safety/module/safety-inspections/${item.id}/edit`}
               fields={[
-                { label: 'Reference No', value: item.reference_no || '-' },
-                { label: 'Created By', value: item.created_by || '-' },
-                { label: 'Created On', value: formatDate(item.created_on) },
-                { label: 'Amount', value: `₹${formatCurrency(item.pr_amount)}` },
-                { label: 'Status', value: item.approved_status },
-                { label: 'Active', value: item.is_active ? 'Yes' : 'No' },
+                { label: 'Inspector', value: item.inspector_name || '-' },
+                { label: 'Date', value: formatDate(item.inspection_date) },
+                { label: 'Status', value: item.status },
+                { label: 'Score', value: item.score !== null ? `${item.score}%` : '-' },
               ]}
             />
           ))}
         </div>
       )}
 
-      {/* Pagination - TODO: Add when API is ready */}
       {data.length > 0 && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div className="text-sm text-muted-foreground">
@@ -293,4 +248,4 @@ const ServicePRList: React.FC = () => {
   );
 };
 
-export default ServicePRList;
+export default SafetyInspectionsList;

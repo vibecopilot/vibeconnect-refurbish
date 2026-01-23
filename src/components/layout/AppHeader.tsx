@@ -68,7 +68,7 @@ const modules: Module[] = [
       { id: 'incident', name: 'Incident Management', path: '/incident' },
       { id: 'safety-module', name: 'Safety Module', path: '/safety/module' },
       { id: 'permit', name: 'Permit', path: '/safety/permit' },
-      { id: 'training', name: 'Training', path: '/safety/training' },
+      { id: 'training', name: 'Training', path: '/training/module' },
     ]
   },
   {

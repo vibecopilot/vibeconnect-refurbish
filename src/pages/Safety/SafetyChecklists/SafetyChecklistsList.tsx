@@ -1,49 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Edit, Loader2, FileText } from 'lucide-react';
+import { Eye, Edit, Play, Loader2, FileText } from 'lucide-react';
 import ListToolbar from '../../../components/ui/ListToolbar';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import DataCard from '../../../components/ui/DataCard';
 import StatusBadge from '../../../components/ui/StatusBadge';
+import { cn } from '../../../lib/utils';
 
-// Interface matching API response structure
-interface ServicePR {
+interface SafetyChecklist {
   id: string | number;
-  pr_no: string;
-  reference_no: string;
-  contractor_name: string;
-  created_by: string;
-  created_on: string;
-  last_approved_by: string | null;
-  approved_status: string;
-  pr_amount: string | number;
-  is_active: boolean;
+  name: string;
+  category: string;
+  questions_count: number;
+  last_updated: string;
+  status: 'Active' | 'Inactive';
+  test_mode: boolean;
 }
 
-const ServicePRList: React.FC = () => {
+const SafetyChecklistsList: React.FC = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchValue, setSearchValue] = useState('');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ServicePR[]>([]);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [data, setData] = useState<SafetyChecklist[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage: 10, total: 0, totalPages: 0 });
 
-  // TODO: Replace with actual API call when ready
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Static data for now - replace with API call
-      // const response = await getServicePRList(pagination.page, pagination.perPage, { search: searchValue });
+      // TODO: Replace with actual API call
+      // const response = await getSafetyChecklistsList(pagination.page, pagination.perPage, { search: searchValue });
       // setData(response.data);
       // setPagination(prev => ({ ...prev, total: response.total, totalPages: response.total_pages }));
       
-      // Static placeholder data
-      const mockData: ServicePR[] = [];
+      const mockData: SafetyChecklist[] = [];
       setData(mockData);
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }));
     } catch (error) {
-      console.error('Error fetching Service PR:', error);
+      console.error('Error fetching Safety Checklists:', error);
       setData([]);
     } finally {
       setLoading(false);
@@ -59,26 +53,30 @@ const ServicePRList: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handleView = (row: ServicePR) => {
-    navigate(`/finance/procurement/service-pr/${row.id}`);
+  const handleView = (row: SafetyChecklist) => {
+    navigate(`/safety/module/safety-checklists/${row.id}`);
   };
 
-  const handleEdit = (row: ServicePR) => {
-    navigate(`/finance/procurement/service-pr/${row.id}/edit`);
+  const handleEdit = (row: SafetyChecklist) => {
+    navigate(`/safety/module/safety-checklists/${row.id}/edit`);
+  };
+
+  const handleExecute = (row: SafetyChecklist) => {
+    navigate(`/safety/module/safety-checklists/${row.id}/execute`);
   };
 
   const handleAdd = () => {
-    navigate('/finance/procurement/service-pr/create');
-  };
-
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export Service PR');
+    navigate('/safety/module/safety-checklists/create');
   };
 
   const handleFilter = () => {
     // TODO: Implement filter functionality
-    console.log('Filter Service PR');
+    console.log('Filter Safety Checklists');
+  };
+
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    console.log('Export Safety Checklists');
   };
 
   const formatDate = (dateString: string) => {
@@ -94,92 +92,57 @@ const ServicePRList: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: string | number) => {
-    if (!amount) return '0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const getStatusType = (status: string): 'pending' | 'approved' | 'rejected' => {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('approved')) return 'approved';
-    if (statusLower.includes('rejected')) return 'rejected';
-    return 'pending';
-  };
-
-  // Table columns
-  const columns: TableColumn<ServicePR>[] = [
+  const columns: TableColumn<SafetyChecklist>[] = [
     {
-      key: 'id',
-      header: 'ID',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value}</span>,
-    },
-    {
-      key: 'pr_no',
-      header: 'PR No.',
+      key: 'name',
+      header: 'Checklist Name',
       sortable: true,
       render: (value) => <span className="text-sm font-medium text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'reference_no',
-      header: 'Reference No.',
+      key: 'category',
+      header: 'Category',
       sortable: true,
       render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'contractor_name',
-      header: 'Supplier Name',
+      key: 'questions_count',
+      header: 'Questions Count',
       sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
+      render: (value) => <span className="text-sm text-foreground">{value || 0}</span>,
     },
     {
-      key: 'created_by',
-      header: 'Created By',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
-    },
-    {
-      key: 'created_on',
-      header: 'Created On',
+      key: 'last_updated',
+      header: 'Last Updated',
       sortable: true,
       render: (value) => <span className="text-sm text-muted-foreground">{formatDate(value)}</span>,
     },
     {
-      key: 'last_approved_by',
-      header: 'Last Approved By',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
-    },
-    {
-      key: 'approved_status',
-      header: 'Approved Status',
-      sortable: true,
-      render: (value) => <StatusBadge status={getStatusType(String(value))} label={String(value)} />,
-    },
-    {
-      key: 'pr_amount',
-      header: 'PR Amount',
-      sortable: true,
-      render: (value) => <span className="text-sm font-medium text-foreground">₹{formatCurrency(value)}</span>,
-    },
-    {
-      key: 'is_active',
-      header: 'Active/Inactive',
+      key: 'status',
+      header: 'Status',
       sortable: true,
       render: (value) => {
-        // For Active/Inactive, we'll use a simple badge since StatusBadge doesn't have 'active'/'inactive' types
-        const isActive = Boolean(value);
+        const isActive = value === 'Active';
         return (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            isActive 
-              ? 'bg-success-light text-success' 
-              : 'bg-error-light text-error'
-          }`}>
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
+          <StatusBadge 
+            status={isActive ? 'approved' : 'rejected'} 
+            label={String(value)} 
+          />
         );
       },
+    },
+    {
+      key: 'test_mode',
+      header: 'Test Mode',
+      sortable: true,
+      render: (value) => (
+        <span className={cn(
+          "px-2 py-1 rounded-full text-xs font-medium",
+          value ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
+        )}>
+          {value ? 'Yes' : 'No'}
+        </span>
+      ),
     },
   ];
 
@@ -193,9 +156,8 @@ const ServicePRList: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <ListToolbar
-        searchPlaceholder="Search Service PR..."
+        searchPlaceholder="Search Safety Checklists..."
         searchValue={searchValue}
         onSearchChange={handleSearch}
         viewMode={viewMode}
@@ -204,29 +166,39 @@ const ServicePRList: React.FC = () => {
         onExport={handleExport}
         showViewToggle={true}
         onAdd={handleAdd}
-        addLabel="Create Service PR"
+        addLabel="Create Safety Checklist"
       />
 
-      {/* Content */}
       {viewMode === 'table' ? (
         <>
           <DataTable
             columns={columns}
             data={data}
             getRowId={(row) => String(row.id)}
-            viewPath={(row) => `/finance/procurement/service-pr/${row.id}`}
+            viewPath={(row) => `/safety/module/safety-checklists/${row.id}`}
             onView={handleView}
             showActions={true}
+            customActions={(row) => (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleExecute(row)}
+                  className="p-1.5 hover:bg-primary/10 rounded text-primary"
+                  title="Execute/Test"
+                >
+                  <Play className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           />
           {data.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 bg-card border-t border-border">
               <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground mb-3">No Service PR Found</p>
+              <p className="text-sm text-muted-foreground mb-3">No Safety Checklists Found</p>
               <button
                 onClick={handleAdd}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
               >
-                Create Service PR
+                Create Safety Checklist
               </button>
             </div>
           )}
@@ -234,13 +206,13 @@ const ServicePRList: React.FC = () => {
       ) : data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
           <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No Service PR Found</h3>
-          <p className="text-muted-foreground mb-4">Get started by creating a new Service PR</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">No Safety Checklists Found</h3>
+          <p className="text-muted-foreground mb-4">Get started by creating a new Safety Checklist</p>
           <button
             onClick={handleAdd}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
           >
-            Create Service PR
+            Create Safety Checklist
           </button>
         </div>
       ) : (
@@ -248,24 +220,21 @@ const ServicePRList: React.FC = () => {
           {data.map((item) => (
             <DataCard
               key={item.id}
-              title={item.pr_no || `PR #${item.id}`}
-              subtitle={item.contractor_name}
-              viewPath={`/finance/procurement/service-pr/${item.id}`}
-              editPath={`/finance/procurement/service-pr/${item.id}/edit`}
+              title={item.name}
+              subtitle={item.category}
+              viewPath={`/safety/module/safety-checklists/${item.id}`}
+              editPath={`/safety/module/safety-checklists/${item.id}/edit`}
               fields={[
-                { label: 'Reference No', value: item.reference_no || '-' },
-                { label: 'Created By', value: item.created_by || '-' },
-                { label: 'Created On', value: formatDate(item.created_on) },
-                { label: 'Amount', value: `₹${formatCurrency(item.pr_amount)}` },
-                { label: 'Status', value: item.approved_status },
-                { label: 'Active', value: item.is_active ? 'Yes' : 'No' },
+                { label: 'Questions', value: String(item.questions_count) },
+                { label: 'Status', value: item.status },
+                { label: 'Test Mode', value: item.test_mode ? 'Yes' : 'No' },
+                { label: 'Last Updated', value: formatDate(item.last_updated) },
               ]}
             />
           ))}
         </div>
       )}
 
-      {/* Pagination - TODO: Add when API is ready */}
       {data.length > 0 && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div className="text-sm text-muted-foreground">
@@ -293,4 +262,4 @@ const ServicePRList: React.FC = () => {
   );
 };
 
-export default ServicePRList;
+export default SafetyChecklistsList;

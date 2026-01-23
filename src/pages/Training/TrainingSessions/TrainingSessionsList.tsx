@@ -1,49 +1,44 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Edit, Loader2, FileText } from 'lucide-react';
+import { Eye, Edit, Calendar, Loader2, FileText, Users, MapPin } from 'lucide-react';
 import ListToolbar from '../../../components/ui/ListToolbar';
 import DataTable, { TableColumn } from '../../../components/ui/DataTable';
 import DataCard from '../../../components/ui/DataCard';
 import StatusBadge from '../../../components/ui/StatusBadge';
 
-// Interface matching API response structure
-interface ServicePR {
+interface TrainingSession {
   id: string | number;
-  pr_no: string;
-  reference_no: string;
-  contractor_name: string;
-  created_by: string;
-  created_on: string;
-  last_approved_by: string | null;
-  approved_status: string;
-  pr_amount: string | number;
-  is_active: boolean;
+  session_name: string;
+  training_program: string;
+  date_time: string;
+  location: string;
+  instructor: string;
+  enrolled_count: number;
+  attended_count: number;
+  status: 'Scheduled' | 'Ongoing' | 'Completed' | 'Cancelled';
 }
 
-const ServicePRList: React.FC = () => {
+const TrainingSessionsList: React.FC = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchValue, setSearchValue] = useState('');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ServicePR[]>([]);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [data, setData] = useState<TrainingSession[]>([]);
   const [pagination, setPagination] = useState({ page: 1, perPage: 10, total: 0, totalPages: 0 });
 
-  // TODO: Replace with actual API call when ready
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Static data for now - replace with API call
-      // const response = await getServicePRList(pagination.page, pagination.perPage, { search: searchValue });
+      // TODO: Replace with actual API call
+      // const response = await getTrainingSessionsList(pagination.page, pagination.perPage, { search: searchValue });
       // setData(response.data);
       // setPagination(prev => ({ ...prev, total: response.total, totalPages: response.total_pages }));
       
-      // Static placeholder data
-      const mockData: ServicePR[] = [];
+      const mockData: TrainingSession[] = [];
       setData(mockData);
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }));
     } catch (error) {
-      console.error('Error fetching Service PR:', error);
+      console.error('Error fetching Training Sessions:', error);
       setData([]);
     } finally {
       setLoading(false);
@@ -59,125 +54,110 @@ const ServicePRList: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handleView = (row: ServicePR) => {
-    navigate(`/finance/procurement/service-pr/${row.id}`);
+  const handleView = (row: TrainingSession) => {
+    navigate(`/training/module/training-sessions/${row.id}`);
   };
 
-  const handleEdit = (row: ServicePR) => {
-    navigate(`/finance/procurement/service-pr/${row.id}/edit`);
+  const handleEdit = (row: TrainingSession) => {
+    navigate(`/training/module/training-sessions/${row.id}/edit`);
   };
 
   const handleAdd = () => {
-    navigate('/finance/procurement/service-pr/create');
-  };
-
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export Service PR');
+    navigate('/training/module/training-sessions/create');
   };
 
   const handleFilter = () => {
     // TODO: Implement filter functionality
-    console.log('Filter Service PR');
+    console.log('Filter Training Sessions');
   };
 
-  const formatDate = (dateString: string) => {
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    console.log('Export Training Sessions');
+  };
+
+  const formatDateTime = (dateString: string) => {
     if (!dateString) return '-';
     try {
-      return new Date(dateString).toLocaleDateString('en-GB', {
+      return new Date(dateString).toLocaleString('en-GB', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       });
     } catch {
       return dateString;
     }
   };
 
-  const formatCurrency = (amount: string | number) => {
-    if (!amount) return '0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed': return 'approved';
+      case 'Ongoing': return 'pending';
+      case 'Scheduled': return 'info';
+      case 'Cancelled': return 'rejected';
+      default: return 'default';
+    }
   };
 
-  const getStatusType = (status: string): 'pending' | 'approved' | 'rejected' => {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('approved')) return 'approved';
-    if (statusLower.includes('rejected')) return 'rejected';
-    return 'pending';
-  };
-
-  // Table columns
-  const columns: TableColumn<ServicePR>[] = [
+  const columns: TableColumn<TrainingSession>[] = [
     {
-      key: 'id',
-      header: 'ID',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value}</span>,
-    },
-    {
-      key: 'pr_no',
-      header: 'PR No.',
+      key: 'session_name',
+      header: 'Session Name',
       sortable: true,
       render: (value) => <span className="text-sm font-medium text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'reference_no',
-      header: 'Reference No.',
+      key: 'training_program',
+      header: 'Training Program',
       sortable: true,
       render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'contractor_name',
-      header: 'Supplier Name',
+      key: 'date_time',
+      header: 'Date & Time',
+      sortable: true,
+      render: (value) => <span className="text-sm text-foreground">{formatDateTime(String(value))}</span>,
+    },
+    {
+      key: 'location',
+      header: 'Location/Venue',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-foreground">{value || '-'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'instructor',
+      header: 'Instructor',
       sortable: true,
       render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
     },
     {
-      key: 'created_by',
-      header: 'Created By',
+      key: 'enrolled_count',
+      header: 'Enrolled/Attended',
       sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-foreground">{row.attended_count || 0}/{value || 0}</span>
+        </div>
+      ),
     },
     {
-      key: 'created_on',
-      header: 'Created On',
-      sortable: true,
-      render: (value) => <span className="text-sm text-muted-foreground">{formatDate(value)}</span>,
-    },
-    {
-      key: 'last_approved_by',
-      header: 'Last Approved By',
-      sortable: true,
-      render: (value) => <span className="text-sm text-foreground">{value || '-'}</span>,
-    },
-    {
-      key: 'approved_status',
-      header: 'Approved Status',
-      sortable: true,
-      render: (value) => <StatusBadge status={getStatusType(String(value))} label={String(value)} />,
-    },
-    {
-      key: 'pr_amount',
-      header: 'PR Amount',
-      sortable: true,
-      render: (value) => <span className="text-sm font-medium text-foreground">₹{formatCurrency(value)}</span>,
-    },
-    {
-      key: 'is_active',
-      header: 'Active/Inactive',
+      key: 'status',
+      header: 'Status',
       sortable: true,
       render: (value) => {
-        // For Active/Inactive, we'll use a simple badge since StatusBadge doesn't have 'active'/'inactive' types
-        const isActive = Boolean(value);
         return (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            isActive 
-              ? 'bg-success-light text-success' 
-              : 'bg-error-light text-error'
-          }`}>
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
+          <StatusBadge 
+            status={getStatusColor(String(value)) as 'pending' | 'approved' | 'rejected'} 
+            label={String(value)} 
+          />
         );
       },
     },
@@ -193,9 +173,8 @@ const ServicePRList: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <ListToolbar
-        searchPlaceholder="Search Service PR..."
+        searchPlaceholder="Search Training Sessions..."
         searchValue={searchValue}
         onSearchChange={handleSearch}
         viewMode={viewMode}
@@ -204,29 +183,28 @@ const ServicePRList: React.FC = () => {
         onExport={handleExport}
         showViewToggle={true}
         onAdd={handleAdd}
-        addLabel="Create Service PR"
+        addLabel="Create Training Session"
       />
 
-      {/* Content */}
       {viewMode === 'table' ? (
         <>
           <DataTable
             columns={columns}
             data={data}
             getRowId={(row) => String(row.id)}
-            viewPath={(row) => `/finance/procurement/service-pr/${row.id}`}
+            viewPath={(row) => `/training/module/training-sessions/${row.id}`}
             onView={handleView}
             showActions={true}
           />
           {data.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 bg-card border-t border-border">
               <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground mb-3">No Service PR Found</p>
+              <p className="text-sm text-muted-foreground mb-3">No Training Sessions Found</p>
               <button
                 onClick={handleAdd}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
               >
-                Create Service PR
+                Create Training Session
               </button>
             </div>
           )}
@@ -234,13 +212,13 @@ const ServicePRList: React.FC = () => {
       ) : data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border">
           <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No Service PR Found</h3>
-          <p className="text-muted-foreground mb-4">Get started by creating a new Service PR</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">No Training Sessions Found</h3>
+          <p className="text-muted-foreground mb-4">Get started by creating a new Training Session</p>
           <button
             onClick={handleAdd}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
           >
-            Create Service PR
+            Create Training Session
           </button>
         </div>
       ) : (
@@ -248,24 +226,22 @@ const ServicePRList: React.FC = () => {
           {data.map((item) => (
             <DataCard
               key={item.id}
-              title={item.pr_no || `PR #${item.id}`}
-              subtitle={item.contractor_name}
-              viewPath={`/finance/procurement/service-pr/${item.id}`}
-              editPath={`/finance/procurement/service-pr/${item.id}/edit`}
+              title={item.session_name}
+              subtitle={item.training_program}
+              viewPath={`/training/module/training-sessions/${item.id}`}
+              editPath={`/training/module/training-sessions/${item.id}/edit`}
               fields={[
-                { label: 'Reference No', value: item.reference_no || '-' },
-                { label: 'Created By', value: item.created_by || '-' },
-                { label: 'Created On', value: formatDate(item.created_on) },
-                { label: 'Amount', value: `₹${formatCurrency(item.pr_amount)}` },
-                { label: 'Status', value: item.approved_status },
-                { label: 'Active', value: item.is_active ? 'Yes' : 'No' },
+                { label: 'Date & Time', value: formatDateTime(item.date_time) },
+                { label: 'Location', value: item.location || '-' },
+                { label: 'Instructor', value: item.instructor || '-' },
+                { label: 'Enrolled/Attended', value: `${item.attended_count || 0}/${item.enrolled_count || 0}` },
+                { label: 'Status', value: item.status },
               ]}
             />
           ))}
         </div>
       )}
 
-      {/* Pagination - TODO: Add when API is ready */}
       {data.length > 0 && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div className="text-sm text-muted-foreground">
@@ -293,4 +269,4 @@ const ServicePRList: React.FC = () => {
   );
 };
 
-export default ServicePRList;
+export default TrainingSessionsList;

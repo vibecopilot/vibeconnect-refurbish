@@ -9,14 +9,14 @@ import Login from "./components/Authentication/Login";
 
 // Pages
 import Dashboard from "./pages/Dashboard/Dashboard";
-import {
-  VMSLayout,
-  VMSVisitors,
-  VMSRegisteredVehicles,
-  VMSStaff,
-  VMSPatrolling,
+import { 
+  VMSLayout, 
+  VMSVisitors, 
+  VMSRegisteredVehicles, 
+  VMSStaff, 
+  VMSPatrolling, 
   VMSGoodsInOut,
-  CreateVisitor,
+  CreateVisitor, 
   ViewVisitor,
   StaffCreate,
   StaffView,
@@ -75,12 +75,39 @@ import {
   BookHotel,
 } from "./pages/Amenities";
 import ViewHotelBooking from "./pages/Amenities/ViewHotelBooking";
+import ViewAmenityBooking from "./pages/Amenities/ViewAmenityBooking";
 import { SpaceBookingsList, BookSpace } from "./pages/SpaceBooking";
 import ViewSpaceBooking from "./pages/SpaceBooking/ViewSpaceBooking";
 import FitoutHub from "./pages/FitOut/FitoutHub";
 import { DocumentsList } from "./pages/Documents";
 import { IncidentList, CreateIncident, ViewIncident } from "./pages/Incident";
 import { PermitList, CreatePermit, ViewPermit } from "./pages/Permit/index";
+import {
+  SafetyLayout,
+  SafetyDashboard,
+  SafetyMeasuresList,
+  CreateSafetyMeasure,
+  ViewSafetyMeasure,
+  SafetyChecklistsList,
+  CreateSafetyChecklist,
+  ViewSafetyChecklist,
+  ExecuteSafetyChecklist,
+  SafetyInspectionsList,
+  CreateSafetyInspection,
+  ViewSafetyInspection,
+} from "./pages/Safety";
+import {
+  TrainingLayout,
+  TrainingDashboard,
+  TrainingProgramsList,
+  CreateTrainingProgram,
+  ViewTrainingProgram,
+  TrainingSessionsList,
+  CreateTrainingSession,
+  ViewTrainingSession,
+  TrainingMaterialsList,
+  ViewTrainingMaterial,
+} from "./pages/Training";
 import { CalendarPage, PlanMyCalendar } from "./pages/Calendar/index";
 import { MailRoomLayout, DeliveryVendorList, CreateVendor, ViewVendor, InboundList, CreateInboundPackage, ViewInbound, OutboundList, CreateOutboundPackage, ViewOutbound } from "./pages/MailRoom/index";
 import { SupplierList, CreateSupplier, ViewSupplier } from "./pages/Supplier";
@@ -95,9 +122,13 @@ import {
   MaterialPRList,
   CreateMaterialPR,
   ServicePRList,
+  CreateServicePR,
   POList,
+  CreatePO,
   WOList,
+  CreateWO,
   GRNSRNList,
+  CreateGRNSRN,
   AutoSavedPRList,
   PendingApprovalsList,
   DeletionRequestsList,
@@ -121,8 +152,10 @@ import SampleResultSurvey from "./pages/SubPages/survey/SampleResultSurvey.tsx";
 import EditTemplateSurvey from "./pages/SubPages/survey/EditTemplateSurvey.tsx";
 import CreateTemplateSurvey from "./pages/SubPages/survey/CreateTemplateSurvey.tsx";
 import SurveyResponseForm from "./pages/SubPages/survey/SurveyResponseForm";
-import SetupPage from "./pages/Setup/SetupPage";
-import AccountPage from "./pages/Setup/Account/AccountPage";
+// Setup Module - Layout and Pages
+import SetupLayout from "./pages/Setup/SetupLayout";
+import FloorPage from "./pages/Setup/Account/FloorPage";
+import UnitPage from "./pages/Setup/Account/UnitPage";
 import UsersPage from "./pages/Setup/users/UsersPage";
 import CreateUserPage from "./pages/Setup/users/CreateUserPage";
 import AddressesSetup from "./pages/Setup/AddressSetup/AddressSetup";
@@ -134,6 +167,23 @@ import EditFMUserSetupNew from "./pages/Setup/EditFMUserSetupNew";
 import InvoiceApprovalSetup from "./pages/Setup/InvoiceApprovalSetupPages/InvoiceApprovalSetup";
 import AddInvoiceApprovalsSetup from "./pages/Setup/InvoiceApprovalSetupPages/AddInvoiceApprovalSetup";
 import EditInvoiceApprovalsSetup from "./pages/Setup/InvoiceApprovalSetupPages/EditInvoiceApprovalSet";
+import UserRolesSetup from "./pages/Setup/UserRolesSetup";
+import AssetGroupPage from "./pages/Setup/AssetStock/AssetGroupPage";
+import MeterCategoryType from "./pages/Setup/MeterCategoryType/MeterCategoryType";
+import TicketPage from "./pages/Setup/Ticket/TicketPage";
+import BusinessSetup from "./pages/SubPages/BusinessSetup";
+import SupplierSetup from "./pages/Setup/Supplier/SupplierSetup";
+import VisitorSetup from "./pages/Setup/VisitorSetup";
+import SetupBookingFacility from "./pages/SubPages/SetupBookingFacility";
+import ParkingSetup from "./pages/Setup/ParkingSetup";
+import FBSetup from "./pages/FoodsBeverage/FBSetup";
+import { SetupFB } from "./pages/FoodsBeverage/SetupFB";
+import BillingSetup from "./pages/Setup/BillingSetup/BillingSetup";
+import PermitSetup from "./pages/Setup/PermitSetup";
+import IncidentSetup from "./pages/Setup/IncidentSetupPages/IncidentSetup";
+import { ComplianceSetup as RevampComplianceSetup } from "./pages/RevampCompliance/ComplianceSetup";
+import CommunicationSetupControl from "./pages/Setup/CommunicationSetup/CommunicationSetupControl";
+import UserTreePage from "./pages/Setup/UserTree/UserTreePage";
 // Placeholder pages for other modules
 // Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -151,7 +201,6 @@ import ScheduledListEdit from "./pages/Audit/Operational/ScheduledListEdit";
 import ChecklistsList from "./pages/Audit/Operational/ChecklistsList.tsx";
 import ChecklistView from "./pages/Audit/Operational/ChecklistsView.tsx";
 import UserTreeViewPage from "./pages/Setup/UserTree/UserTreeViewPage.tsx"
-import UserTreePage from "./pages/Setup/UserTree/UserTreePage.tsx";
 
 // Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -165,14 +214,14 @@ function App() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-right" />
-
+      
       <Routes>
         {/* Login Route - No header */}
         <Route path="/login" element={<Login />} />
-
+        
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
+        
         {/* Dashboard */}
         <Route path="/dashboard" element={<AuthenticatedLayout><Dashboard /></AuthenticatedLayout>} />
 
@@ -185,7 +234,7 @@ function App() {
           <Route path="patrolling" element={<VMSPatrolling />} />
           <Route path="goods-in-out" element={<VMSGoodsInOut />} />
         </Route>
-
+        
         {/* Security Detail/Create/Edit routes */}
         <Route path="/security/visitors/create" element={<AuthenticatedLayout><SecurityVisitorCreate /></AuthenticatedLayout>} />
         <Route path="/security/visitors/self-register" element={<AuthenticatedLayout><SecuritySelfRegistration /></AuthenticatedLayout>} />
@@ -202,7 +251,7 @@ function App() {
           <Route path="patrolling" element={<VMSPatrolling />} />
           <Route path="goods-in-out" element={<VMSGoodsInOut />} />
         </Route>
-
+        
         {/* VMS Detail/Create/Edit routes - outside the tabbed layout */}
         <Route path="/vms/visitors/create" element={<AuthenticatedLayout><CreateVisitor /></AuthenticatedLayout>} />
         <Route path="/vms/visitors/:id" element={<AuthenticatedLayout><ViewVisitor /></AuthenticatedLayout>} />
@@ -225,18 +274,22 @@ function App() {
         <Route path="/asset/:id" element={<AuthenticatedLayout><AssetDetailsBentoView /></AuthenticatedLayout>} />
         <Route path="/asset/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
 
+        {/* Asset Fullscreen Views */}
+        <Route path="/asset/:id/details" element={<AuthenticatedLayout><AssetDetailsFullScreen /></AuthenticatedLayout>} />
+        <Route path="/asset/:id/timeline" element={<AuthenticatedLayout><TimelineFullScreen /></AuthenticatedLayout>} />
+        
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/amc/create" element={<AuthenticatedLayout><AddAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id" element={<AuthenticatedLayout><ViewAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><EditAMC /></AuthenticatedLayout>} />
-
+        
         {/* Meter */}
         <Route path="/asset/meter" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/meter/create" element={<AuthenticatedLayout><NewAssetExperimental /></AuthenticatedLayout>} />
         <Route path="/asset/meter/:id" element={<AuthenticatedLayout><ViewMeter /></AuthenticatedLayout>} />
         <Route path="/asset/meter/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
-
+        
         {/* Checklist */}
         <Route path="/asset/checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/create" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
@@ -248,7 +301,7 @@ function App() {
         {/* Routine Task */}
         <Route path="/asset/routine-task" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/routine-task/:assetId/:id" element={<AuthenticatedLayout><ViewRoutineTask /></AuthenticatedLayout>} />
-
+        
         {/* PPM Checklist */}
         <Route path="/asset/ppm-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-checklist/create" element={<AuthenticatedLayout><CreatePPMChecklist /></AuthenticatedLayout>} />
@@ -256,14 +309,22 @@ function App() {
         <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><EditPPMChecklist /></AuthenticatedLayout>} />
         <Route path="/admin/copy-ppm-checklist/:id" element={<AuthenticatedLayout><CopyChecklistPPM /></AuthenticatedLayout>} />
         <Route path="/assets/associate-ppm-checklist/:id" element={<AuthenticatedLayout><AssociateAssetChecklist /></AuthenticatedLayout>} />
-
+        
         {/* PPM Activity */}
         <Route path="/asset/ppm-activity" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-activity/create" element={<AuthenticatedLayout><CreatePPMActivity /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-activity/:assetId/:id" element={<AuthenticatedLayout><ViewPPMActivity /></AuthenticatedLayout>} />
-
+        
         {/* PPM Calendar */}
         <Route path="/asset/ppm-calendar" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+
+        {/* Master Checklist - Unified Checklist & PPM Checklist */}
+        <Route path="/asset/master-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/create" element={<AuthenticatedLayout><MasterChecklistCreate /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id" element={<AuthenticatedLayout><MasterChecklistView /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id/edit" element={<AuthenticatedLayout><MasterChecklistEdit /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id/copy" element={<AuthenticatedLayout><MasterChecklistCopy /></AuthenticatedLayout>} />
+        <Route path="/asset/master-checklist/:id/associate" element={<AuthenticatedLayout><AssociateMasterChecklist /></AuthenticatedLayout>} />
 
         {/* Stock Items */}
         <Route path="/asset/stock-items" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
@@ -271,17 +332,17 @@ function App() {
         <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><EditStockItem /></AuthenticatedLayout>} />
 
         <Route path="/asset/overview" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-
+        
         {/* QR Code */}
         <Route path="/asset/qr-code" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-
+        
         {/* Soft Services - Service Tab */}
         <Route path="/soft-services" element={<AuthenticatedLayout><ServiceList /></AuthenticatedLayout>} />
         <Route path="/soft-services/create" element={<AuthenticatedLayout><CreateService /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id" element={<AuthenticatedLayout><ViewService /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id/usage" element={<AuthenticatedLayout><ServiceUsageAnalytics /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id/edit" element={<AuthenticatedLayout><CreateService /></AuthenticatedLayout>} />
-
+        
         {/* Soft Services - Checklist Tab */}
         <Route path="/soft-services/checklist" element={<AuthenticatedLayout><ChecklistList /></AuthenticatedLayout>} />
         <Route path="/soft-services/checklist/create" element={<AuthenticatedLayout><SoftServiceCreateChecklist /></AuthenticatedLayout>} />
@@ -289,7 +350,7 @@ function App() {
         <Route path="/soft-services/checklist/:id/edit" element={<AuthenticatedLayout><SoftServiceCreateChecklist /></AuthenticatedLayout>} />
         <Route path="/soft-services/associate-checklist/:id" element={<AuthenticatedLayout><AssociateServiceChecklist /></AuthenticatedLayout>} />
         <Route path="/services/associate-checklist/:id" element={<AuthenticatedLayout><AssociateServiceChecklist /></AuthenticatedLayout>} />
-
+          
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
         <Route path="/soft-services/:serviceId/task/:taskId" element={<AuthenticatedLayout><SoftServiceTaskDetails /></AuthenticatedLayout>} />
@@ -309,7 +370,7 @@ function App() {
         <Route path="/service-desk/:id" element={<AuthenticatedLayout><TicketView /></AuthenticatedLayout>} />
         <Route path="/service-desk/:id/edit" element={<AuthenticatedLayout><TicketEdit /></AuthenticatedLayout>} />
 
-        {/* Contact Book */}
+       {/* Contact Book */}
         <Route path="/contact-book" element={<AuthenticatedLayout><ContactBook /></AuthenticatedLayout>} />
         <Route path="/contact-book/create" element={<AuthenticatedLayout><ContactBookCreate /></AuthenticatedLayout>} />
         <Route path="/contact-book/view/:id" element={<AuthenticatedLayout><ContactBookView /></AuthenticatedLayout>} />
@@ -324,8 +385,8 @@ function App() {
         {/* Amenities Booking - standalone pages */}
         <Route path="/amenities" element={<AuthenticatedLayout><AmenitiesList /></AuthenticatedLayout>} />
         <Route path="/amenities/book" element={<AuthenticatedLayout><BookAmenity /></AuthenticatedLayout>} />
-        <Route path="/amenities/bookings/:id" element={<AuthenticatedLayout><PlaceholderPage title="Booking Details" /></AuthenticatedLayout>} />
-
+        <Route path="/amenities/bookings/:id" element={<AuthenticatedLayout><ViewAmenityBooking /></AuthenticatedLayout>} />
+        
         {/* Hotel Bookings */}
         <Route path="/amenities/hotel" element={<AuthenticatedLayout><HotelBookingsList /></AuthenticatedLayout>} />
         <Route path="/amenities/hotel/book" element={<AuthenticatedLayout><BookHotel /></AuthenticatedLayout>} />
@@ -414,12 +475,12 @@ function App() {
         <Route path="/compliance" element={<AuthenticatedLayout><Compliance /></AuthenticatedLayout>} />
         <Route path="/compliance/add-compliance" element={<AuthenticatedLayout><AddCompliance /></AuthenticatedLayout>} />
         <Route path="/compliance/compliance-details/:id" element={<AuthenticatedLayout><ComplianceDetails /></AuthenticatedLayout>} />
-
+        
         {/* Parking - FM Module */}
         <Route path="/parking" element={<AuthenticatedLayout><Parkings /></AuthenticatedLayout>} />
         <Route path="/admin/book-parking" element={<AuthenticatedLayout><AddParking /></AuthenticatedLayout>} />
         <Route path="/parking/:id" element={<AuthenticatedLayout><ParkingDetails /></AuthenticatedLayout>} />
-
+        
         {/* Survey - FM Module */}
         <Route path="/survey" element={<AuthenticatedLayout><Survey /></AuthenticatedLayout>} />
         <Route path="/admin/add-survey" element={<AuthenticatedLayout><AddSurvey /></AuthenticatedLayout>} />
@@ -436,11 +497,63 @@ function App() {
         {/* Public Survey Response Form - No Auth Required */}
         <Route path="/survey/:id/respond" element={<SurveyResponseForm />} />
 
-        {/* Setup - System Configuration */}
-        <Route path="/setup" element={<AuthenticatedLayout><SetupPage /></AuthenticatedLayout>} />
-        <Route path="/setup/account" element={<AuthenticatedLayout><AccountPage /></AuthenticatedLayout>} />
-        <Route path="/setup/users" element={<AuthenticatedLayout><UsersPage /></AuthenticatedLayout>} />
-        <Route path="/setup/users/create" element={<AuthenticatedLayout><CreateUserPage /></AuthenticatedLayout>} />
+        {/* Setup - System Configuration (Nested Routes) */}
+        <Route path="/setup" element={<AuthenticatedLayout><SetupLayout /></AuthenticatedLayout>}>
+          {/* General Category */}
+          <Route path="general/account/floor" element={<FloorPage />} />
+          <Route path="general/account/unit" element={<UnitPage />} />
+          <Route path="general/users" element={<UsersPage />} />
+          <Route path="general/users/create" element={<CreateUserPage />} />
+          <Route path="general/user-roles" element={<UserRolesSetup />} />
+          <Route path="general/fm-user" element={<FMUserSetupNew />} />
+          <Route path="general/fm-user/add" element={<AddFMUserSetupNew />} />
+          <Route path="general/fm-user/:id" element={<EditFMUserSetupNew />} />
+
+          {/* FM Module Category */}
+          <Route path="fm-module/asset-group" element={<AssetGroupPage />} />
+          <Route path="fm-module/master-checklist" element={<PlaceholderPage title="Master Checklist" />} />
+          <Route path="fm-module/meter-category" element={<MeterCategoryType />} />
+
+          {/* Service Desk Category */}
+          <Route path="service-desk/ticket" element={<TicketPage />} />
+
+          {/* CRM Category */}
+          <Route path="crm/contact-category" element={<BusinessSetup />} />
+          <Route path="crm/supplier" element={<SupplierSetup />} />
+          <Route path="crm/visitor" element={<VisitorSetup />} />
+          <Route path="crm/visitor-alerts" element={<PlaceholderPage title="Visitor Alerts" />} />
+
+          {/* Value Added Services Category */}
+          <Route path="value-added/workspace-booking" element={<SetupBookingFacility />} />
+          <Route path="value-added/fnb" element={<PlaceholderPage title="F&B Setup" />} />
+
+          {/* Finance Category */}
+          <Route path="finance/invoice-approval" element={<InvoiceApprovalSetup />} />
+          <Route path="finance/invoice-approval/add" element={<AddInvoiceApprovalsSetup />} />
+          <Route path="finance/invoice-approval/:id" element={<EditInvoiceApprovalsSetup />} />
+          <Route path="finance/billing" element={<BillingSetup />} />
+          <Route path="finance/addresses" element={<AddressesSetup />} />
+          <Route path="finance/addresses/add" element={<AddAddressesSetup />} />
+          <Route path="finance/addresses/:id" element={<EditAddressesSetup />} />
+          <Route path="finance/sac-hsn" element={<PlaceholderPage title="SAC/HSN Setup" />} />
+
+          {/* Booking Management Category */}
+          <Route path="booking/parking" element={<ParkingSetup />} />
+          <Route path="booking/fb-setup" element={<SetupFB />} />
+
+          {/* Transitioning Category */}
+          <Route path="transitioning/permit" element={<PermitSetup />} />
+          <Route path="transitioning/incidents" element={<IncidentSetup />} />
+
+          {/* Compliance Category */}
+          <Route path="compliance/communication" element={<CommunicationSetupControl />} />
+          <Route path="compliance/revamp-compliance" element={<RevampComplianceSetup />} />
+
+          {/* User Tree Category */}
+          <Route path="usertree/usertree" element={<UserTreePage />} />
+        </Route>
+
+        {/* Legacy Admin Routes (for backward compatibility) */}
         <Route path="/admin/addresses-setup" element={<AuthenticatedLayout><AddressesSetup /></AuthenticatedLayout>} />
         <Route path="/admin/add-addresses-setup" element={<AuthenticatedLayout><AddAddressesSetup /></AuthenticatedLayout>} />
         <Route path="/admin/edit-addresses-setup/:id" element={<AuthenticatedLayout><EditAddressesSetup /></AuthenticatedLayout>} />
@@ -453,9 +566,55 @@ function App() {
         {/* <Route path="/setup/user-tree" element={<AuthenticatedLayout><UserTreePage/></AuthenticatedLayout>} /> */}
         <Route path="/setup/user-tree/view/:id" element={<AuthenticatedLayout><UserTreeViewPage /></AuthenticatedLayout>} />
 
-        {/* Safety Module - Under Development Pages */}
-        <Route path="/safety/module" element={<AuthenticatedLayout><PlaceholderPage title="Safety Module" /></AuthenticatedLayout>} />
-        <Route path="/safety/training" element={<AuthenticatedLayout><PlaceholderPage title="Training" /></AuthenticatedLayout>} />
+        {/* Safety Module - Tabbed Layout */}
+        <Route path="/safety/module" element={<AuthenticatedLayout><SafetyLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/safety/module/dashboard" replace />} />
+          <Route path="dashboard" element={<SafetyDashboard />} />
+          
+          {/* Safety Measures */}
+          <Route path="safety-measures" element={<SafetyMeasuresList />} />
+          <Route path="safety-measures/create" element={<CreateSafetyMeasure />} />
+          <Route path="safety-measures/:id" element={<ViewSafetyMeasure />} />
+          <Route path="safety-measures/:id/edit" element={<CreateSafetyMeasure />} />
+          
+          {/* Safety Checklists */}
+          <Route path="safety-checklists" element={<SafetyChecklistsList />} />
+          <Route path="safety-checklists/create" element={<CreateSafetyChecklist />} />
+          <Route path="safety-checklists/:id" element={<ViewSafetyChecklist />} />
+          <Route path="safety-checklists/:id/edit" element={<CreateSafetyChecklist />} />
+          <Route path="safety-checklists/:id/execute" element={<ExecuteSafetyChecklist />} />
+          
+          {/* Safety Inspections */}
+          <Route path="safety-inspections" element={<SafetyInspectionsList />} />
+          <Route path="safety-inspections/create" element={<CreateSafetyInspection />} />
+          <Route path="safety-inspections/:id" element={<ViewSafetyInspection />} />
+          <Route path="safety-inspections/:id/edit" element={<CreateSafetyInspection />} />
+        </Route>
+
+        {/* Training Module - Tabbed Layout */}
+        <Route path="/training/module" element={<AuthenticatedLayout><TrainingLayout /></AuthenticatedLayout>}>
+          <Route index element={<Navigate to="/training/module/dashboard" replace />} />
+          <Route path="dashboard" element={<TrainingDashboard />} />
+          
+          {/* Training Programs */}
+          <Route path="training-programs" element={<TrainingProgramsList />} />
+          <Route path="training-programs/create" element={<CreateTrainingProgram />} />
+          <Route path="training-programs/:id" element={<ViewTrainingProgram />} />
+          <Route path="training-programs/:id/edit" element={<CreateTrainingProgram />} />
+          
+          {/* Training Sessions */}
+          <Route path="training-sessions" element={<TrainingSessionsList />} />
+          <Route path="training-sessions/create" element={<CreateTrainingSession />} />
+          <Route path="training-sessions/:id" element={<ViewTrainingSession />} />
+          <Route path="training-sessions/:id/edit" element={<CreateTrainingSession />} />
+          
+          {/* Training Materials */}
+          <Route path="training-materials" element={<TrainingMaterialsList />} />
+          <Route path="training-materials/:id" element={<ViewTrainingMaterial />} />
+        </Route>
+
+        {/* Training Module - Legacy route (redirects to new structure) */}
+        <Route path="/safety/training" element={<Navigate to="/training/module/dashboard" replace />} />
 
         {/* Permit - Safety Module */}
         <Route path="/safety/permit" element={<AuthenticatedLayout><PermitList /></AuthenticatedLayout>} />
@@ -471,9 +630,21 @@ function App() {
           <Route path="material-pr/:id" element={<CreateMaterialPR />} />
           <Route path="material-pr/:id/edit" element={<CreateMaterialPR />} />
           <Route path="service-pr" element={<ServicePRList />} />
+          <Route path="service-pr/create" element={<CreateServicePR />} />
+          <Route path="service-pr/:id" element={<CreateServicePR />} />
+          <Route path="service-pr/:id/edit" element={<CreateServicePR />} />
           <Route path="po" element={<POList />} />
+          <Route path="po/create" element={<CreatePO />} />
+          <Route path="po/:id" element={<CreatePO />} />
+          <Route path="po/:id/edit" element={<CreatePO />} />
           <Route path="wo" element={<WOList />} />
+          <Route path="wo/create" element={<CreateWO />} />
+          <Route path="wo/:id" element={<CreateWO />} />
+          <Route path="wo/:id/edit" element={<CreateWO />} />
           <Route path="grn-srn" element={<GRNSRNList />} />
+          <Route path="grn-srn/create" element={<CreateGRNSRN />} />
+          <Route path="grn-srn/:id" element={<CreateGRNSRN />} />
+          <Route path="grn-srn/:id/edit" element={<CreateGRNSRN />} />
           <Route path="auto-saved-pr" element={<AutoSavedPRList />} />
           <Route path="pending-approvals" element={<PendingApprovalsList />} />
           <Route path="deletion-requests" element={<DeletionRequestsList />} />
