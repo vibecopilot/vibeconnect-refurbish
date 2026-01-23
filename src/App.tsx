@@ -450,7 +450,7 @@ function App() {
         <Route path="/admin/invoice-approval-setup" element={<AuthenticatedLayout><InvoiceApprovalSetup /></AuthenticatedLayout>} />
         <Route path="/admin/add-invoice-approval-setup" element={<AuthenticatedLayout><AddInvoiceApprovalsSetup /></AuthenticatedLayout>} />
         <Route path="/admin/edit-invoice-approval-setup/:id" element={<AuthenticatedLayout><EditInvoiceApprovalsSetup /></AuthenticatedLayout>} />
-        <Route path="/setup/user-tree" element={<AuthenticatedLayout><UserTreePage/></AuthenticatedLayout>} />
+        {/* <Route path="/setup/user-tree" element={<AuthenticatedLayout><UserTreePage/></AuthenticatedLayout>} /> */}
         <Route path="/setup/user-tree/view/:id" element={<AuthenticatedLayout><UserTreeViewPage /></AuthenticatedLayout>} />
 
         {/* Safety Module - Under Development Pages */}
