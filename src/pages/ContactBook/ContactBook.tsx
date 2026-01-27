@@ -41,18 +41,42 @@ interface Contact {
     generic_sub_info_name?: string;
 }
 
+interface ContactApiResponse {
+    contact_books?: Contact[];
+    total_pages?: number;
+    total_count?: number;
+    count?: number;
+}
+
+// --- Custom Debounce Hook ---
+function useDebounce(value: string, delay: number) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
 const ContactBookList: React.FC = () => {
     const navigate = useNavigate();
 
-    // State for all records (for client-side search)
-    const [allContacts, setAllContacts] = useState<Contact[]>([]);
-
-    // State for displayed records (paginated + filtered)
+    // State for displayed records (paginated + filtered from server)
     const [rows, setRows] = useState<Contact[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Search input value
     const [search, setSearch] = useState("");
+
+    // Debounced search value for API calls
+    const debouncedSearch = useDebounce(search, 500);
 
     const [view, setView] = useState<"grid" | "table">("grid");
     const [exporting, setExporting] = useState(false);
@@ -67,30 +91,67 @@ const ContactBookList: React.FC = () => {
         totalPages: 0,
     });
 
-    /* ---------- FETCH ALL CONTACTS FOR CLIENT-SIDE FILTERING ---------- */
-    // This mimics the fetchAllTickets logic in TicketList
-    const fetchAllContacts = useCallback(async () => {
+ const filteredRows = useMemo(() => {
+  if (!debouncedSearch) return rows;
+
+  const q = debouncedSearch.toLowerCase();
+
+  return rows.filter((r) =>
+    r.company_name?.toLowerCase().includes(q) ||
+    r.contact_person_name?.toLowerCase().includes(q) ||
+    String(r.mobile ?? "").includes(q) ||   // ✅ FIX HERE
+    r.primary_email?.toLowerCase().includes(q) ||
+    r.generic_info_name?.toLowerCase().includes(q) ||
+    r.generic_sub_info_name?.toLowerCase().includes(q)
+  );
+}, [rows, debouncedSearch]);
+
+
+
+    /* ---------- FETCH CONTACTS (SERVER-SIDE) ---------- */
+    const fetchContacts = useCallback(async () => {
         try {
             setLoading(true);
-            // Fetch a large number (e.g., 1000) to get all records for filtering
-            // Adjust 1000 if you have more records in the DB
-            const res = await getContactBook(1, 1000, "");
 
-            const data = res.data;
-            const list = data?.contact_books ?? data ?? [];
+            const res = await getContactBook(
+                pagination.page,
+                pagination.perPage,
+                debouncedSearch
+            );
 
-            setAllContacts(list);
-            setLoading(false);
+            const data: ContactApiResponse = res.data;
+            const list = data?.contact_books ?? [];
+
+            setLoading(true);
+            setRows(list);
+
+            setPagination((prev) => ({
+                ...prev,
+                total: data?.total_count ?? list.length,
+                totalPages:
+                    data?.total_pages ??
+                    Math.ceil((data?.total_count ?? list.length) / prev.perPage),
+            }));
         } catch (e) {
-            console.error("Fetch error:", e);
+            console.error(e);
+            toast.error("Failed to load contacts");
+        } finally {
             setLoading(false);
         }
-    }, []);
+    }, [pagination.page, pagination.perPage, debouncedSearch]);
 
-    // Fetch all contacts on mount
+
+    // Fetch on mount (initial load)
     useEffect(() => {
-        fetchAllContacts();
-    }, [fetchAllContacts]);
+        fetchContacts();
+    }, [fetchContacts]);
+
+    useEffect(() => {
+        setPagination((prev) => ({
+            ...prev,
+            page: 1,
+        }));
+    }, [debouncedSearch]);
 
     useEffect(() => {
         setPagination((prev) => ({
@@ -100,58 +161,19 @@ const ContactBookList: React.FC = () => {
         }));
     }, [view]);
 
-    useEffect(() => {
-        setPagination(prev => ({ ...prev, page: 1 }));
-    }, [search]);
-
-    useEffect(() => {
-        let filtered = [...allContacts];
-
-        // Filter based on search input
-        if (search) {
-            const lowerSearch = search.toLowerCase();
-            filtered = filtered.filter(item => {
-                const mobile = item.mobile ? String(item.mobile) : "";
-                const landline = item.landline_no ? String(item.landline_no) : "";
-
-                return (
-                    item.company_name?.toLowerCase().includes(lowerSearch) ||
-                    item.contact_person_name?.toLowerCase().includes(lowerSearch) ||
-                    item.primary_email?.toLowerCase().includes(lowerSearch) ||
-                    mobile.includes(search) ||
-                    landline.includes(search)
-                );
-            });
-
-        }
-
-        // Update displayed tickets with pagination
-        const startIndex = (pagination.page - 1) * pagination.perPage;
-        const endIndex = startIndex + pagination.perPage;
-        const paginatedData = filtered.slice(startIndex, endIndex);
-
-        setRows(paginatedData);
-        setPagination((prev) => ({
-            ...prev,
-            total: filtered.length,
-            totalPages: Math.ceil(filtered.length / prev.perPage),
-        }));
-    }, [search, pagination.page, pagination.perPage, allContacts]);
-
-    /* ---------- PAGINATION LOGIC (Keep for UI interaction) ---------- */
-    const paginatedRows = useMemo(() => {
-        return rows;
-    }, [rows]);
-
     /* ---------- EXPORT TO EXCEL FUNCTION ---------- */
     const exportToExcel = async () => {
         try {
             setExporting(true);
             toast.loading('Preparing export...');
 
-            // Filter current data for export based on search
-            // We export the currently FILTERED list (like what user sees)
-            const formattedData = rows.map((contact) => ({
+            // Fetch ALL records matching the current search for export
+            // We use a large limit (e.g., 10000) to get everything
+            const res = await getContactBook(1, 10000, debouncedSearch);
+            const data: ContactApiResponse = res.data;
+            const allContacts = data?.contact_books ?? data ?? [];
+
+            const formattedData = allContacts.map((contact) => ({
                 'Company Name': contact.company_name || '-',
                 'Contact Person': contact.contact_person_name || '-',
                 'Mobile': contact.mobile || '-',
@@ -275,8 +297,8 @@ const ContactBookList: React.FC = () => {
                     {/* Export */}
                     <button
                         onClick={exportToExcel}
-                        disabled={exporting || rows.length === 0}
-                        className={`flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold ${exporting || rows.length === 0
+                        disabled={exporting}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-md text-sm font-semibold ${exporting
                             ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                             : "bg-purple-600 text-white hover:bg-purple-700"
                             }`}
@@ -307,7 +329,7 @@ const ContactBookList: React.FC = () => {
             {/* ---------- GRID VIEW ---------- */}
             {!loading && view === "grid" && rows.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {paginatedRows.map((row) => (
+                    {filteredRows.map((row) => (
                         <div
                             key={row.id}
                             className="bg-white border rounded-xl p-4 relative hover:shadow-md transition-shadow"
@@ -370,7 +392,7 @@ const ContactBookList: React.FC = () => {
             )}
 
             {/* ---------- TABLE VIEW ---------- */}
-            {!loading && view === "table" && rows.length > 0 && (
+            {!loading && view === "table" && filteredRows.length > 0 && (
                 <div className="border rounded-md bg-white overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-100 text-gray-500 uppercase text-[11px]">
@@ -395,7 +417,7 @@ const ContactBookList: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {paginatedRows.map((r) => (
+                            {filteredRows.map((r) => (
                                 <tr key={r.id} className="border-b hover:bg-gray-50">
                                     <td className="px-3 py-2 text-purple-600">
                                         <div className="flex gap-2">
@@ -452,7 +474,7 @@ const ContactBookList: React.FC = () => {
             }
 
             {
-                !loading && rows.length > 0 && (
+                !loading && filteredRows.length > 0 && (
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white border rounded-md mt-4">
 
                         {/* Records info */}

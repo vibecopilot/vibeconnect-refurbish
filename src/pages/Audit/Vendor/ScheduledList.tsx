@@ -1,207 +1,374 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Edit2, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ListToolbar from '../../../components/list/ListToolbar';
 import DataTable from '../../../components/table/DataTable';
-import { getRoutineTask } from '../../../api';
+import { getAuditScheduled, getChecklist } from '../../../api';
 import { useViewMode } from '../../../hooks/useViewMode';
+
 
 interface ScheduledAudit {
   id: number;
+  audit_for: string;
   activity_name: string;
-  task_name: string;
-  assigned_to: string;
-  assigned_to_name: string;
-  created_at: string;
-  status: string;
-  audit_for: String;
+  description: string;
   checklist_type: string;
   priority: string;
-  category_id: string;
+  frequency: string;
+  assign_to: number | null;
+  scan_type: string;
+  plan_duration: number;
+  email_trigger_rule: string;
+  look_overdue_task: string;
   start_from: string;
   end_at: string;
-  supplier_id: string;
-
+  select_supplier: number | null;
+  created_at: string;
+  status?: string;
+  audit_tasks: {
+    id: number;
+    task: string;
+  }[];
 }
-const statusFilters = ['All', 'Open', 'Closed', 'Pending', 'Completed'];
 
-const VendorScheduledList: React.FC = () => {
+const statusFilters = ['All','Low','High','Medium'];
+
+const ScheduledList: React.FC = () => {
   const navigate = useNavigate();
   const { viewMode, setViewMode, recordsPerPage } = useViewMode();
   const [data, setData] = useState<ScheduledAudit[]>([]);
-  const [filteredData, setFilteredData] = useState<ScheduledAudit[]>([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const fetchData = useCallback(async () => {
+  // Server-side pagination (ContactBook-style)
+  const getDefaultPerPage = (mode: 'grid' | 'list') => (mode === 'grid' ? 12 : 10);
+
+  const [pagination, setPagination] = useState({
+    page: 1,
+    perPage: getDefaultPerPage(viewMode),
+    total: 0,
+    totalPages: 1,
+  });
+
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await getRoutineTask();
-      const items = Array.isArray(response?.data) ? response.data : [];
-      setData(items);
-      setFilteredData(items);
+      const params: any = {};
+      if (searchText) params.search = searchText;
+      if (activeFilter && activeFilter !== 'All') params.status = activeFilter;
+
+      const response = await getAuditScheduled(pagination.page, pagination.perPage, params);
+      const raw = response?.data;
+      const rawItems = Array.isArray(raw) ? raw : raw.data || raw.audits || raw.items || [];
+
+      const items: ScheduledAudit[] = rawItems.map((it: any) => ({
+        id: it.id,
+        audit_for: it.audit_for,
+        activity_name: it.activity_name,
+        description: it.description,
+        checklist_type: it.checklist_type,
+        priority: it.priority,
+        frequency: it.frequency,
+        assign_to: it.assign_to,
+        scan_type: it.scan_type,
+        plan_duration: it.plan_duration,
+        email_trigger_rule: it.email_trigger_rule,
+        look_overdue_task: it.look_overdue_task,
+        start_from: it.start_from,
+        end_at: it.end_at,
+        select_supplier: it.select_supplier,
+        created_at: it.created_at,
+        status: it.status,
+        audit_tasks: it.audit_tasks || [],
+      }));
+
+
+      // Determine if API provided pagination metadata
+      const hasServerPagination = raw?.total_pages !== undefined || raw?.current_page !== undefined || raw?.total !== undefined || raw?.total_count !== undefined || raw?.count !== undefined;
+
+      let total = raw?.count || raw?.total || raw?.total_count || items.length;
+      let tPages = raw?.total_pages || Math.max(1, Math.ceil(total / pagination.perPage));
+      const currentPage = raw?.current_page || pagination.page;
+
+      // Client-side fallback: if API returned all items (no pagination metadata), slice items locally
+      if (!hasServerPagination) {
+        total = items.length;
+        tPages = Math.max(1, Math.ceil(total / pagination.perPage));
+        const start = (pagination.page - 1) * pagination.perPage;
+        const end = start + pagination.perPage;
+        const pageItems = items.slice(start, end);
+        setData(pageItems);
+      } else {
+        setData(items);
+      }
+
+      setPagination((prev) => ({ ...prev, total, totalPages: tPages, page: currentPage }));
     } catch (error) {
-      console.error('Error fetching vendor scheduled audits:', error);
-      toast.error('Failed to fetch vendor scheduled audits');
+      console.error(error);
+      toast.error('Failed to fetch scheduled audits');
       setData([]);
-      setFilteredData([]);
+      setPagination((prev) => ({ ...prev, total: 0, totalPages: 1 }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
+  const getPriorityClasses = (priority?: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return 'bg-red-100 text-red-700';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'low':
+        return 'bg-green-100 text-green-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [pagination.page, pagination.perPage, searchText, activeFilter]);
+
+  // Keep perPage in sync with view mode
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, perPage: getDefaultPerPage(viewMode), page: 1 }));
+  }, [viewMode]);
 
   const handleSearch = (value: string) => {
     setSearchText(value);
-    applyFilters(value, activeFilter);
+    setPagination((p) => ({ ...p, page: 1 }));
   };
 
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
-    applyFilters(searchText, filter);
+    setPagination((p) => ({ ...p, page: 1 }));
   };
 
-  const applyFilters = (search: string, filter: string) => {
-    let filtered = Array.isArray(data) ? data : [];
 
-    if (search) {
-      filtered = filtered.filter((item) =>
-        item.activity_name?.toLowerCase().includes(search.toLowerCase()) ||
-        item.task_name?.toLowerCase().includes(search.toLowerCase())
-      );
+  const handleExport = async () => {
+    try {
+      const response = await getAuditScheduled(1, 1000); // Fetch up to 1000 records for export
+      const raw = response?.data;
+      const allItems = Array.isArray(raw) ? raw : raw.data || raw.audits || [];
+
+      const dataToExport = allItems.map((it: any) => ({
+        id: it.id,
+        activity_name: it.activity_name || it.activity || it.name || '',
+        task: (it.tasks && it.tasks.length > 0 && it.tasks[0].name) || it.task_name || it.task || '',
+        assigned_to: it.assign_to || (it.assigned && it.assigned.id) || '',
+        created_at: it.created_at || it.created_on || '',
+        status: it.status || it.audit_status || '',
+        audit_for: it.audit_for || '',
+        checklist_type: it.checklist_type || '',
+        priority: it.priority || '',
+        category_id: it.category_id || '',
+        start_from: it.start_from ? new Date(it.start_from).toLocaleDateString() : '',
+        end_at: it.end_at ? new Date(it.end_at).toLocaleDateString() : '',
+        supplier_id: it.supplier_id || ''
+      }));
+
+      const csvContent = [
+        ['ID', 'Activity', 'Task', 'Assigned To', 'Created On', 'Status'].join(','),
+        ...dataToExport.map(item => [
+          item.id,
+          item.activity_name || '',
+          item.task || '',
+          item.assign_to || '',
+          item.created_at ? new Date(item.created_at).toLocaleDateString() : '',
+          item.status || ''
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'operational_scheduled_audits.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Exported successfully');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to export audits');
     }
-
-    if (filter !== 'All') {
-      filtered = filtered.filter((item) =>
-        item.status?.toLowerCase() === filter.toLowerCase()
-      );
-    }
-
-    setFilteredData(filtered);
-  };
-
-  const handleExport = () => {
-    const dataToExport = Array.isArray(filteredData) ? filteredData : [];
-    const csvContent = [
-      ['ID', 'Activity', 'Task', 'Assigned To', 'Created On', 'Status'].join(','),
-      ...dataToExport.map(item => [
-        item.id,
-        item.activity_name || '',
-        item.task_name || '',
-        item.assigned_to_name || '',
-        item.created_at ? new Date(item.created_at).toLocaleDateString() : '',
-        item.status || '',
-        item.audit_for || '',
-        item.checklist_type || '',
-        item.priority || '',
-        item.category_id || '',
-        item.start_from ? new Date(item.start_from).toLocaleDateString() : '',
-        item.end_at ? new Date(item.end_at).toLocaleDateString() : '',
-        item.supplier_id || ''
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'vendor_scheduled_audits.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('Exported successfully');
   };
 
   const columns = [
     {
-      name: 'ACTION',
+      name: 'Action',
       width: '100px',
       cell: (row: ScheduledAudit) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <button
-            onClick={() => navigate(`/audit/vendor/scheduled/${row.id}`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-            title="View"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/audit/operational/scheduled/view/${row.id}`);
+            }}
+            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
           >
             <Eye size={16} />
           </button>
           <button
-            onClick={() => navigate(`/audit/vendor/scheduled/${row.id}/edit`)}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-            title="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/audit/operational/scheduled/edit/${row.id}`);
+            }}
+            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-primary"
           >
             <Edit2 size={16} />
           </button>
         </div>
       ),
     },
-    { name: 'ID', selector: (row: ScheduledAudit) => row.id, sortable: true, width: '80px' },
-    { name: 'ACTIVITY', selector: (row: ScheduledAudit) => row.activity_name || '-', sortable: true },
-    { name: 'TASK', selector: (row: ScheduledAudit) => row.task_name || '-', sortable: true },
-    { name: 'ASSIGNED TO', selector: (row: ScheduledAudit) => row.assigned_to_name || '-', sortable: true },
-    { name: 'STATUS', selector: (row: ScheduledAudit) => row.status || '-', sortable: true },
-    { name: 'TASK FOR', selector: (row: ScheduledAudit) => row.audit_for || '-', sortable: true },
-    { name: 'CHECKLIST TYPE', selector: (row: ScheduledAudit) => row.checklist_type || '-', sortable: true },
-    { name: 'PRIORITY', selector: (row: ScheduledAudit) => row.priority || '-', sortable: true },
-    { name: 'CATEGORY ID', selector: (row: ScheduledAudit) => row.category_id || '-', sortable: true },
-    { name: 'START FROM', selector: (row: ScheduledAudit) => row.start_from ? new Date(row.start_from).toLocaleDateString() : '-', sortable: true },
-    { name: 'END AT', selector: (row: ScheduledAudit) => row.end_at ? new Date(row.end_at).toLocaleDateString() : '-', sortable: true },
-    { name: 'SUPPLIER ID', selector: (row: ScheduledAudit) => row.supplier_id || '-', sortable: true },
-    { name: 'CREATED ON', selector: (row: ScheduledAudit) => row.created_at ? new Date(row.created_at).toLocaleDateString() : '-', sortable: true },
+    { name: 'ID', selector: row => row.id, sortable: true, width: '80px' },
+    { name: 'Activity', selector: row => row.activity_name || '-', sortable: true },
+
+    {
+      name: 'Task',
+      selector: row =>
+        row.audit_tasks?.length
+          ? row.audit_tasks.map(t => t.task).join(', ')
+          : '-',
+      sortable: false,
+    },
+
+    {
+      name: 'Assigned To',
+      selector: row => row.assign_to ?? '-',
+      sortable: true,
+    },
+
+    {
+      name: 'Created On',
+      selector: row =>
+        row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : '-',
+      sortable: true,
+    },
+
+    { name: 'Audit For', selector: row => row.audit_for || '-', sortable: true },
+    { name: 'Checklist Type', selector: row => row.checklist_type || '-', sortable: true },
+    {
+      name: 'Priority',
+      sortable: true,
+      cell: (row: ScheduledAudit) => (
+        <span
+          className={`px-2 py-0.5 text-xs rounded-full font-medium ${getPriorityClasses(
+            row.priority
+          )}`}
+        >
+          {row.priority || '-'}
+        </span>
+      ),
+    },
+
+
+    {
+      name: 'Start From',
+      selector: row =>
+        row.start_from
+          ? new Date(row.start_from).toLocaleDateString()
+          : '-',
+      sortable: true,
+    },
+    {
+      name: 'End At',
+      selector: row =>
+        row.end_at
+          ? new Date(row.end_at).toLocaleDateString()
+          : '-',
+      sortable: true,
+    },
   ];
 
+
   const AuditCard = ({ item }: { item: ScheduledAudit }) => (
-    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-shadow">
+      {/* Header */}
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <ClipboardList className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{item.activity_name || 'N/A'}</h3>
-            <p className="text-sm text-muted-foreground">ID: {item.id}</p>
-          </div>
+        {/* <div className="p-2 bg-primary/10 rounded-lg"> <ClipboardList className="w-4 h-4 text-primary" /> </div> */}
+        <div>
+          <h3 className="font-semibold text-foreground text-sm">
+            {item.activity_name || 'N/A'}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {item.id}
+          </p>
         </div>
-        <span className={`px-2 py-1 text-xs rounded-full ${item.priority === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-          item.priority === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-            item.priority === 'Open' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-          }`}>
-          {item.priority || 'N/A'}
+        <span
+          className={`px-2 py-0.5 text-xs rounded-full font-medium ${getPriorityClasses(
+            item.priority
+          )}`}
+        >
+          {item.priority || '-'}
+        </span>
+
+
+      </div>
+
+      {/* Body (2-column like image) */}
+      <div className="flex justify-between">
+        <span className="text-muted-foreground text-sm mt-2">Task</span>
+        <span className="font-medium text-sm text-foreground text-right truncate max-w-[140px]">
+          {item.audit_tasks?.length
+            ? item.audit_tasks.map(t => t.task).join(', ')
+            : '-'}
         </span>
       </div>
-      <div className="space-y-1 text-sm text-muted-foreground mb-4">
-        <p>Task: {item.task_name || '-'}</p>
-        <p>Assigned To: {item.assigned_to_name || '-'}</p>
-        <p>Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</p>
+
+      <div className="flex justify-between">
+        <span className="text-muted-foreground text-sm mt-1">Assigned</span>
+        <span className="font-medium text-foreground text-sm ">
+          {item.assign_to ?? '-'}
+        </span>
       </div>
-      <div className="flex justify-end gap-2 pt-3 border-t border-border">
+
+
+      <div className="flex justify-between">
+        <span className="text-muted-foreground text-sm mt-1">Created</span>
+        <span className="font-medium text-foreground text-sm ">
+          {item.created_at
+            ? new Date(item.created_at).toLocaleDateString()
+            : '-'}
+        </span>
+      </div>
+
+      {/* Footer actions */}
+      <div className="flex items-center gap-4 pt-3 mt-3 border-t border-border text-sm">
         <button
-          onClick={() => navigate(`/audit/vendor/scheduled/${item.id}`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-          title="View"
+          onClick={() =>
+            navigate(`/audit/operational/scheduled/view/${item.id}`)
+          }
+          className="flex items-center gap-1 text-purple-700 hover:text-primary"
         >
-          <Eye size={16} />
+          <Eye className="w-4 h-4" />
+          View
         </button>
+
         <button
-          onClick={() => navigate(`/audit/vendor/scheduled/${item.id}/edit`)}
-          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-primary transition-colors"
-          title="Edit"
+          onClick={() =>
+            navigate(`/audit/operational/scheduled/edit/${item.id}`)
+          }
+          className="flex items-center gap-1 text-purple-700 hover:text-primary"
         >
-          <Edit2 size={16} />
+          <Edit2 className="w-4 h-4" />
+          Edit
         </button>
       </div>
     </div>
   );
 
-  const safeFilteredData = Array.isArray(filteredData) ? filteredData : [];
 
   return (
-    <div>
+    <div className='flex flex-col w-full '>
       <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
         {/* Left side - Status Filters */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -239,8 +406,8 @@ const VendorScheduledList: React.FC = () => {
           onViewModeChange={setViewMode}
           showViewToggle
           showAddButton
-          addButtonLabel="Add"
-          onAddClick={() => navigate('/audit/vendor/scheduled/create')}
+          addButtonLabel="Add Audit"
+          onAddClick={() => navigate('/audit/operational/scheduled/create')}
           showFilter={false}
           showExport
           onExportClick={handleExport}
@@ -248,31 +415,97 @@ const VendorScheduledList: React.FC = () => {
         />
       </div>
 
-      {viewMode === 'grid' ? (
-        <div className="mt-4">
-          {loading ? (
-            <div className="text-center py-10 text-muted-foreground">Loading...</div>
-          ) : safeFilteredData.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">No vendor scheduled audits found</div>
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center text-muted-foreground py-8">Loading audits...</div>
+      )}
+
+      {/* Grid View */}
+      {!loading && viewMode === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+          {data.length === 0 ? (
+            <div className="col-span-full text-center text-muted-foreground py-8">No audits found</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {safeFilteredData.slice(0, recordsPerPage).map((item) => (
-                <AuditCard key={item.id} item={item} />
-              ))}
-            </div>
+            data.map((item) => (
+              <AuditCard key={item.id} item={item} />
+            ))
           )}
         </div>
-      ) : (
+      )}
+
+      {/* Table View (List mode) */}
+      {!loading && viewMode === 'list' && (
         <DataTable
           columns={columns}
-          data={safeFilteredData}
+          data={Array.isArray(data) ? data : []}
           loading={loading}
-          pagination
-          paginationPerPage={recordsPerPage}
+          pagination={false}
+          onRowClicked={(row: any) => navigate(`/audit/operational/scheduled/view/${row.id}`)}
+          selectableRows
+          className="mt-4"
+
         />
+      )}
+
+      {/* PAGINATION (Server-side, ContactBook style) */}
+      {!loading && data.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 text-sm text-muted-foreground mt-4 bg-white border rounded-md">
+          <div className="text-sm text-muted-foreground">
+            Showing {(pagination.page - 1) * pagination.perPage + 1} to {Math.min(pagination.page * pagination.perPage, pagination.total)} of {pagination.total} entries
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPagination(p => ({ ...p, page: 1 }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-40"
+            >
+              {'«'}
+            </button>
+
+            <button
+              onClick={() => setPagination(p => ({ ...p, page: Math.max(1, p.page - 1) }))}
+              disabled={pagination.page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-40"
+            >
+              {'‹ Prev'}
+            </button>
+
+            <span className="px-3 py-1 border rounded bg-primary text-primary-foreground">
+              {pagination.page}
+            </span>
+
+            <button
+              onClick={() => setPagination(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-40"
+            >
+              {'Next ›'}
+            </button>
+
+            <button
+              onClick={() => setPagination(p => ({ ...p, page: p.totalPages }))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-40"
+            >
+              {'»'}
+            </button>
+          </div>
+
+          <select
+            value={pagination.perPage}
+            onChange={(e) => setPagination(p => ({ ...p, perPage: Number(e.target.value), page: 1 }))}
+            className="px-3 py-1 border rounded"
+          >
+            <option value={10}>10 / page</option>
+            <option value={12}>12 / page</option>
+            <option value={24}>24 / page</option>
+            <option value={48}>48 / page</option>
+          </select>
+        </div>
       )}
     </div>
   );
 };
 
-export default VendorScheduledList;
+export default ScheduledList;

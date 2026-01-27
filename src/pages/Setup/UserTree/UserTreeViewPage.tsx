@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import toast from 'react-hot-toast';
-// import * as XLSX from 'xlsx'; 
 
-import { vmsService, getAllVisitorsByUserId, } from "../../../services/vms.service";
 import {
   Eye,
-  Edit,
   Search,
   Columns3,
   ChevronDown,
-  Filter,
   MapPin,
   Phone,
   Mail,
@@ -20,29 +16,17 @@ import {
   Home,
   Loader2,
   Ticket as TicketIcon,
-  AlertCircle,
-  RefreshCw,
-  EyeOff,
-  Clock,
-  CheckCircle,
-  XCircle,
-  RefreshCcw,
-  HelpCircle,
-  MessageCircle,
   FileText,
   MessageSquare,
-  FileCheck,
-  Users,
-  Wrench,
-  Car,
   ArrowLeft,
   Building,
   Tag,
   AlertTriangle,
   ExternalLink,
-  Download,
   X,
-  Edit2
+  Car,
+  Users,
+  Clock,
 } from "lucide-react";
 import {
   fetchUserComplaintsById,
@@ -52,6 +36,7 @@ import {
   getEventsCreatedByUserId,
   getUsersByID
 } from "../../../api";
+import { vmsService, getAllVisitorsByUserId } from "../../../services/vms.service";
 
 // --- Types ---
 
@@ -83,6 +68,7 @@ interface UserProfile {
   name: string;
   isVerified: boolean;
   status: "Active" | "Inactive";
+  userType: string;
   personalInfo: {
     contact: string;
     email: string;
@@ -111,27 +97,28 @@ interface BroadcastItem {
   status: string;
   expiry_date: string;
   created_by: string;
-  description?: string;
+  notice_discription?: string;
   document?: string;
 }
 
+// Helper for Pagination State
+interface PaginationState {
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+}
 
-// const domainPrefix = "https://admin.vibecopilot.ai";
+interface ColumnConfig {
+  key: string;
+  label: string;
+  width?: string;
+}
 
+const domainPrefix = "https://admin.vibecopilot.ai";
 
-const InfoItem: React.FC<{ icon: React.ReactNode; label: string; value: string | number | undefined }> = ({ icon, label, value }) => (
-  <div className="flex items-start gap-2">
-    <div className="text-muted-foreground mt-0.5">{icon}</div>
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium text-foreground">{value ?? '-'}</p>
-    </div>
-  </div>
-);
-
-// --- Helper Component for Status Badge (FIXED) ---
+// --- Helper Component for Status Badge ---
 const StatusBadge: React.FC<{ status: any }> = ({ status }) => {
-  // Normalize status: Handle if status is an object { name: "Active" } or a string "Active"
   let statusStr = '';
   if (typeof status === 'string') {
     statusStr = status;
@@ -163,6 +150,100 @@ const StatusBadge: React.FC<{ status: any }> = ({ status }) => {
   );
 };
 
+// --- Reusable Pagination Component ---
+const PaginationFooter: React.FC<{
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  totalItems: number;
+  isClientSide?: boolean;
+}> = ({ pagination, setPagination, totalItems, isClientSide = false }) => {
+
+  const start = (pagination.page - 1) * pagination.perPage + 1;
+  const end = Math.min(pagination.page * pagination.perPage, isClientSide ? totalItems : pagination.total);
+
+  const totalPages = isClientSide ? Math.ceil(totalItems / pagination.perPage) : pagination.totalPages;
+
+  return (
+    <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="text-sm text-slate-500">
+        Showing {totalItems > 0 ? start : 0} to {end} of {isClientSide ? totalItems : pagination.total} entries
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setPagination(p => ({ ...p, page: 1 }))}
+          disabled={pagination.page === 1}
+          className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          «
+        </button>
+        <button
+          onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+          disabled={pagination.page === 1}
+          className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          Previous
+        </button>
+
+        <button className="px-3 py-1.5 text-sm font-medium text-white bg-purple-700 rounded-lg cursor-default">
+          {pagination.page}
+        </button>
+
+        <button
+          onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+          disabled={pagination.page >= totalPages}
+          className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          Next
+        </button>
+        <button
+          onClick={() => setPagination(p => ({ ...p, page: totalPages }))}
+          disabled={pagination.page >= totalPages}
+          className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-slate-50"
+        >
+          »
+        </button>
+
+        <select
+          value={pagination.perPage}
+          onChange={(e) => setPagination(p => ({ ...p, perPage: Number(e.target.value), page: 1 }))}
+          className="ml-2 pl-2 pr-8 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+        >
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+        </select>
+      </div>
+    </div>
+  );
+};
+
+// --- Helper for Debounce ---
+function useDebounce(value: string, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+const InfoItem: React.FC<{ icon: React.ReactNode; label: string; value: string | number | undefined }> = ({ icon, label, value }) => (
+  <div className="flex items-start gap-2">
+    <div className="text-muted-foreground mt-0.5">{icon}</div>
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-foreground">{value ?? '-'}</p>
+    </div>
+  </div>
+);
+
 const UserTreeViewPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -178,41 +259,16 @@ const UserTreeViewPage: React.FC = () => {
   // --- VISITORS STATE ---
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchVisitorQuery, setSearchVisitorQuery] = useState("");
+  const debouncedVisitorSearch = useDebounce(searchVisitorQuery, 500);
   const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
   const [hiddenVisitorColumns, setHiddenVisitorColumns] = useState<Set<string>>(new Set());
   const [visitors, setVisitors] = useState<VisitorRow[]>([]);
   const [loadingVisitors, setLoadingVisitors] = useState(false);
-
-  // --- AMENITIES STATE ---
-  const [amenities, setAmenities] = useState<any[]>([]);
-  const [loadingAmenities, setLoadingAmenities] = useState(false);
-
-  // --- COMMUNICATION STATE ---
-  const [subTab, setSubTab] = useState<"Events" | "Broadcast">("Events");
-  const [events, setEvents] = useState<any[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
-  const [broadcasts, setBroadcasts] = useState<any[]>([]);
-  const [loadingBroadcasts, setLoadingBroadcasts] = useState(false);
-
-  // --- SERVICE DESK STATE ---
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [loadingTickets, setLoadingTickets] = useState(false);
-
-  // --- UNIFIED VIEW MODAL STATE ---
-  const [viewType, setViewType] = useState<'visitor' | 'amenity' | 'event' | 'broadcast' | 'ticket' | null>(null);
-  const [viewData, setViewData] = useState<any>(null);
-  const [loadingViewDetails, setLoadingViewDetails] = useState(false);
-
-  // Pagination State
-  const [visitorPagination, setVisitorPagination] = useState({
+  const [visitorPagination, setVisitorPagination] = useState<PaginationState>({
     page: 1, perPage: 10, total: 0, totalPages: 1,
   });
-  const [sdPagination, setSdPagination] = useState({
-    page: 1, perPage: 10, total: 0, totalPages: 0,
-  });
 
-  // --- COLUMNS ---
-  const allVisitorColumns = [
+  const allVisitorColumns: ColumnConfig[] = [
     { key: "action", label: "Action", width: "w-24" },
     { key: "type", label: "Visitor Type", width: "w-32" },
     { key: "name", label: "Name", width: "w-40" },
@@ -228,8 +284,94 @@ const UserTreeViewPage: React.FC = () => {
     { key: "hosts", label: "Host", width: "w-32" },
   ];
 
-  // --- FETCHING FUNCTIONS ---
+  // --- AMENITIES STATE ---
+  const [amenities, setAmenities] = useState<any[]>([]);
+  const [loadingAmenities, setLoadingAmenities] = useState(false);
+  const [amenityPagination, setAmenityPagination] = useState<PaginationState>({
+    page: 1, perPage: 10, total: 0, totalPages: 0,
+  });
+  const [isAmenitySearchVisible, setIsAmenitySearchVisible] = useState(false);
+  const [searchAmenityQuery, setSearchAmenityQuery] = useState("");
+  const debouncedAmenitySearch = useDebounce(searchAmenityQuery, 500);
+  const [hiddenAmenityColumns, setHiddenAmenityColumns] = useState<Set<string>>(new Set());
 
+  const allAmenityColumns: ColumnConfig[] = [
+    { key: "action", label: "Action", width: "w-24" },
+    { key: "name", label: "Facility Name", width: "w-40" },
+    { key: "type", label: "Type", width: "w-32" },
+    { key: "amount", label: "Amount", width: "w-32" },
+    { key: "payment", label: "Payment", width: "w-32" },
+    { key: "status", label: "Status", width: "w-32" },
+  ];
+
+  // --- COMMUNICATION STATE ---
+  const [subTab, setSubTab] = useState<"Events" | "Broadcast">("Events");
+  
+  // Events
+  const [events, setEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [eventPagination, setEventPagination] = useState<PaginationState>({
+    page: 1, perPage: 10, total: 0, totalPages: 0,
+  });
+  const [isEventSearchVisible, setIsEventSearchVisible] = useState(false);
+  const [searchEventQuery, setSearchEventQuery] = useState("");
+  const debouncedEventSearch = useDebounce(searchEventQuery, 500);
+  const [hiddenEventColumns, setHiddenEventColumns] = useState<Set<string>>(new Set());
+
+  const allEventColumns: ColumnConfig[] = [
+    { key: "action", label: "Action", width: "w-24" },
+    { key: "name", label: "Event Name", width: "w-40" },
+    { key: "venue", label: "Venue", width: "w-32" },
+    { key: "start", label: "Start Date", width: "w-32" },
+    { key: "end", label: "End Date", width: "w-32" },
+    { key: "status", label: "Status", width: "w-32" },
+  ];
+
+  // Broadcasts
+  const [broadcasts, setBroadcasts] = useState<any[]>([]);
+  const [loadingBroadcasts, setLoadingBroadcasts] = useState(false);
+  const [broadcastPagination, setBroadcastPagination] = useState<PaginationState>({
+    page: 1, perPage: 10, total: 0, totalPages: 0,
+  });
+  const [isBroadcastSearchVisible, setIsBroadcastSearchVisible] = useState(false);
+  const [searchBroadcastQuery, setSearchBroadcastQuery] = useState("");
+  const debouncedBroadcastSearch = useDebounce(searchBroadcastQuery, 500);
+  const [hiddenBroadcastColumns, setHiddenBroadcastColumns] = useState<Set<string>>(new Set());
+
+  const allBroadcastColumns: ColumnConfig[] = [
+    { key: "action", label: "Action", width: "w-24" },
+    { key: "title", label: "Title", width: "w-40" },
+    { key: "status", label: "Status", width: "w-32" },
+    { key: "expiry", label: "Expiry Date", width: "w-32" },
+    { key: "createdBy", label: "Created By", width: "w-32" },
+  ];
+
+  // --- SERVICE DESK STATE ---
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [sdPagination, setSdPagination] = useState<PaginationState>({
+    page: 1, perPage: 10, total: 0, totalPages: 0,
+  });
+  const [isTicketSearchVisible, setIsTicketSearchVisible] = useState(false);
+  const [searchTicketQuery, setSearchTicketQuery] = useState("");
+  const debouncedTicketSearch = useDebounce(searchTicketQuery, 500);
+  const [hiddenTicketColumns, setHiddenTicketColumns] = useState<Set<string>>(new Set());
+
+  const allTicketColumns: ColumnConfig[] = [
+    { key: "action", label: "Action", width: "w-24" },
+    { key: "ticket_number", label: "Ticket No", width: "w-32" },
+    { key: "title", label: "Title", width: "w-40" },
+    { key: "status", label: "Status", width: "w-32" },
+    { key: "priority", label: "Priority", width: "w-32" },
+    { key: "category", label: "Category", width: "w-32" },
+  ];
+
+  // --- UNIFIED VIEW MODAL STATE ---
+  const [viewType, setViewType] = useState<'visitor' | 'amenity' | 'event' | 'broadcast' | 'ticket' | null>(null);
+  const [viewData, setViewData] = useState<any>(null);
+  const [loadingViewDetails, setLoadingViewDetails] = useState(false);
+
+  // Fetch Functions (Largely Unchanged, just kept for completeness)
   const fetchUserProfile = async (id: number) => {
     setLoadingProfile(true);
     try {
@@ -240,6 +382,7 @@ const UserTreeViewPage: React.FC = () => {
         name: `${apiData.firstname || ""} ${apiData.lastname || ""}`.trim(),
         isVerified: Boolean(apiData.face_added),
         status: apiData.active ? "Active" : "Inactive",
+        userType: apiData.user_type ? apiData.user_type.replace(/_/g, " ").toUpperCase() : "-",
         personalInfo: {
           contact: apiData.mobile || "-",
           email: apiData.email || "-",
@@ -269,7 +412,6 @@ const UserTreeViewPage: React.FC = () => {
         id: item.id,
         ticket_number: item.ticket_number,
         title: item.heading,
-        // FIX: Handle object status safely here too
         status: item.issue_status?.name || item.issue_status || 'Unknown',
         priority: item.priority?.name || item.priority || '-',
         category: item.category_type?.name || item.category_type || '-',
@@ -313,10 +455,7 @@ const UserTreeViewPage: React.FC = () => {
         passStart: item.start_pass || "-",
         passEnd: item.end_pass || "-",
         inOut: item.visitor_in_out ? item.visitor_in_out.charAt(0).toUpperCase() + item.visitor_in_out.slice(1) : "-",
-        hosts: item.hosts?.length
-          ? item.hosts.map((h: any) => h.full_name).join(", ")
-          : "-"
-
+        hosts: item.hosts?.length ? item.hosts.map((h: any) => h.full_name).join(", ") : "-"
       }));
       setVisitors(transformed);
       setVisitorPagination(prev => ({
@@ -337,7 +476,9 @@ const UserTreeViewPage: React.FC = () => {
     setLoadingAmenities(true);
     try {
       const res = await getAmenitiesBookedByUserId(id);
-      setAmenities(res.data?.amenity_bookings || []);
+      const bookings = res.data?.amenity_bookings || [];
+      setAmenities(bookings);
+      setAmenityPagination(prev => ({ ...prev, total: bookings.length, totalPages: Math.ceil(bookings.length / prev.perPage) }));
     } catch (err) {
       console.error(err);
       toast.error("Failed to load amenities bookings");
@@ -352,7 +493,9 @@ const UserTreeViewPage: React.FC = () => {
     setLoadingEvents(true);
     try {
       const res = await getEventsCreatedByUserId(Number(id));
-      setEvents(res.data || []);
+      const evts = res.data || [];
+      setEvents(evts);
+      setEventPagination(prev => ({ ...prev, total: evts.length, totalPages: Math.ceil(evts.length / prev.perPage) }));
     } catch (e) {
       toast.error("Failed to load events");
       setEvents([]);
@@ -366,7 +509,9 @@ const UserTreeViewPage: React.FC = () => {
     setLoadingBroadcasts(true);
     try {
       const res = await getBroadCastCreatedByUserId(Number(id));
-      setBroadcasts(res.data || []);
+      const brds = res.data || [];
+      setBroadcasts(brds);
+      setBroadcastPagination(prev => ({ ...prev, total: brds.length, totalPages: Math.ceil(brds.length / prev.perPage) }));
     } catch (e) {
       toast.error("Failed to load broadcasts");
       setBroadcasts([]);
@@ -375,7 +520,7 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
-  // --- EFFECTS ---
+  // Effects
   useEffect(() => {
     if (activeTab === "Open Profile" && id) fetchUserProfile(Number(id));
   }, [activeTab, id]);
@@ -385,20 +530,53 @@ const UserTreeViewPage: React.FC = () => {
   }, [activeTab, id, visitorPagination.page]);
 
   useEffect(() => {
-    if (activeTab === "ServiceDesk" && id) fetchServiceDeskTickets();
-  }, [activeTab, id, sdPagination.page]);
+    if (activeTab === "ServiceDesk") {
+      setSdPagination(p => ({ ...p, page: 1 }));
+      fetchServiceDeskTickets();
+    }
+  }, [activeTab, id]);
 
   useEffect(() => {
-    if (activeTab === "Amenities Bookings") fetchAmenitiesBookings();
+    if (activeTab === "ServiceDesk" && sdPagination.page > 1) {
+      fetchServiceDeskTickets();
+    }
+  }, [sdPagination.page, sdPagination.perPage]);
+
+  useEffect(() => {
+    if (activeTab === "Amenities Bookings") {
+      setAmenityPagination(p => ({ ...p, page: 1 }));
+      fetchAmenitiesBookings();
+    }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === "Communication") {
+      setEventPagination(p => ({ ...p, page: 1 }));
+      setBroadcastPagination(p => ({ ...p, page: 1 }));
       subTab === "Events" ? fetchEvents() : fetchBroadcasts();
     }
   }, [activeTab, subTab, id]);
 
-  // --- VIEW HANDLERS ---
+  // Reset Page on Search
+  useEffect(() => {
+    if (activeTab === "Visitors") setVisitorPagination(p => ({ ...p, page: 1 }));
+  }, [debouncedVisitorSearch]);
+
+  useEffect(() => {
+    if (activeTab === "ServiceDesk") setSdPagination(p => ({ ...p, page: 1 }));
+  }, [debouncedTicketSearch]);
+
+  useEffect(() => {
+    if (activeTab === "Amenities Bookings") setAmenityPagination(p => ({ ...p, page: 1 }));
+  }, [debouncedAmenitySearch]);
+
+  useEffect(() => {
+    if (activeTab === "Communication") {
+      if (subTab === "Events") setEventPagination(p => ({ ...p, page: 1 }));
+      if (subTab === "Broadcast") setBroadcastPagination(p => ({ ...p, page: 1 }));
+    }
+  }, [debouncedEventSearch, debouncedBroadcastSearch]);
+
   const handleOpenView = async (type: 'visitor' | 'amenity' | 'event' | 'broadcast' | 'ticket', itemId: any, itemData?: any) => {
     setViewType(type);
     setViewData(itemData || null);
@@ -429,19 +607,8 @@ const UserTreeViewPage: React.FC = () => {
     setViewData(null);
   };
 
-  // --- FILTERING ---
-  const filteredVisitors = visitors.filter(row =>
-    row.name.toLowerCase().includes(searchVisitorQuery.toLowerCase()) ||
-    row.contact.includes(searchVisitorQuery) ||
-    row.purpose.toLowerCase().includes(searchVisitorQuery.toLowerCase())
-  );
-
-  const visitorTotalPages = Math.ceil(filteredVisitors.length / visitorPagination.perPage);
-  const vStartIndex = (visitorPagination.page - 1) * visitorPagination.perPage;
-  const paginatedVisitors = filteredVisitors.slice(vStartIndex, vStartIndex + visitorPagination.perPage);
-
-  const toggleColumn = (key: string) => {
-    setHiddenVisitorColumns(prev => {
+  const toggleColumn = (key: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+    setter(prev => {
       const newSet = new Set(prev);
       if (newSet.has(key)) newSet.delete(key);
       else newSet.add(key);
@@ -451,9 +618,51 @@ const UserTreeViewPage: React.FC = () => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
+    return new Date(dateString).toLocaleDateString();
   };
 
+  // Filtered Data Logic
+  const filteredVisitors = visitors.filter(row =>
+    row.name.toLowerCase().includes(debouncedVisitorSearch.toLowerCase()) ||
+    row.contact.includes(debouncedVisitorSearch) ||
+    row.purpose.toLowerCase().includes(debouncedVisitorSearch.toLowerCase())
+  );
+
+  const filteredTickets = tickets.filter(row =>
+    row.ticket_number.toLowerCase().includes(debouncedTicketSearch.toLowerCase()) ||
+    row.title.toLowerCase().includes(debouncedTicketSearch.toLowerCase())
+  );
+
+  const filteredAmenities = amenities.filter(row =>
+    (row.amenity?.fac_name || "").toLowerCase().includes(debouncedAmenitySearch.toLowerCase()) ||
+    (row.status || "").toLowerCase().includes(debouncedAmenitySearch.toLowerCase())
+  );
+
+  const filteredEvents = events.filter(row =>
+    (row.event_name || "").toLowerCase().includes(debouncedEventSearch.toLowerCase()) ||
+    (row.venue || "").toLowerCase().includes(debouncedEventSearch.toLowerCase())
+  );
+
+  const filteredBroadcasts = broadcasts.filter(row =>
+    (row.notice_title || "").toLowerCase().includes(debouncedBroadcastSearch.toLowerCase()) ||
+    (row.status || "").toLowerCase().includes(debouncedBroadcastSearch.toLowerCase())
+  );
+
+  // Pagination Logic
+  const vStartIndex = (visitorPagination.page - 1) * visitorPagination.perPage;
+  const paginatedVisitors = filteredVisitors.slice(vStartIndex, vStartIndex + visitorPagination.perPage);
+
+  const tStartIndex = (sdPagination.page - 1) * sdPagination.perPage;
+  const paginatedTickets = filteredTickets.slice(tStartIndex, tStartIndex + sdPagination.perPage);
+
+  const amStartIndex = (amenityPagination.page - 1) * amenityPagination.perPage;
+  const paginatedAmenities = filteredAmenities.slice(amStartIndex, amStartIndex + amenityPagination.perPage);
+
+  const evStartIndex = (eventPagination.page - 1) * eventPagination.perPage;
+  const paginatedEvents = filteredEvents.slice(evStartIndex, evStartIndex + eventPagination.perPage);
+
+  const brStartIndex = (broadcastPagination.page - 1) * broadcastPagination.perPage;
+  const paginatedBroadcasts = filteredBroadcasts.slice(brStartIndex, brStartIndex + broadcastPagination.perPage);
 
   return (
     <div className="p-6 min-h-screen bg-slate-50 font-sans">
@@ -489,36 +698,60 @@ const UserTreeViewPage: React.FC = () => {
         {/* --- CONTENT: SERVICE DESK --- */}
         {activeTab === "ServiceDesk" && (
           <div className="p-6 animate-in fade-in">
+            {/* Controls */}
             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                <input type="text" placeholder="Search tickets..." className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+              <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isTicketSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
+                <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isTicketSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                <input
+                  type="text"
+                  placeholder="Search tickets..."
+                  value={searchTicketQuery}
+                  onChange={(e) => setSearchTicketQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsTicketSearchVisible(!isTicketSearchVisible)}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isTicketSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <Search className="w-4 h-4" /> {isTicketSearchVisible ? "Hide Search" : "Show Search"}
+                </button>
+                <div className="relative">
+                  <button onClick={() => { /* Toggle Ticket Column Menu logic if needed, simplified for now */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                  {/* Placeholder for Column Menu for Tickets */}
+                </div>
               </div>
             </div>
+
             <div className="min-h-[400px]">
               {loadingTickets ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /><span className="mt-2">Loading...</span></div>
-              ) : tickets.length > 0 ? (
+              ) : paginatedTickets.length > 0 ? (
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider w-24">Action</th>
-                      <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider w-32">Title</th>
-                      <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider w-32">Status</th>
-                      <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider w-32">Priority</th>
+                      {allTicketColumns.filter(c => !hiddenTicketColumns.has(c.key)).map((col) => (
+                        <th key={col.key} className={`px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {tickets.map((row) => (
+                    {paginatedTickets.map((row) => (
                       <tr key={row.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-3">
-                          <button onClick={() => handleOpenView('ticket', row.id, row)} className="p-1.5 text-slate-400 hover:text-purple-600 rounded-md">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </td>
-                        <td className="px-6 py-3">{row.title}</td>
-                        <td className="px-6 py-3"><StatusBadge status={row.status} /></td>
-                        <td className="px-6 py-3">{row.priority}</td>
+                        {allTicketColumns.filter(c => !hiddenTicketColumns.has(c.key)).map((col) => (
+                          <td key={`${row.id}-${col.key}`} className="px-6 py-3">
+                            {col.key === "action" ? (
+                              <button onClick={() => handleOpenView('ticket', row.id, row)} className="p-1.5 text-slate-400 hover:text-purple-600 rounded-md"><Eye className="w-4 h-4" /></button>
+                            ) : col.key === "status" ? (
+                              <StatusBadge status={row[col.key]} />
+                            ) : (
+                              row[col.key]
+                            )}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -530,50 +763,69 @@ const UserTreeViewPage: React.FC = () => {
                 </div>
               )}
             </div>
-            {/* SD Pagination */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-4 border-t border-slate-200">
-              <div className="text-sm text-slate-500">Showing {sdPagination.page} of {sdPagination.totalPages} pages</div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setSdPagination(p => ({ ...p, page: 1 }))} disabled={sdPagination.page === 1} className="px-3 py-1.5 text-sm border rounded bg-white text-slate-500 disabled:opacity-50">«</button>
-                <button onClick={() => setSdPagination(p => ({ ...p, page: p.page - 1 }))} disabled={sdPagination.page === 1} className="px-3 py-1.5 text-sm border rounded bg-white text-slate-500 disabled:opacity-50">Previous</button>
-                <button className="px-3 py-1.5 text-sm border rounded bg-purple-700 text-white">{sdPagination.page}</button>
-                <button onClick={() => setSdPagination(p => ({ ...p, page: p.page + 1 }))} disabled={sdPagination.page >= sdPagination.totalPages} className="px-3 py-1.5 text-sm border rounded bg-white text-slate-500 disabled:opacity-50">Next</button>
-                <button onClick={() => setSdPagination(p => ({ ...p, page: p.totalPages }))} disabled={sdPagination.page >= sdPagination.totalPages} className="px-3 py-1.5 text-sm border rounded bg-white text-slate-500 disabled:opacity-50">»</button>
-              </div>
-            </div>
+
+            <PaginationFooter
+              pagination={sdPagination}
+              setPagination={setSdPagination}
+              totalItems={filteredTickets.length}
+              isClientSide={true}
+            />
           </div>
         )}
 
         {/* --- CONTENT: VISITORS --- */}
         {activeTab === "Visitors" && (
           <>
-            {/* Search Bar */}
-            {isSearchVisible && (
-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 animate-in fade-in slide-down-from-top-2">
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                  <input type="text" placeholder="Search visitors..." value={searchVisitorQuery} onChange={(e) => setSearchVisitorQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" />
-                </div>
+             {/* Unified Control Bar for Visitors to match other tabs */}
+            <div className="px-6 py-3 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
+              <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
+                <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                <input
+                  type="text"
+                  placeholder="Search visitors..."
+                  value={searchVisitorQuery}
+                  onChange={(e) => setSearchVisitorQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                />
               </div>
-            )}
 
-            {/* Toolbar */}
-            <div className="px-6 py-3 flex items-center justify-between border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <button onClick={() => setIsSearchVisible(!isSearchVisible)} className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                  <Search className="w-4 h-4" /> {isSearchVisible ? "Hide Search" : "Show Search"}
+                <button
+                  onClick={() => setIsSearchVisible(!isSearchVisible)}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isSearchVisible
+                      ? "bg-purple-50 border-purple-200 text-purple-700"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                >
+                  <Search className="w-4 h-4" />
+                  {isSearchVisible ? "Hide Search" : "Show Search"}
                 </button>
-              </div>
-              <div className="flex items-center gap-2">
+
                 <div className="relative">
-                  <button onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                    <Columns3 className="w-4 h-4" /> Column Visibility <ChevronDown className="w-3.5 h-3.5" />
+                  <button
+                    onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <Columns3 className="w-4 h-4" />
+                    Column Visibility
+                    <ChevronDown className="w-3.5 h-3.5" />
                   </button>
+
                   {isColumnMenuOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-20 overflow-hidden">
                       {allVisitorColumns.map((col) => (
-                        <label key={col.key} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer">
-                          <input type="checkbox" checked={!hiddenVisitorColumns.has(col.key)} onChange={() => toggleColumn(col.key)} className="w-4 h-4" />
+                        <label
+                          key={col.key}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!hiddenVisitorColumns.has(col.key)}
+                            onChange={() =>
+                              toggleColumn(col.key, setHiddenVisitorColumns)
+                            }
+                            className="w-4 h-4"
+                          />
                           <span className="text-sm">{col.label}</span>
                         </label>
                       ))}
@@ -583,7 +835,6 @@ const UserTreeViewPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Table Section */}
             <div className="overflow-x-auto min-h-[400px]">
               {loadingVisitors ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /><span className="mt-2">Loading...</span></div>
@@ -604,7 +855,6 @@ const UserTreeViewPage: React.FC = () => {
                             {col.key === "action" ? (
                               <div className="flex items-center gap-2">
                                 <button onClick={() => handleOpenView('visitor', row.id, row)} className="p-1.5 text-purple-600 hover:text-purple-600 rounded-md"><Eye className="w-4 h-4" /></button>
-                                <button className="p-1.5 text-purple-600 hover:text-purple-600 rounded-md"><Edit className="w-4 h-4" /></button>
                               </div>
                             ) : (
                               row[col.key as keyof VisitorRow]
@@ -617,69 +867,97 @@ const UserTreeViewPage: React.FC = () => {
                 </table>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
-                  <Filter className="w-12 h-12 mb-3 opacity-20" />
+                  <TicketIcon className="w-12 h-12 mb-3 opacity-20" />
                   <p className="font-medium text-slate-500">No visitors found</p>
                 </div>
               )}
             </div>
 
-            {/* Pagination Footer */}
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="text-sm text-slate-500">Showing {vStartIndex + 1} to {Math.min(vStartIndex + visitorPagination.perPage, filteredVisitors.length)} of {filteredVisitors.length} entries</div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setVisitorPagination(p => ({ ...p, page: 1 }))} disabled={visitorPagination.page === 1} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50">«</button>
-                <button onClick={() => setVisitorPagination(p => ({ ...p, page: p.page - 1 }))} disabled={visitorPagination.page === 1} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50">Previous</button>
-                <button className="px-3 py-1.5 text-sm font-medium text-white bg-purple-700 rounded-lg">{visitorPagination.page}</button>
-                <button onClick={() => setVisitorPagination(p => ({ ...p, page: p.page + 1 }))} disabled={visitorPagination.page >= visitorTotalPages} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg disabled:opacity-50">Next</button>
-                <button onClick={() => setVisitorPagination(p => ({ ...p, page: visitorTotalPages }))} disabled={visitorPagination.page >= visitorTotalPages} className="px-3 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-white rounded disabled:opacity-50 transition-colors">»</button>
-                <select value={visitorPagination.perPage} onChange={(e) => setVisitorPagination(p => ({ ...p, perPage: Number(e.target.value), page: 1 }))} className="ml-2 pl-2 pr-8 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
-                  <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
-                </select>
-              </div>
-            </div>
+            <PaginationFooter
+              pagination={visitorPagination}
+              setPagination={setVisitorPagination}
+              totalItems={filteredVisitors.length}
+              isClientSide={true}
+            />
           </>
         )}
 
         {/* --- CONTENT: AMENITIES BOOKINGS --- */}
         {activeTab === "Amenities Bookings" && (
           <div className="p-6 animate-in fade-in">
+            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+               <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isAmenitySearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
+                <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isAmenitySearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                <input
+                    type="text"
+                    placeholder="Search amenities..."
+                    value={searchAmenityQuery}
+                    onChange={(e) => setSearchAmenityQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsAmenitySearchVisible(!isAmenitySearchVisible)}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isAmenitySearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <Search className="w-4 h-4" /> {isAmenitySearchVisible ? "Hide Search" : "Show Search"}
+                </button>
+                 <div className="relative">
+                  <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                  {/* Placeholder for Column Menu for Amenities */}
+                </div>
+              </div>
+            </div>
+
             {loadingAmenities ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /><span className="mt-2">Loading...</span></div>
-            ) : amenities.length > 0 ? (
-              <div className="overflow-x-auto min-h-[400px]">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 uppercase text-xs tracking-wider">Action</th>
-                      <th className="px-6 py-3 uppercase text-xs tracking-wider">Facility Name</th>
-                      <th className="px-6 py-3 uppercase text-xs tracking-wider">Type</th>
-                      <th className="px-6 py-3 uppercase text-xs tracking-wider">Amount</th>
-                      <th className="px-6 py-3 uppercase text-xs tracking-wider">Payment</th>
-                      <th className="px-6 py-3 uppercase text-xs tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {amenities.map((a: any) => (
-                      <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-3">
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => handleOpenView('amenity', a.id, a)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
-                            <button className="p-1.5 text-purple-600 hover:text-purple-600"><Edit className="w-4 h-4" /></button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-3 font-medium text-slate-700">{a.amenity?.fac_name || "-"}</td>
-                        <td className="px-6 py-3 text-slate-600">{a.amenity?.fac_type || "-"}</td>
-                        <td className="px-6 py-3 text-slate-600">{a.amount ?? "-"}</td>
-                        <td className="px-6 py-3 text-slate-600">{a.payment_mode || "-"}</td>
-                        <td className="px-6 py-3"><StatusBadge status={a.status || "-"} /></td>
+            ) : paginatedAmenities.length > 0 ? (
+              <>
+                <div className="overflow-x-auto min-h-[400px]">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                      <tr>
+                         {allAmenityColumns.filter(c => !hiddenAmenityColumns.has(c.key)).map((col) => (
+                           <th key={col.key} className={`px-6 py-3 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paginatedAmenities.map((a: any) => (
+                        <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                           {allAmenityColumns.filter(c => !hiddenAmenityColumns.has(c.key)).map((col) => (
+                             <td key={`${a.id}-${col.key}`} className="px-6 py-3">
+                                {col.key === "action" ? (
+                                   <button onClick={() => handleOpenView('amenity', a.id, a)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
+                                ) : col.key === "status" ? (
+                                  <StatusBadge status={a.status || "-"} />
+                                ) : col.key === "name" ? (
+                                    a.amenity?.fac_name || "-"
+                                ) : col.key === "type" ? (
+                                     a.amenity?.fac_type || "-"
+                                ) : (
+                                    a[col.key]
+                                )}
+                             </td>
+                           ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationFooter
+                  pagination={amenityPagination}
+                  setPagination={setAmenityPagination}
+                  totalItems={filteredAmenities.length}
+                  isClientSide={true}
+                />
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
-                <Filter className="w-12 h-12 mb-3 opacity-20" />
+                <TicketIcon className="w-12 h-12 mb-3 opacity-20" />
                 <p className="font-medium text-slate-500">No amenities bookings found</p>
               </div>
             )}
@@ -697,77 +975,153 @@ const UserTreeViewPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="overflow-x-auto min-h-[400px]">
+            <div className="min-h-[400px]">
               {(subTab === "Events" ? loadingEvents : loadingBroadcasts) ? (
-                <div className="flex flex-col items-center justify-center h-64 text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /><span className="mt-2">Loading...</span></div>
+                <div className="flex flex-col items-center justify-between h-64 text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /><span className="mt-2">Loading...</span></div>
               ) : subTab === "Events" ? (
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-2 uppercase text-xs w-24">Action</th>
-                      <th className="px-6 py-2 uppercase text-xs">Event Name</th>
-                      <th className="px-6 py-2 uppercase text-xs">Venue</th>
-                      <th className="px-6 py-2 uppercase text-xs">Start Date</th>
-                      <th className="px-6 py-2 Uppercase text-xs">End Date</th>
-                      <th className="px-6 py-2 uppercase text-xs">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {events.map((e) => (
-                      <tr key={e.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-3 flex">
-                          <button onClick={() => handleOpenView('event', e.id, e)} className="p-1.5  text-purple-600 hover:text-purple-600 "><Eye className="w-4 h-4" /></button>
-                          <button className="p-1.5 text-purple-600 hover:text-purple-600 rounded-md"><Edit className="w-4 h-4" /></button>
+                <>
+                  {/* Event Controls */}
+                  <div className="px-6 py-3 mb-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
+                    <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isEventSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
+                        <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isEventSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                        <input
+                          type="text"
+                          placeholder="Search events..."
+                          value={searchEventQuery}
+                          onChange={(e) => setSearchEventQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsEventSearchVisible(!isEventSearchVisible)}
+                          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isEventSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        >
+                          <Search className="w-4 h-4" /> {isEventSearchVisible ? "Hide Search" : "Show Search"}
+                        </button>
+                         <div className="relative">
+                            <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                              <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                  </div>
 
-                        </td>
-                        <td className="px-6 py-3">{e.event_name || '-'}</td>
-                        <td className="px-6 py-3">{e.venue || "-"}</td>
-                        <td className="px-6 py-3">{new Date(e.start_date_time).toLocaleDateString() || '-'}</td>
-                        <td className="px-6 py-3">{new Date(e.end_date_time).toLocaleDateString() || '-'}</td>
-                        <td className="px-6 py-3"><StatusBadge status={e.status || "-"} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  <div className="overflow-x-auto px-6">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                        <tr>
+                            {allEventColumns.filter(c => !hiddenEventColumns.has(c.key)).map((col) => (
+                                <th key={col.key} className={`px-6 py-2 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                            ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedEvents.map((e) => (
+                          <tr key={e.id} className="hover:bg-slate-50">
+                             {allEventColumns.filter(c => !hiddenEventColumns.has(c.key)).map((col) => (
+                                 <td key={`${e.id}-${col.key}`} className="px-6 py-3">
+                                     {col.key === "action" ? (
+                                        <button onClick={() => handleOpenView('event', e.id, e)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
+                                     ) : col.key === "status" ? (
+                                         <StatusBadge status={e.status || "-"} />
+                                     ) : col.key === "start" ? (
+                                         new Date(e.start_date_time).toLocaleDateString()
+                                     ) : col.key === "end" ? (
+                                         new Date(e.end_date_time).toLocaleDateString()
+                                     ) : (
+                                         e[col.key]
+                                     )}
+                                 </td>
+                             ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <PaginationFooter
+                    pagination={eventPagination}
+                    setPagination={setEventPagination}
+                    totalItems={filteredEvents.length}
+                    isClientSide={true}
+                  />
+                </>
               ) : (
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 uppercase text-xs w-56">Action</th>
-                      <th className="px-6 py-3 uppercase text-xs w-24">Title</th>
-                      <th className="px-6 py-3 uppercase text-xs">Status</th>
-                      <th className="px-6 py-3 uppercase text-xs">Expiry Date</th>
-                      <th className="px-6 py-3 uppercase text-xs">Created By</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {broadcasts.map((b) => (
-                      <tr key={b.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-3 flex">
-                          <button onClick={() => handleOpenView('broadcast', b.id, b)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
-                          <button onClick={() => handleOpenView('broadcast', b.id, b)} className="p-1.5 px-2 text-purple-600 hover:text-purple-600"><Edit className="w-4 h-4" /></button>
+                <>
+                   {/* Broadcast Controls */}
+                  <div className="px-6 py-3 mb-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
+                    <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isBroadcastSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
+                        <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isBroadcastSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                        <input
+                          type="text"
+                          placeholder="Search broadcasts..."
+                          value={searchBroadcastQuery}
+                          onChange={(e) => setSearchBroadcastQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsBroadcastSearchVisible(!isBroadcastSearchVisible)}
+                          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isBroadcastSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        >
+                          <Search className="w-4 h-4" /> {isBroadcastSearchVisible ? "Hide Search" : "Show Search"}
+                        </button>
+                         <div className="relative">
+                            <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                              <Columns3 className="w-4 h-4" /> Columns Visibility <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                  </div>
 
-                        </td>
-                        <td className="px-6 py-3">{b.notice_title || '-'}</td>
-                        <td className="px-6 py-3"><StatusBadge status={b.status || '-'} /></td>
-                        <td className="px-6 py-3">{new Date(b.expiry_date).toLocaleDateString() || '-'}</td>
-                        <td className="px-6 py-3">{b.created_by || '-'}</td>
-
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  <div className="overflow-x-auto px-6">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                        <tr>
+                             {allBroadcastColumns.filter(c => !hiddenBroadcastColumns.has(c.key)).map((col) => (
+                                <th key={col.key} className={`px-6 py-3 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                            ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedBroadcasts.map((b) => (
+                          <tr key={b.id} className="hover:bg-slate-50">
+                              {allBroadcastColumns.filter(c => !hiddenBroadcastColumns.has(c.key)).map((col) => (
+                                  <td key={`${b.id}-${col.key}`} className="px-6 py-3">
+                                      {col.key === "action" ? (
+                                          <button onClick={() => handleOpenView('broadcast', b.id, b)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
+                                      ) : col.key === "status" ? (
+                                          <StatusBadge status={b.status || '-'} />
+                                      ) : col.key === "expiry" ? (
+                                          new Date(b.expiry_date).toLocaleDateString()
+                                      ) : (
+                                          b[col.key]
+                                      )}
+                                  </td>
+                              ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <PaginationFooter
+                    pagination={broadcastPagination}
+                    setPagination={setBroadcastPagination}
+                    totalItems={filteredBroadcasts.length}
+                    isClientSide={true}
+                  />
+                </>
               )}
             </div>
           </div>
         )}
 
-        {/* --- UNIFIED DETAIL MODAL (TICKETVIEW STYLE) --- */}
+        {/* --- UNIFIED DETAIL MODAL --- */}
         {viewType && (
           <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto">
             <div className="min-h-screen px-4 py-6 flex items-start justify-center">
               <div className="bg-white w-full max-w-5xl rounded-xl shadow-2xl my-8 animate-in fade-in zoom-in duration-200">
-                {/* MODAL HEADER */}
                 <div className="bg-white sticky top-0 z-10 border-b border-slate-200 px-6 py-4 rounded-t-xl flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button onClick={handleCloseView} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-slate-600" /></button>
@@ -803,9 +1157,7 @@ const UserTreeViewPage: React.FC = () => {
                 ) : (
                   <div className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* LEFT COLUMN (MAIN) */}
                       <div className="lg:col-span-2 space-y-6">
-                        {/* INFO CARD */}
                         <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
                           <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                             <h2 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -818,7 +1170,6 @@ const UserTreeViewPage: React.FC = () => {
                           </div>
                           <div className="p-6">
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                              {/* TICKET FIELDS */}
                               {viewType === 'ticket' && (
                                 <>
                                   <InfoItem icon={<Tag className="w-4 h-4" />} label="Category" value={viewData?.category_type || viewData?.helpdesk_category?.name} />
@@ -828,7 +1179,6 @@ const UserTreeViewPage: React.FC = () => {
                                   <InfoItem icon={<UserIcon className="w-4 h-4" />} label="Assigned To" value={viewData?.assigned_to || 'Unassigned'} />
                                 </>
                               )}
-                              {/* VISITOR FIELDS */}
                               {viewType === 'visitor' && (
                                 <>
                                   <InfoItem icon={<UserIcon className="w-4 h-4" />} label="Visitor Name" value={viewData?.name} />
@@ -847,7 +1197,6 @@ const UserTreeViewPage: React.FC = () => {
                                   />
                                 </>
                               )}
-                              {/* AMENITY FIELDS */}
                               {viewType === 'amenity' && (
                                 <>
                                   <InfoItem icon={<Home className="w-4 h-4" />} label="Facility Name" value={viewData?.amenity?.fac_name} />
@@ -855,10 +1204,9 @@ const UserTreeViewPage: React.FC = () => {
                                   <InfoItem icon={<Calendar className="w-4 h-4" />} label="Booking Date" value={viewData?.booking_date} />
                                   <InfoItem icon={<Clock className="w-4 h-4" />} label="Slot" value={viewData?.slot?.twelve_hr_slot} />
                                   <InfoItem icon={<Tag className="w-4 h-4" />} label="Amount" value={viewData?.amount} />
-                                  <InfoItem icon={<CheckCircle className="w-4 h-4" />} label="Payment Mode" value={viewData?.payment_mode} />
+                                  <InfoItem icon={<Eye className="w-4 h-4" />} label="Payment Mode" value={viewData?.payment_mode} />
                                 </>
                               )}
-                              {/* EVENT FIELDS */}
                               {viewType === 'event' && (
                                 <>
                                   <InfoItem icon={<Calendar className="w-4 h-4" />} label="Start Date" value={formatDate(viewData?.start_date_time)} />
@@ -867,7 +1215,6 @@ const UserTreeViewPage: React.FC = () => {
                                   <InfoItem icon={<UserIcon className="w-4 h-4" />} label="Created By" value={viewData?.created_by} />
                                 </>
                               )}
-                              {/* BROADCAST FIELDS */}
                               {viewType === 'broadcast' && (
                                 <>
                                   <InfoItem icon={<UserIcon className="w-4 h-4" />} label="Title" value={viewData?.notice_title} />
@@ -896,13 +1243,15 @@ const UserTreeViewPage: React.FC = () => {
                               <p className="text-slate-900 whitespace-pre-wrap text-sm leading-relaxed">
                                 {viewType === 'visitor' ? viewData?.purpose :
                                   viewType === 'amenity' ? viewData?.amenity?.description :
-                                    viewType === 'ticket' ? viewData?.text : viewData?.description}
+                                    viewType === 'ticket' ? viewData?.text :
+                                      viewType === 'broadcast' ? viewData?.notice_discription :
+                                        viewData?.description}
                               </p>
                             </div>
                           </div>
                         ) : null}
 
-                        {/* ATTACHMENTS (Generic Implementation) */}
+                        {/* ATTACHMENTS */}
                         {viewType === 'ticket' && viewData?.documents && viewData.documents.length > 0 && (
                           <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
                             <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
@@ -926,7 +1275,6 @@ const UserTreeViewPage: React.FC = () => {
 
                       {/* RIGHT COLUMN (SIDEBAR) */}
                       <div className="space-y-6">
-                        {/* QUICK INFO */}
                         <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
                           <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                             <h2 className="font-semibold text-slate-800">Quick Info</h2>
@@ -963,7 +1311,6 @@ const UserTreeViewPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* TIMELINE */}
                         <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
                           <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                             <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-700" /> Timeline</h2>
@@ -996,7 +1343,7 @@ const UserTreeViewPage: React.FC = () => {
           </div>
         )}
 
-        {/* --- PROFILE MODAL (Original) --- */}
+        {/* --- PROFILE MODAL --- */}
         {isProfileModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl relative animate-in fade-in zoom-in">
@@ -1011,16 +1358,21 @@ const UserTreeViewPage: React.FC = () => {
                   <>
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-16 h-16 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold">{userProfile.name.charAt(0)}</div>
-                      <div><h3 className="font-semibold">{userProfile.name}</h3><p className="text-sm text-slate-500">Status: {userProfile.status}</p></div>
+                      <div>
+                        <h3 className="font-semibold">{userProfile.name}</h3>
+                        <p className="text-sm text-slate-500">
+                          User Type: {userProfile.userType}
+                        </p>
+                      </div>
                     </div>
                     {userProfile.propertyDetails && (
                       <div className="mb-4 border rounded-lg"><div className="bg-slate-50 px-4 py-2 font-medium flex gap-2"><Home className="w-4 h-4" /> Property Details</div><div className="p-4 text-sm">{userProfile.propertyDetails}</div></div>
                     )}
                     <div className="mb-4 border rounded-lg"><div className="bg-slate-50 px-4 py-2 font-medium">Personal Information</div><div className="p-4 space-y-2 text-sm"><div className="flex gap-2"><Phone className="w-4 h-4" /> {userProfile.personalInfo.contact}</div><div className="flex gap-2"><Mail className="w-4 h-4" /> {userProfile.personalInfo.email}</div><div className="flex gap-2"><Calendar className="w-4 h-4" /> {userProfile.personalInfo.dob}</div></div></div>
                     <div className="space-y-4">
-                      <div className="border rounded-lg p-4 flex gap-2"><Users /> Family Members</div>
-                      <div className="border rounded-lg p-4 flex gap-2"><Wrench /> Vendor Services</div>
-                      <div className="border rounded-lg p-4 flex gap-2"><Car /> Vehicle Details</div>
+                      <div className="border rounded-lg p-4 flex gap-2"><Users className="w-4 h-4" /> Family Members</div>
+                      <div className="border rounded-lg p-4 flex gap-2"><Tag className="w-4 h-4" /> Vendor Services</div>
+                      <div className="border rounded-lg p-4 flex gap-2"><Car className="w-4 h-4" /> Vehicle Details</div>
                     </div>
                   </>
                 )}
