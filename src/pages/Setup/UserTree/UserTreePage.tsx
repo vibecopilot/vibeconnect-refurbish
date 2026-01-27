@@ -9,10 +9,12 @@ import {
     Shield,
     Users,
     Edit,
-    Eye
+    Eye,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 
-import { getSetupUsersByBuilding, getFloors, getSetupUsers, getUnits, getBuildings, getSetupUsersByUnit, getSetupUsersByFloor, getSetupUsersByMemberType } from '../../../api';
+import { getSetupUsersByBuilding, getFloors, getUnits,  getSetupUsersByUnit, getSetupUsersByFloor, getSetupUsersByMemberType, getBuildings } from '../../../api';
 
 // Types
 interface Option {
@@ -32,11 +34,16 @@ interface UserRow {
     units_count: number;
 }
 
+// --- Pagination Constants ---
+const ITEMS_PER_PAGE = 10;
 
 const UserTreePage: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [fetchingData, setFetchingData] = useState(false);
+
+    // --- Pagination State ---
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Filter States
     const [selectedBuilding, setSelectedBuilding] = useState<string>('');
@@ -191,6 +198,7 @@ const UserTreePage: React.FC = () => {
     const handleSearch = async () => {
         setFetchingData(true);
         setUsers([]);
+        setCurrentPage(1); // Reset to page 1 on new search
 
         try {
             let response;
@@ -257,8 +265,6 @@ const UserTreePage: React.FC = () => {
         }
     };
 
-
-
     // Handle Reset
     const handleReset = () => {
         setSelectedBuilding('');
@@ -266,6 +272,25 @@ const UserTreePage: React.FC = () => {
         setSelectedUnit('');
         setMemberType('');
         setUsers([]);
+        setCurrentPage(1);
+    };
+
+    // --- Pagination Logic ---
+    const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+    
+    // Calculate the data for the current page
+    const currentUsers = users.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // Helper to generate page numbers
+    const getPageNumbers = () => {
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            pages.push(i);
+        }
+        return pages;
     };
 
     return (
@@ -309,6 +334,7 @@ const UserTreePage: React.FC = () => {
                                         setSelectedBuilding(e.target.value);
                                         setSelectedFloor('');
                                         setSelectedUnit('');
+                                        setUsers([]); // Clear results when changing hierarchy
                                     }}
                                 >
                                     <option value="">Select Building</option>
@@ -369,7 +395,8 @@ const UserTreePage: React.FC = () => {
 
                         {/* Member Type Filter */}
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-default text-xs font-semibold uppercase text-gray-500 tracking-wider">Member Type</label>
+                            {/* Uncomment if needed */}
+                            {/* <label className="text-default text-xs font-semibold uppercase text-gray-500 tracking-wider">Member Type</label>
                             <div className="relative">
                                 <Shield className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                                 <select
@@ -381,7 +408,7 @@ const UserTreePage: React.FC = () => {
                                     <option value="Owner">Owner</option>
                                     <option value="Tenant">Tenant</option>
                                 </select>
-                            </div>
+                            </div> */}
                         </div>
 
                         {/* Search Button */}
@@ -422,7 +449,7 @@ const UserTreePage: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {users.map((row) => (
+                                {currentUsers.map((row) => (
                                     <tr
                                         key={row.id}
                                         className="hover:bg-gray-50 transition-colors group"
@@ -483,14 +510,52 @@ const UserTreePage: React.FC = () => {
                     )}
                 </div>
 
-                {/* PAGINATION (Static for UI) */}
+                {/* PAGINATION SECTION */}
                 {users.length > 0 && (
-                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Showing 1 to {users.length} of {users.length} entries</span>
-                        <div className="flex gap-1">
-                            <button className="px-3 py-1.5 text-sm border rounded bg-white text-gray-500 disabled:opacity-50">Previous</button>
-                            <button className="px-3 py-1.5 text-sm border rounded bg-slate-900 text-white font-medium">1</button>
-                            <button className="px-3 py-1.5 text-sm border rounded bg-white text-gray-500 disabled:opacity-50">Next</button>
+                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <span className="text-sm text-gray-500">
+                            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, users.length)} of {users.length} entries
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="flex items-center px-3 py-1.5 text-sm border rounded bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft className="w-4 h-4 mr-1" />
+                                Previous
+                            </button>
+                            
+                            {/* Page Numbers */}
+                            <div className="hidden sm:flex gap-1">
+                                {getPageNumbers().map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`w-9 h-9 flex items-center justify-center text-sm font-medium rounded transition-colors ${
+                                            currentPage === page
+                                                ? 'bg-purple-700 text-white'
+                                                : 'bg-white text-white-600 border hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Mobile View Page Number (Simpler) */}
+                            <span className="sm:hidden text-sm text-gray-500 font-medium px-2">
+                                Page {currentPage} of {totalPages}
+                            </span>
+
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="flex items-center px-3 py-1.5 text-sm border rounded bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Next
+                                <ChevronRight className="w-4 h-4 ml-1" />
+                            </button>
                         </div>
                     </div>
                 )}
