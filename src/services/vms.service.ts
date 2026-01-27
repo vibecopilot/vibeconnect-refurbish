@@ -150,6 +150,7 @@ export const vmsService = {
       params: { token: getToken() },
     });
   },
+  
 
   // Get visitor history
   getHistory: async (page = 1, perPage = 10) => {

@@ -3328,9 +3328,17 @@ export const getUsersByID = async (id) =>
     },
   });
 
+
+export const editUsersByID = async (id,data) =>
+  axiosInstance.put(`/users/${id}.json`, data,{
+    params: {
+      token: token, 
+      "q[id_eq]": id,
+    },
+  });
+
+
   //usertree visitors
-
-
 export const getAllVisitorsByUserId = (
   userId: number,
   page = 1,
@@ -3360,6 +3368,14 @@ export const getAmenitiesBookedByUserId = async (id) => {
     },
   });
 };
+
+export const getAmenityBookingById = async (id: number) =>
+  axiosInstance.get(`/amenity_bookings/${id}.json`, {
+    params: {
+      token: token,
+    },
+  });
+
 
 //user tree event
 export const getEventsCreatedByUserId = async (id) =>
