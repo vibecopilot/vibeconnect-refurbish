@@ -27,6 +27,8 @@ import {
   Car,
   Users,
   Clock,
+  Edit,
+  Save,
 } from "lucide-react";
 import {
   fetchUserComplaintsById,
@@ -34,9 +36,12 @@ import {
   getAmenityBookingById,
   getBroadCastCreatedByUserId,
   getEventsCreatedByUserId,
-  getUsersByID
+  getUsersByID,
+  getFloors,
+  getUnits,
 } from "../../../api";
 import { vmsService, getAllVisitorsByUserId } from "../../../services/vms.service";
+import { getItemInLocalStorage } from "../../../utils/localStorage";
 
 // --- Types ---
 
@@ -66,6 +71,8 @@ interface VisitorApiResponse {
 interface UserProfile {
   id: string;
   name: string;
+  firstname: string;
+  lastname: string;
   isVerified: boolean;
   status: "Active" | "Inactive";
   userType: string;
@@ -74,7 +81,7 @@ interface UserProfile {
     email: string;
     dob: string;
   };
-  propertyDetails: string | null;
+  propertyDetails: string[];
   familyMembers: any[];
   vendorServices: any[];
   vehicleDetails: any[];
@@ -234,12 +241,12 @@ function useDebounce(value: string, delay: number) {
   return debouncedValue;
 }
 
-const InfoItem: React.FC<{ icon: React.ReactNode; label: string; value: string | number | undefined }> = ({ icon, label, value }) => (
+const InfoItem: React.FC<{ icon: React.ReactNode; label: string; value: string | number | undefined | React.ReactNode }> = ({ icon, label, value }) => (
   <div className="flex items-start gap-2">
-    <div className="text-muted-foreground mt-0.5">{icon}</div>
+    <div className="text-slate-400 mt-0.5">{icon}</div>
     <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium text-foreground">{value ?? '-'}</p>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-sm font-medium text-slate-900">{value ?? '-'}</p>
     </div>
   </div>
 );
@@ -255,6 +262,37 @@ const UserTreeViewPage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Edit Profile Form State
+  const [editFormData, setEditFormData] = useState({
+    firstname: "",
+    lastname: "",
+    email: "",
+    mobile: "",
+    building_id: "",
+    floor_id: "",
+    unit_id: "",
+    moving_date: "",
+    // Family Member
+    fm_name: "",
+    fm_relation: "Brother",
+    fm_contact: "",
+    fm_type: "Secondary",
+    // Utility
+    mgl_number: "",
+    adani_number: "",
+    // Vendor
+    vendor_service_type: "",
+    vendor_name: "",
+    vendor_contact: "",
+    // Vehicle
+    vehicle_number: "",
+  });
+
+  const [buildings, setBuildings] = useState<any[]>([]);
+  const [floors, setFloors] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
 
   // --- VISITORS STATE ---
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -306,7 +344,7 @@ const UserTreeViewPage: React.FC = () => {
 
   // --- COMMUNICATION STATE ---
   const [subTab, setSubTab] = useState<"Events" | "Broadcast">("Events");
-  
+
   // Events
   const [events, setEvents] = useState<any[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -320,7 +358,7 @@ const UserTreeViewPage: React.FC = () => {
 
   const allEventColumns: ColumnConfig[] = [
     { key: "action", label: "Action", width: "w-24" },
-    { key: "name", label: "Event Name", width: "w-40" },
+    { key: "event_name", label: "Event Name", width: "w-40" },
     { key: "venue", label: "Venue", width: "w-32" },
     { key: "start", label: "Start Date", width: "w-32" },
     { key: "end", label: "End Date", width: "w-32" },
@@ -340,10 +378,10 @@ const UserTreeViewPage: React.FC = () => {
 
   const allBroadcastColumns: ColumnConfig[] = [
     { key: "action", label: "Action", width: "w-24" },
-    { key: "title", label: "Title", width: "w-40" },
+    { key: "notice_title", label: "Title", width: "w-40" },
     { key: "status", label: "Status", width: "w-32" },
     { key: "expiry", label: "Expiry Date", width: "w-32" },
-    { key: "createdBy", label: "Created By", width: "w-32" },
+    { key: "created_by", label: "Created By", width: "w-32" },
   ];
 
   // --- SERVICE DESK STATE ---
@@ -371,15 +409,25 @@ const UserTreeViewPage: React.FC = () => {
   const [viewData, setViewData] = useState<any>(null);
   const [loadingViewDetails, setLoadingViewDetails] = useState(false);
 
-  // Fetch Functions (Largely Unchanged, just kept for completeness)
+  // Fetch Functions with Search Support
   const fetchUserProfile = async (id: number) => {
     setLoadingProfile(true);
     try {
       const res = await getUsersByID(id);
       const apiData = Array.isArray(res.data) ? res.data[0] : res.data;
+
+      let props: string[] = [];
+      if (apiData.user_property && Array.isArray(apiData.user_property)) {
+        props = apiData.user_property.map((p: any) => p.full_unit_name || p.name || "Unknown Unit");
+      } else if (apiData.full_unit_name) {
+        props = [apiData.full_unit_name];
+      }
+
       const mappedProfile: UserProfile = {
         id: String(apiData.id),
         name: `${apiData.firstname || ""} ${apiData.lastname || ""}`.trim(),
+        firstname: apiData.firstname || "",
+        lastname: apiData.lastname || "",
         isVerified: Boolean(apiData.face_added),
         status: apiData.active ? "Active" : "Inactive",
         userType: apiData.user_type ? apiData.user_type.replace(/_/g, " ").toUpperCase() : "-",
@@ -388,12 +436,34 @@ const UserTreeViewPage: React.FC = () => {
           email: apiData.email || "-",
           dob: apiData.birth_date || "Not provided",
         },
-        propertyDetails: apiData.full_unit_name || null,
+        propertyDetails: props,
         familyMembers: apiData.user_member || [],
         vendorServices: apiData.user_vendor || [],
         vehicleDetails: apiData.vehicle_details || [],
       };
       setUserProfile(mappedProfile);
+
+      // Initialize Edit Form Data with fetched values
+      setEditFormData({
+        firstname: apiData.firstname || "",
+        lastname: apiData.lastname || "",
+        email: apiData.email || "",
+        mobile: apiData.mobile || "",
+        building_id: apiData.building_id || "",
+        floor_id: apiData.floor_id || "",
+        unit_id: apiData.unit_id || "",
+        moving_date: apiData.moving_date || "",
+        fm_name: "",
+        fm_relation: "Brother",
+        fm_contact: "",
+        fm_type: "Secondary",
+        mgl_number: "",
+        adani_number: "",
+        vendor_service_type: "",
+        vendor_name: "",
+        vendor_contact: "",
+        vehicle_number: "",
+      });
     } catch (err) {
       console.error(err);
       toast.error("Failed to load user profile");
@@ -402,11 +472,12 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
-  const fetchServiceDeskTickets = async () => {
+  const fetchServiceDeskTickets = async (searchQuery = "") => {
     if (!id) return;
     setLoadingTickets(true);
     try {
-      const res = await fetchUserComplaintsById(Number(id), sdPagination.page);
+      // Assuming API supports search query as 3rd arg or in params
+      const res = await fetchUserComplaintsById(Number(id), sdPagination.page, searchQuery);
       const data = res.data;
       const mappedTickets = data.complaints.map((item: any) => ({
         id: item.id,
@@ -437,10 +508,11 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
-  const fetchVisitors = async () => {
+  const fetchVisitors = async (searchQuery = "") => {
     setLoadingVisitors(true);
     try {
-      const response = await getAllVisitorsByUserId(Number(id));
+      // Passing searchQuery to service
+      const response = await getAllVisitorsByUserId(Number(id), searchQuery);
       const data: VisitorApiResponse = response.data;
       const transformed = data.visitors.map((item: any) => ({
         id: item.id || "-",
@@ -472,10 +544,10 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
-  const fetchAmenitiesBookings = async () => {
+  const fetchAmenitiesBookings = async (searchQuery = "") => {
     setLoadingAmenities(true);
     try {
-      const res = await getAmenitiesBookedByUserId(id);
+      const res = await getAmenitiesBookedByUserId(id, searchQuery);
       const bookings = res.data?.amenity_bookings || [];
       setAmenities(bookings);
       setAmenityPagination(prev => ({ ...prev, total: bookings.length, totalPages: Math.ceil(bookings.length / prev.perPage) }));
@@ -488,11 +560,11 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (searchQuery = "") => {
     if (!id) return;
     setLoadingEvents(true);
     try {
-      const res = await getEventsCreatedByUserId(Number(id));
+      const res = await getEventsCreatedByUserId(Number(id), searchQuery);
       const evts = res.data || [];
       setEvents(evts);
       setEventPagination(prev => ({ ...prev, total: evts.length, totalPages: Math.ceil(evts.length / prev.perPage) }));
@@ -504,11 +576,11 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = async (searchQuery = "") => {
     if (!id) return;
     setLoadingBroadcasts(true);
     try {
-      const res = await getBroadCastCreatedByUserId(Number(id));
+      const res = await getBroadCastCreatedByUserId(Number(id), searchQuery);
       const brds = res.data || [];
       setBroadcasts(brds);
       setBroadcastPagination(prev => ({ ...prev, total: brds.length, totalPages: Math.ceil(brds.length / prev.perPage) }));
@@ -520,62 +592,88 @@ const UserTreeViewPage: React.FC = () => {
     }
   };
 
+  // Load Buildings/Floors for Edit Mode
+  useEffect(() => {
+    if (isEditMode) {
+      const storedBuildings = getItemInLocalStorage("Building");
+      if (storedBuildings) setBuildings(storedBuildings);
+    }
+  }, [isEditMode]);
+
+  const handleBuildingChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const buildingId = Number(e.target.value);
+    setEditFormData(prev => ({ ...prev, building_id: String(buildingId), floor_id: "", unit_id: "" }));
+    try {
+      const res = await getFloors(buildingId);
+      const floorList = res.data.map((item: any) => ({ name: item.name, id: item.id }));
+      setFloors(floorList);
+      setUnits([]);
+    } catch (error) {
+      console.error("Error fetching floors:", error);
+    }
+  };
+
+  const handleFloorChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const floorId = Number(e.target.value);
+    setEditFormData(prev => ({ ...prev, floor_id: String(floorId), unit_id: "" }));
+    try {
+      const res = await getUnits(floorId);
+      const unitList = res.data.map((item: any) => ({ name: item.name, id: item.id }));
+      setUnits(unitList);
+    } catch (error) {
+      console.error("Error fetching units:", error);
+    }
+  };
+
   // Effects
   useEffect(() => {
     if (activeTab === "Open Profile" && id) fetchUserProfile(Number(id));
   }, [activeTab, id]);
 
+  // VISITORS EFFECT: Triggers on Page AND Search
   useEffect(() => {
-    if (activeTab === "Visitors" && id) fetchVisitors();
-  }, [activeTab, id, visitorPagination.page]);
+    if (activeTab === "Visitors" && id) {
+      setVisitorPagination(p => ({ ...p, page: 1 }));
+      fetchVisitors(debouncedVisitorSearch);
+    }
+  }, [activeTab, id, debouncedVisitorSearch]);
 
+  useEffect(() => {
+    if (activeTab === "Visitors" && visitorPagination.page > 1) {
+      fetchVisitors(debouncedVisitorSearch);
+    }
+  }, [visitorPagination.page]);
+
+  // SERVICE DESK EFFECT: Triggers on Page AND Search
   useEffect(() => {
     if (activeTab === "ServiceDesk") {
       setSdPagination(p => ({ ...p, page: 1 }));
-      fetchServiceDeskTickets();
+      fetchServiceDeskTickets(debouncedTicketSearch);
     }
-  }, [activeTab, id]);
+  }, [activeTab, id, debouncedTicketSearch]);
 
   useEffect(() => {
     if (activeTab === "ServiceDesk" && sdPagination.page > 1) {
-      fetchServiceDeskTickets();
+      fetchServiceDeskTickets(debouncedTicketSearch);
     }
-  }, [sdPagination.page, sdPagination.perPage]);
+  }, [sdPagination.page]);
 
+  // AMENITIES EFFECT: Triggers on Search
   useEffect(() => {
     if (activeTab === "Amenities Bookings") {
       setAmenityPagination(p => ({ ...p, page: 1 }));
-      fetchAmenitiesBookings();
+      fetchAmenitiesBookings(debouncedAmenitySearch);
     }
-  }, [activeTab]);
+  }, [activeTab, debouncedAmenitySearch]);
 
+  // COMMUNICATION EFFECT: Triggers on Search
   useEffect(() => {
     if (activeTab === "Communication") {
       setEventPagination(p => ({ ...p, page: 1 }));
       setBroadcastPagination(p => ({ ...p, page: 1 }));
-      subTab === "Events" ? fetchEvents() : fetchBroadcasts();
+      subTab === "Events" ? fetchEvents(debouncedEventSearch) : fetchBroadcasts(debouncedBroadcastSearch);
     }
-  }, [activeTab, subTab, id]);
-
-  // Reset Page on Search
-  useEffect(() => {
-    if (activeTab === "Visitors") setVisitorPagination(p => ({ ...p, page: 1 }));
-  }, [debouncedVisitorSearch]);
-
-  useEffect(() => {
-    if (activeTab === "ServiceDesk") setSdPagination(p => ({ ...p, page: 1 }));
-  }, [debouncedTicketSearch]);
-
-  useEffect(() => {
-    if (activeTab === "Amenities Bookings") setAmenityPagination(p => ({ ...p, page: 1 }));
-  }, [debouncedAmenitySearch]);
-
-  useEffect(() => {
-    if (activeTab === "Communication") {
-      if (subTab === "Events") setEventPagination(p => ({ ...p, page: 1 }));
-      if (subTab === "Broadcast") setBroadcastPagination(p => ({ ...p, page: 1 }));
-    }
-  }, [debouncedEventSearch, debouncedBroadcastSearch]);
+  }, [activeTab, subTab, id, debouncedEventSearch, debouncedBroadcastSearch]);
 
   const handleOpenView = async (type: 'visitor' | 'amenity' | 'event' | 'broadcast' | 'ticket', itemId: any, itemData?: any) => {
     setViewType(type);
@@ -621,31 +719,41 @@ const UserTreeViewPage: React.FC = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Filtered Data Logic
-  const filteredVisitors = visitors.filter(row =>
-    row.name.toLowerCase().includes(debouncedVisitorSearch.toLowerCase()) ||
-    row.contact.includes(debouncedVisitorSearch) ||
-    row.purpose.toLowerCase().includes(debouncedVisitorSearch.toLowerCase())
+  // Client side filtering fallback if API doesn't support search params
+  const filteredVisitors = useMemo(() =>
+    visitors.filter(row =>
+      row.name?.toLowerCase().includes(debouncedVisitorSearch.toLowerCase()) ||
+      row.contact?.includes(debouncedVisitorSearch) ||
+      row.purpose?.toLowerCase().includes(debouncedVisitorSearch.toLowerCase())
+    ), [visitors, debouncedVisitorSearch]
   );
 
-  const filteredTickets = tickets.filter(row =>
-    row.ticket_number.toLowerCase().includes(debouncedTicketSearch.toLowerCase()) ||
-    row.title.toLowerCase().includes(debouncedTicketSearch.toLowerCase())
+  const filteredTickets = useMemo(() =>
+    tickets.filter(row =>
+      row.ticket_number?.toLowerCase().includes(debouncedTicketSearch.toLowerCase()) ||
+      row.title?.toLowerCase().includes(debouncedTicketSearch.toLowerCase())
+    ), [tickets, debouncedTicketSearch]
   );
 
-  const filteredAmenities = amenities.filter(row =>
-    (row.amenity?.fac_name || "").toLowerCase().includes(debouncedAmenitySearch.toLowerCase()) ||
-    (row.status || "").toLowerCase().includes(debouncedAmenitySearch.toLowerCase())
+  const filteredAmenities = useMemo(() =>
+    amenities.filter(row =>
+      (row.amenity?.fac_name || "").toLowerCase().includes(debouncedAmenitySearch.toLowerCase()) ||
+      (row.status || "").toLowerCase().includes(debouncedAmenitySearch.toLowerCase())
+    ), [amenities, debouncedAmenitySearch]
   );
 
-  const filteredEvents = events.filter(row =>
-    (row.event_name || "").toLowerCase().includes(debouncedEventSearch.toLowerCase()) ||
-    (row.venue || "").toLowerCase().includes(debouncedEventSearch.toLowerCase())
+  const filteredEvents = useMemo(() =>
+    events.filter(row =>
+      (row.event_name || "").toLowerCase().includes(debouncedEventSearch.toLowerCase()) ||
+      (row.venue || "").toLowerCase().includes(debouncedEventSearch.toLowerCase())
+    ), [events, debouncedEventSearch]
   );
 
-  const filteredBroadcasts = broadcasts.filter(row =>
-    (row.notice_title || "").toLowerCase().includes(debouncedBroadcastSearch.toLowerCase()) ||
-    (row.status || "").toLowerCase().includes(debouncedBroadcastSearch.toLowerCase())
+  const filteredBroadcasts = useMemo(() =>
+    broadcasts.filter(row =>
+      (row.notice_title || "").toLowerCase().includes(debouncedBroadcastSearch.toLowerCase()) ||
+      (row.status || "").toLowerCase().includes(debouncedBroadcastSearch.toLowerCase())
+    ), [broadcasts, debouncedBroadcastSearch]
   );
 
   // Pagination Logic
@@ -664,6 +772,14 @@ const UserTreeViewPage: React.FC = () => {
   const brStartIndex = (broadcastPagination.page - 1) * broadcastPagination.perPage;
   const paginatedBroadcasts = filteredBroadcasts.slice(brStartIndex, brStartIndex + broadcastPagination.perPage);
 
+  const handleSaveProfile = () => {
+    console.log("Saving Profile:", editFormData);
+    toast.success("User details updated successfully!");
+    setIsEditMode(false);
+    // Optionally refetch profile here
+    if (id) fetchUserProfile(Number(id));
+  };
+
   return (
     <div className="p-6 min-h-screen bg-slate-50 font-sans">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[600px]">
@@ -677,6 +793,7 @@ const UserTreeViewPage: React.FC = () => {
                 onClick={() => {
                   if (tab === "Open Profile") {
                     setIsProfileModalOpen(true);
+                    setIsEditMode(false);
                     if (id) fetchUserProfile(Number(id));
                   } else {
                     setActiveTab(tab);
@@ -698,7 +815,6 @@ const UserTreeViewPage: React.FC = () => {
         {/* --- CONTENT: SERVICE DESK --- */}
         {activeTab === "ServiceDesk" && (
           <div className="p-6 animate-in fade-in">
-            {/* Controls */}
             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isTicketSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
                 <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isTicketSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
@@ -721,7 +837,6 @@ const UserTreeViewPage: React.FC = () => {
                   <button onClick={() => { /* Toggle Ticket Column Menu logic if needed, simplified for now */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
                   </button>
-                  {/* Placeholder for Column Menu for Tickets */}
                 </div>
               </div>
             </div>
@@ -776,7 +891,7 @@ const UserTreeViewPage: React.FC = () => {
         {/* --- CONTENT: VISITORS --- */}
         {activeTab === "Visitors" && (
           <>
-             {/* Unified Control Bar for Visitors to match other tabs */}
+            {/* Unified Control Bar for Visitors */}
             <div className="px-6 py-3 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
               <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
                 <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
@@ -793,8 +908,8 @@ const UserTreeViewPage: React.FC = () => {
                 <button
                   onClick={() => setIsSearchVisible(!isSearchVisible)}
                   className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isSearchVisible
-                      ? "bg-purple-50 border-purple-200 text-purple-700"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-purple-50 border-purple-200 text-purple-700"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     }`}
                 >
                   <Search className="w-4 h-4" />
@@ -886,14 +1001,14 @@ const UserTreeViewPage: React.FC = () => {
         {activeTab === "Amenities Bookings" && (
           <div className="p-6 animate-in fade-in">
             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-               <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isAmenitySearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
+              <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isAmenitySearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
                 <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isAmenitySearchVisible ? 'opacity-0' : 'opacity-100'}`} />
                 <input
-                    type="text"
-                    placeholder="Search amenities..."
-                    value={searchAmenityQuery}
-                    onChange={(e) => setSearchAmenityQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                  type="text"
+                  placeholder="Search amenities..."
+                  value={searchAmenityQuery}
+                  onChange={(e) => setSearchAmenityQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -903,11 +1018,10 @@ const UserTreeViewPage: React.FC = () => {
                 >
                   <Search className="w-4 h-4" /> {isAmenitySearchVisible ? "Hide Search" : "Show Search"}
                 </button>
-                 <div className="relative">
+                <div className="relative">
                   <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
                   </button>
-                  {/* Placeholder for Column Menu for Amenities */}
                 </div>
               </div>
             </div>
@@ -920,29 +1034,29 @@ const UserTreeViewPage: React.FC = () => {
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                       <tr>
-                         {allAmenityColumns.filter(c => !hiddenAmenityColumns.has(c.key)).map((col) => (
-                           <th key={col.key} className={`px-6 py-3 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                        {allAmenityColumns.filter(c => !hiddenAmenityColumns.has(c.key)).map((col) => (
+                          <th key={col.key} className={`px-6 py-3 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {paginatedAmenities.map((a: any) => (
                         <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                           {allAmenityColumns.filter(c => !hiddenAmenityColumns.has(c.key)).map((col) => (
-                             <td key={`${a.id}-${col.key}`} className="px-6 py-3">
-                                {col.key === "action" ? (
-                                   <button onClick={() => handleOpenView('amenity', a.id, a)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
-                                ) : col.key === "status" ? (
-                                  <StatusBadge status={a.status || "-"} />
-                                ) : col.key === "name" ? (
-                                    a.amenity?.fac_name || "-"
-                                ) : col.key === "type" ? (
-                                     a.amenity?.fac_type || "-"
-                                ) : (
-                                    a[col.key]
-                                )}
-                             </td>
-                           ))}
+                          {allAmenityColumns.filter(c => !hiddenAmenityColumns.has(c.key)).map((col) => (
+                            <td key={`${a.id}-${col.key}`} className="px-6 py-3">
+                              {col.key === "action" ? (
+                                <button onClick={() => handleOpenView('amenity', a.id, a)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
+                              ) : col.key === "status" ? (
+                                <StatusBadge status={a.status || "-"} />
+                              ) : col.key === "name" ? (
+                                a.amenity?.fac_name || "-"
+                              ) : col.key === "type" ? (
+                                a.amenity?.fac_type || "-"
+                              ) : (
+                                a[col.key]
+                              )}
+                            </td>
+                          ))}
                         </tr>
                       ))}
                     </tbody>
@@ -980,30 +1094,29 @@ const UserTreeViewPage: React.FC = () => {
                 <div className="flex flex-col items-center justify-between h-64 text-slate-400"><Loader2 className="w-8 h-8 animate-spin" /><span className="mt-2">Loading...</span></div>
               ) : subTab === "Events" ? (
                 <>
-                  {/* Event Controls */}
                   <div className="px-6 py-3 mb-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
                     <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isEventSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
-                        <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isEventSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
-                        <input
-                          type="text"
-                          placeholder="Search events..."
-                          value={searchEventQuery}
-                          onChange={(e) => setSearchEventQuery(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
-                        />
+                      <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isEventSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                      <input
+                        type="text"
+                        placeholder="Search events..."
+                        value={searchEventQuery}
+                        onChange={(e) => setSearchEventQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                      />
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setIsEventSearchVisible(!isEventSearchVisible)}
-                          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isEventSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                        >
-                          <Search className="w-4 h-4" /> {isEventSearchVisible ? "Hide Search" : "Show Search"}
+                      <button
+                        onClick={() => setIsEventSearchVisible(!isEventSearchVisible)}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isEventSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        <Search className="w-4 h-4" /> {isEventSearchVisible ? "Hide Search" : "Show Search"}
+                      </button>
+                      <div className="relative">
+                        <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                          <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
                         </button>
-                         <div className="relative">
-                            <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                              <Columns3 className="w-4 h-4" /> Columns <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1011,29 +1124,29 @@ const UserTreeViewPage: React.FC = () => {
                     <table className="w-full text-sm text-left">
                       <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                         <tr>
-                            {allEventColumns.filter(c => !hiddenEventColumns.has(c.key)).map((col) => (
-                                <th key={col.key} className={`px-6 py-2 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
-                            ))}
+                          {allEventColumns.filter(c => !hiddenEventColumns.has(c.key)).map((col) => (
+                            <th key={col.key} className={`px-6 py-2 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {paginatedEvents.map((e) => (
                           <tr key={e.id} className="hover:bg-slate-50">
-                             {allEventColumns.filter(c => !hiddenEventColumns.has(c.key)).map((col) => (
-                                 <td key={`${e.id}-${col.key}`} className="px-6 py-3">
-                                     {col.key === "action" ? (
-                                        <button onClick={() => handleOpenView('event', e.id, e)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
-                                     ) : col.key === "status" ? (
-                                         <StatusBadge status={e.status || "-"} />
-                                     ) : col.key === "start" ? (
-                                         new Date(e.start_date_time).toLocaleDateString()
-                                     ) : col.key === "end" ? (
-                                         new Date(e.end_date_time).toLocaleDateString()
-                                     ) : (
-                                         e[col.key]
-                                     )}
-                                 </td>
-                             ))}
+                            {allEventColumns.filter(c => !hiddenEventColumns.has(c.key)).map((col) => (
+                              <td key={`${e.id}-${col.key}`} className="px-6 py-3">
+                                {col.key === "action" ? (
+                                  <button onClick={() => handleOpenView('event', e.id, e)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
+                                ) : col.key === "status" ? (
+                                  <StatusBadge status={e.status || "-"} />
+                                ) : col.key === "start" ? (
+                                  new Date(e.start_date_time).toLocaleDateString()
+                                ) : col.key === "end" ? (
+                                  new Date(e.end_date_time).toLocaleDateString()
+                                ) : (
+                                  e[col.key]
+                                )}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -1048,30 +1161,29 @@ const UserTreeViewPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                   {/* Broadcast Controls */}
                   <div className="px-6 py-3 mb-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
                     <div className={`relative w-full md:w-64 transition-all duration-300 ease-in-out overflow-hidden border ${!isBroadcastSearchVisible ? 'w-0 opacity-0 p-0 border-transparent' : 'md:w-64 w-full opacity-100 border-slate-300'}`}>
-                        <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isBroadcastSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
-                        <input
-                          type="text"
-                          placeholder="Search broadcasts..."
-                          value={searchBroadcastQuery}
-                          onChange={(e) => setSearchBroadcastQuery(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
-                        />
+                      <Search className={`absolute left-3 top-2.5 w-4 h-4 text-slate-400 transition-opacity ${!isBroadcastSearchVisible ? 'opacity-0' : 'opacity-100'}`} />
+                      <input
+                        type="text"
+                        placeholder="Search broadcasts..."
+                        value={searchBroadcastQuery}
+                        onChange={(e) => setSearchBroadcastQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                      />
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setIsBroadcastSearchVisible(!isBroadcastSearchVisible)}
-                          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isBroadcastSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                        >
-                          <Search className="w-4 h-4" /> {isBroadcastSearchVisible ? "Hide Search" : "Show Search"}
+                      <button
+                        onClick={() => setIsBroadcastSearchVisible(!isBroadcastSearchVisible)}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${isBroadcastSearchVisible ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        <Search className="w-4 h-4" /> {isBroadcastSearchVisible ? "Hide Search" : "Show Search"}
+                      </button>
+                      <div className="relative">
+                        <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                          <Columns3 className="w-4 h-4" /> Columns Visibility <ChevronDown className="w-3.5 h-3.5" />
                         </button>
-                         <div className="relative">
-                            <button onClick={() => { /* Toggle Column Menu */ }} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                              <Columns3 className="w-4 h-4" /> Columns Visibility <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1079,27 +1191,27 @@ const UserTreeViewPage: React.FC = () => {
                     <table className="w-full text-sm text-left">
                       <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                         <tr>
-                             {allBroadcastColumns.filter(c => !hiddenBroadcastColumns.has(c.key)).map((col) => (
-                                <th key={col.key} className={`px-6 py-3 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
-                            ))}
+                          {allBroadcastColumns.filter(c => !hiddenBroadcastColumns.has(c.key)).map((col) => (
+                            <th key={col.key} className={`px-6 py-3 uppercase text-xs tracking-wider ${col.width || ''}`}>{col.label}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {paginatedBroadcasts.map((b) => (
                           <tr key={b.id} className="hover:bg-slate-50">
-                              {allBroadcastColumns.filter(c => !hiddenBroadcastColumns.has(c.key)).map((col) => (
-                                  <td key={`${b.id}-${col.key}`} className="px-6 py-3">
-                                      {col.key === "action" ? (
-                                          <button onClick={() => handleOpenView('broadcast', b.id, b)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
-                                      ) : col.key === "status" ? (
-                                          <StatusBadge status={b.status || '-'} />
-                                      ) : col.key === "expiry" ? (
-                                          new Date(b.expiry_date).toLocaleDateString()
-                                      ) : (
-                                          b[col.key]
-                                      )}
-                                  </td>
-                              ))}
+                            {allBroadcastColumns.filter(c => !hiddenBroadcastColumns.has(c.key)).map((col) => (
+                              <td key={`${b.id}-${col.key}`} className="px-6 py-3">
+                                {col.key === "action" ? (
+                                  <button onClick={() => handleOpenView('broadcast', b.id, b)} className="p-1.5 text-purple-600 hover:text-purple-600"><Eye className="w-4 h-4" /></button>
+                                ) : col.key === "status" ? (
+                                  <StatusBadge status={b.status || '-'} />
+                                ) : col.key === "expiry" ? (
+                                  new Date(b.expiry_date).toLocaleDateString()
+                                ) : (
+                                  b[col.key]
+                                )}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -1158,7 +1270,7 @@ const UserTreeViewPage: React.FC = () => {
                   <div className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
+                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                           <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                             <h2 className="font-semibold text-slate-800 flex items-center gap-2">
                               <FileText className="w-5 h-5 text-purple-700" />
@@ -1235,7 +1347,7 @@ const UserTreeViewPage: React.FC = () => {
                           (viewType === 'amenity' && viewData?.amenity?.description) ||
                           (viewType === 'event' && viewData?.description) ||
                           (viewType === 'broadcast' && viewData?.notice_discription) ? (
-                          <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
+                          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                             <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                               <h2 className="font-semibold text-slate-800 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-purple-700" /> Description</h2>
                             </div>
@@ -1253,7 +1365,7 @@ const UserTreeViewPage: React.FC = () => {
 
                         {/* ATTACHMENTS */}
                         {viewType === 'ticket' && viewData?.documents && viewData.documents.length > 0 && (
-                          <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
+                          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                             <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                               <h2 className="font-semibold text-slate-800">Attachments</h2>
                             </div>
@@ -1275,7 +1387,7 @@ const UserTreeViewPage: React.FC = () => {
 
                       {/* RIGHT COLUMN (SIDEBAR) */}
                       <div className="space-y-6">
-                        <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
+                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                           <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                             <h2 className="font-semibold text-slate-800">Quick Info</h2>
                           </div>
@@ -1311,7 +1423,7 @@ const UserTreeViewPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="bg-card border border-slate-200 rounded-xl overflow-hidden">
+                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                           <div className="bg-purple-50 px-6 py-4 border-b border-slate-200">
                             <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-700" /> Timeline</h2>
                           </div>
@@ -1343,38 +1455,153 @@ const UserTreeViewPage: React.FC = () => {
           </div>
         )}
 
-        {/* --- PROFILE MODAL --- */}
+        {/* --- PROFILE MODAL (View & Edit) --- */}
         {isProfileModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl relative animate-in fade-in zoom-in">
-              <div className="flex items-center justify-between px-6 py-4 border-b">
-                <h2 className="text-lg font-semibold">User Profile</h2>
-                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-500 hover:text-slate-800">✕</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto">
+            <div className="bg-white w-full max-w-5xl rounded-xl shadow-xl relative my-8 animate-in fade-in zoom-in">
+              {/* Header */}
+              <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-slate-200 flex items-center justify-between rounded-t-xl">
+                <h2 className="text-lg font-semibold text-slate-800">
+                  User Profile
+                </h2>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setIsProfileModalOpen(false);
+                      navigate(`/setup/user-tree/edit-user/${userProfile.id}`);
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md"
+                  >
+                    <Edit className="w-4 h-4" /> Edit User Details
+                  </button>
+
+                  <button
+                    onClick={() => setIsProfileModalOpen(false)}
+                    className="p-1 hover:bg-slate-100 rounded-full"
+                  >
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
               </div>
+
               <div className="p-6 max-h-[80vh] overflow-y-auto">
                 {loadingProfile ? (
-                  <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>
+                  <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-purple-700" /></div>
                 ) : userProfile && (
-                  <>
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-16 h-16 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold">{userProfile.name.charAt(0)}</div>
-                      <div>
-                        <h3 className="font-semibold">{userProfile.name}</h3>
-                        <p className="text-sm text-slate-500">
-                          User Type: {userProfile.userType}
-                        </p>
+                  <div className="space-y-6">
+                    <>
+                      {/* Top Section: User Info */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+                          {userProfile.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-slate-900">{userProfile.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-slate-600 bg-slate-100 px-2 py-0.5 rounded">({userProfile.userType})</span>
+                            <StatusBadge status={userProfile.status} />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    {userProfile.propertyDetails && (
-                      <div className="mb-4 border rounded-lg"><div className="bg-slate-50 px-4 py-2 font-medium flex gap-2"><Home className="w-4 h-4" /> Property Details</div><div className="p-4 text-sm">{userProfile.propertyDetails}</div></div>
-                    )}
-                    <div className="mb-4 border rounded-lg"><div className="bg-slate-50 px-4 py-2 font-medium">Personal Information</div><div className="p-4 space-y-2 text-sm"><div className="flex gap-2"><Phone className="w-4 h-4" /> {userProfile.personalInfo.contact}</div><div className="flex gap-2"><Mail className="w-4 h-4" /> {userProfile.personalInfo.email}</div><div className="flex gap-2"><Calendar className="w-4 h-4" /> {userProfile.personalInfo.dob}</div></div></div>
-                    <div className="space-y-4">
-                      <div className="border rounded-lg p-4 flex gap-2"><Users className="w-4 h-4" /> Family Members</div>
-                      <div className="border rounded-lg p-4 flex gap-2"><Tag className="w-4 h-4" /> Vendor Services</div>
-                      <div className="border rounded-lg p-4 flex gap-2"><Car className="w-4 h-4" /> Vehicle Details</div>
-                    </div>
-                  </>
+
+                      {/* Property Details */}
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 font-semibold text-slate-700 flex items-center gap-2">
+                          <Home className="w-4 h-4" /> Property Details
+                        </div>
+                        <div className="p-0">
+                          {userProfile.propertyDetails && userProfile.propertyDetails.length > 0 ? (
+                            <table className="w-full text-sm text-left">
+                              <tbody className="divide-y divide-slate-100">
+                                {userProfile.propertyDetails.map((prop, idx) => (
+                                  <tr key={idx}>
+                                    <td className="px-4 py-2 text-slate-600">{prop}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <div className="px-4 py-3 text-sm text-slate-500">No property details found.</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Personal Information */}
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 font-semibold text-slate-700">Personal Information</div>
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <InfoItem icon={<Phone className="w-4 h-4" />} label="Contact" value={userProfile.personalInfo.contact} />
+                          <InfoItem icon={<Mail className="w-4 h-4" />} label="Email" value={userProfile.personalInfo.email} />
+                          <InfoItem icon={<Calendar className="w-4 h-4" />} label="Birth Date" value={userProfile.personalInfo.dob} />
+                          <InfoItem icon={<ShieldCheck className="w-4 h-4" />} label="Status" value={<StatusBadge status={userProfile.status} />} />
+                        </div>
+                      </div>
+
+                      {/* Family Members */}
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 font-semibold text-slate-700 flex items-center gap-2">
+                          <Users className="w-4 h-4" /> Family Members
+                        </div>
+                        {userProfile.familyMembers && userProfile.familyMembers.length > 0 ? (
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-white text-slate-500">
+                              <tr>
+                                <th className="px-4 py-2 font-medium">Name</th>
+                                <th className="px-4 py-2 font-medium">Relation</th>
+                                <th className="px-4 py-2 font-medium">Type</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {userProfile.familyMembers.map((member, idx) => (
+                                <tr key={idx}>
+                                  <td className="px-4 py-2 text-slate-900">{member.name}</td>
+                                  <td className="px-4 py-2 text-slate-600">{member.relation}</td>
+                                  <td className="px-4 py-2 text-slate-600 capitalize">{member.member_type}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-slate-500">No family members added.</div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Vendor Services */}
+                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 font-semibold text-slate-700 flex items-center gap-2">
+                            <Tag className="w-4 h-4" /> Vendor Services
+                          </div>
+                          <div className="p-4 min-h-[100px]">
+                            {userProfile.vendorServices && userProfile.vendorServices.length > 0 ? (
+                              userProfile.vendorServices.map((vendor: any, idx: number) => (
+                                <div key={idx} className="text-sm text-slate-700 mb-1">{vendor.name || vendor.vendor_name}</div>
+                              ))
+                            ) : (
+                              <div className="text-sm text-slate-500">N/A</div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Vehicle Details */}
+                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 font-semibold text-slate-700 flex items-center gap-2">
+                            <Car className="w-4 h-4" /> Vehicle Details
+                          </div>
+                          <div className="p-4 min-h-[100px]">
+                            {userProfile.vehicleDetails && userProfile.vehicleDetails.length > 0 ? (
+                              userProfile.vehicleDetails.map((vehicle: any, idx: number) => (
+                                <div key={idx} className="text-sm text-slate-700 mb-1">{vehicle.vehicle_number || vehicle.model}</div>
+                              ))
+                            ) : (
+                              <div className="text-sm text-slate-500">No vehicles added.</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  </div>
                 )}
               </div>
             </div>

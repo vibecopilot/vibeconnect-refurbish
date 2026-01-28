@@ -32,7 +32,8 @@ interface ScheduledAudit {
   }[];
 }
 
-const statusFilters = ['All','Low','High','Medium'];
+const priorityFilters = ['All', 'Low', 'Medium', 'High'];
+
 
 const ScheduledList: React.FC = () => {
   const navigate = useNavigate();
@@ -52,80 +53,78 @@ const ScheduledList: React.FC = () => {
     totalPages: 1,
   });
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (searchText) params.search = searchText;
-      if (activeFilter && activeFilter !== 'All') params.status = activeFilter;
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const params: any = {};
 
-      const response = await getAuditScheduled(pagination.page, pagination.perPage, params);
-      const raw = response?.data;
-      const rawItems = Array.isArray(raw) ? raw : raw.data || raw.audits || raw.items || [];
-
-      const items: ScheduledAudit[] = rawItems.map((it: any) => ({
-        id: it.id,
-        audit_for: it.audit_for,
-        activity_name: it.activity_name,
-        description: it.description,
-        checklist_type: it.checklist_type,
-        priority: it.priority,
-        frequency: it.frequency,
-        assign_to: it.assign_to,
-        scan_type: it.scan_type,
-        plan_duration: it.plan_duration,
-        email_trigger_rule: it.email_trigger_rule,
-        look_overdue_task: it.look_overdue_task,
-        start_from: it.start_from,
-        end_at: it.end_at,
-        select_supplier: it.select_supplier,
-        created_at: it.created_at,
-        status: it.status,
-        audit_tasks: it.audit_tasks || [],
-      }));
-
-
-      // Determine if API provided pagination metadata
-      const hasServerPagination = raw?.total_pages !== undefined || raw?.current_page !== undefined || raw?.total !== undefined || raw?.total_count !== undefined || raw?.count !== undefined;
-
-      let total = raw?.count || raw?.total || raw?.total_count || items.length;
-      let tPages = raw?.total_pages || Math.max(1, Math.ceil(total / pagination.perPage));
-      const currentPage = raw?.current_page || pagination.page;
-
-      // Client-side fallback: if API returned all items (no pagination metadata), slice items locally
-      if (!hasServerPagination) {
-        total = items.length;
-        tPages = Math.max(1, Math.ceil(total / pagination.perPage));
-        const start = (pagination.page - 1) * pagination.perPage;
-        const end = start + pagination.perPage;
-        const pageItems = items.slice(start, end);
-        setData(pageItems);
-      } else {
-        setData(items);
-      }
-
-      setPagination((prev) => ({ ...prev, total, totalPages: tPages, page: currentPage }));
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to fetch scheduled audits');
-      setData([]);
-      setPagination((prev) => ({ ...prev, total: 0, totalPages: 1 }));
-    } finally {
-      setLoading(false);
+    if (searchText) {
+      params.search = searchText;
     }
-  };
-  const getPriorityClasses = (priority?: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'bg-red-100 text-red-700';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'low':
-        return 'bg-green-100 text-green-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+
+    // send priority to API (if backend supports it)
+    if (activeFilter !== 'All') {
+      params.priority = activeFilter.toLowerCase();
     }
-  };
+
+    const response = await getAuditScheduled(
+      pagination.page,
+      pagination.perPage,
+      params
+    );
+
+    const raw = response?.data;
+    const rawItems = Array.isArray(raw)
+      ? raw
+      : raw.data || raw.audits || raw.items || [];
+
+    // map API data
+    let items: ScheduledAudit[] = rawItems.map((it: any) => ({
+      id: it.id,
+      audit_for: it.audit_for,
+      activity_name: it.activity_name,
+      description: it.description,
+      checklist_type: it.checklist_type,
+      priority: it.priority,
+      frequency: it.frequency,
+      assign_to: it.assign_to,
+      scan_type: it.scan_type,
+      plan_duration: it.plan_duration,
+      email_trigger_rule: it.email_trigger_rule,
+      look_overdue_task: it.look_overdue_task,
+      start_from: it.start_from,
+      end_at: it.end_at,
+      select_supplier: it.select_supplier,
+      created_at: it.created_at,
+      status: it.status,
+      audit_tasks: it.audit_tasks || [],
+    }));
+
+    // ✅ CLIENT-SIDE PRIORITY FILTER (FINAL FIX)
+    if (activeFilter !== 'All') {
+      items = items.filter(
+        item => item.priority?.toLowerCase() === activeFilter.toLowerCase()
+      );
+    }
+
+    const total = raw?.total || raw?.count || items.length;
+    const totalPages = Math.max(1, Math.ceil(total / pagination.perPage));
+
+    setData(items);
+    setPagination(prev => ({
+      ...prev,
+      total,
+      totalPages,
+    }));
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to fetch scheduled audits');
+    setData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
   useEffect(() => {
@@ -199,6 +198,19 @@ const ScheduledList: React.FC = () => {
       toast.error('Failed to export audits');
     }
   };
+
+  const getPriorityClasses = (priority?: string) => {
+  switch (priority?.toLowerCase()) {
+    case 'high':
+      return 'bg-red-100 text-red-700';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-700';
+    case 'low':
+      return 'bg-green-100 text-green-700';
+    default:
+      return 'bg-gray-100 text-gray-700';
+  }
+};
 
   const columns = [
     {
@@ -372,18 +384,18 @@ const ScheduledList: React.FC = () => {
       <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
         {/* Left side - Status Filters */}
         <div className="flex items-center gap-2 flex-wrap">
-          {statusFilters.map((filter) => (
+          {priorityFilters.map((filter) => (
             <label
               key={filter}
               className={`relative inline-flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer mb-5
-                ${activeFilter === filter
+      ${activeFilter === filter
                   ? 'text-primary font-medium'
                   : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <input
                 type="radio"
-                name="statusFilter"
+                name="priorityFilter"
                 value={filter}
                 checked={activeFilter === filter}
                 onChange={() => handleFilterChange(filter)}
@@ -395,6 +407,7 @@ const ScheduledList: React.FC = () => {
               )}
             </label>
           ))}
+
         </div>
 
         {/* Right side - Toolbar */}
