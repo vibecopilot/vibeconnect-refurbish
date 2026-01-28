@@ -104,8 +104,8 @@ export const postAuditScheduled = async (data) =>
       "Content-Type": "multipart/form-data",
     },
   });
-// Accept optional pagination params (page, per_page) and any additional query params
-export const getAuditScheduled = (
+
+  export const getAuditScheduled = (
   page: number = 1,
   perPage: number = 12,
   search: string = ""
@@ -3328,6 +3328,19 @@ export const getUsersByID = async (id) =>
     },
   });
 
+  export const editSetupUsers = async (id, data) =>
+  axiosInstance.put(`/users/${id}.json`, data, {
+    params: {
+      token: token,
+    },
+  });
+
+  export const getFilterUsers = async (id) =>
+  axiosInstance.get(`/users/${id}.json`, {
+    params: {
+      token: token,
+    },
+  });
 
 export const editUsersByID = async (id,data) =>
   axiosInstance.put(`/users/${id}.json`, data,{

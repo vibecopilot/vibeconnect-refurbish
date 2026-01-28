@@ -9,14 +9,14 @@ import Login from "./components/Authentication/Login";
 
 // Pages
 import Dashboard from "./pages/Dashboard/Dashboard";
-import { 
-  VMSLayout, 
-  VMSVisitors, 
-  VMSRegisteredVehicles, 
-  VMSStaff, 
-  VMSPatrolling, 
+import {
+  VMSLayout,
+  VMSVisitors,
+  VMSRegisteredVehicles,
+  VMSStaff,
+  VMSPatrolling,
   VMSGoodsInOut,
-  CreateVisitor, 
+  CreateVisitor,
   ViewVisitor,
   StaffCreate,
   StaffView,
@@ -184,6 +184,7 @@ import IncidentSetup from "./pages/Setup/IncidentSetupPages/IncidentSetup";
 import { ComplianceSetup as RevampComplianceSetup } from "./pages/RevampCompliance/ComplianceSetup";
 import CommunicationSetupControl from "./pages/Setup/CommunicationSetup/CommunicationSetupControl";
 import UserTreePage from "./pages/Setup/UserTree/UserTreePage";
+import EditUserPage from "./pages/Setup/UserTree/EditUserPage";
 // Placeholder pages for other modules
 // Coming Soon placeholder for modules not yet available
 const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
@@ -201,6 +202,7 @@ import ScheduledListEdit from "./pages/Audit/Operational/ScheduledListEdit";
 import ChecklistsList from "./pages/Audit/Operational/ChecklistsList.tsx";
 import ChecklistView from "./pages/Audit/Operational/ChecklistsView.tsx";
 import UserTreeViewPage from "./pages/Setup/UserTree/UserTreeViewPage.tsx"
+import ConductedListView from "./pages/Audit/Operational/ConductedListView.tsx";
 
 // Layout wrapper for authenticated pages - now includes protection
 const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -214,14 +216,14 @@ function App() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-right" />
-      
+
       <Routes>
         {/* Login Route - No header */}
         <Route path="/login" element={<Login />} />
-        
+
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        
+
         {/* Dashboard */}
         <Route path="/dashboard" element={<AuthenticatedLayout><Dashboard /></AuthenticatedLayout>} />
 
@@ -234,7 +236,7 @@ function App() {
           <Route path="patrolling" element={<VMSPatrolling />} />
           <Route path="goods-in-out" element={<VMSGoodsInOut />} />
         </Route>
-        
+
         {/* Security Detail/Create/Edit routes */}
         <Route path="/security/visitors/create" element={<AuthenticatedLayout><SecurityVisitorCreate /></AuthenticatedLayout>} />
         <Route path="/security/visitors/self-register" element={<AuthenticatedLayout><SecuritySelfRegistration /></AuthenticatedLayout>} />
@@ -251,7 +253,7 @@ function App() {
           <Route path="patrolling" element={<VMSPatrolling />} />
           <Route path="goods-in-out" element={<VMSGoodsInOut />} />
         </Route>
-        
+
         {/* VMS Detail/Create/Edit routes - outside the tabbed layout */}
         <Route path="/vms/visitors/create" element={<AuthenticatedLayout><CreateVisitor /></AuthenticatedLayout>} />
         <Route path="/vms/visitors/:id" element={<AuthenticatedLayout><ViewVisitor /></AuthenticatedLayout>} />
@@ -277,19 +279,19 @@ function App() {
         {/* Asset Fullscreen Views */}
         <Route path="/asset/:id/details" element={<AuthenticatedLayout><AssetDetailsFullScreen /></AuthenticatedLayout>} />
         <Route path="/asset/:id/timeline" element={<AuthenticatedLayout><TimelineFullScreen /></AuthenticatedLayout>} />
-        
+
         {/* AMC */}
         <Route path="/asset/amc" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/amc/create" element={<AuthenticatedLayout><AddAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id" element={<AuthenticatedLayout><ViewAMC /></AuthenticatedLayout>} />
         <Route path="/asset/amc/:id/edit" element={<AuthenticatedLayout><EditAMC /></AuthenticatedLayout>} />
-        
+
         {/* Meter */}
         <Route path="/asset/meter" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/meter/create" element={<AuthenticatedLayout><NewAssetExperimental /></AuthenticatedLayout>} />
         <Route path="/asset/meter/:id" element={<AuthenticatedLayout><ViewMeter /></AuthenticatedLayout>} />
         <Route path="/asset/meter/:id/edit" element={<AuthenticatedLayout><EditAsset /></AuthenticatedLayout>} />
-        
+
         {/* Checklist */}
         <Route path="/asset/checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/checklist/create" element={<AuthenticatedLayout><CreateChecklist /></AuthenticatedLayout>} />
@@ -301,7 +303,7 @@ function App() {
         {/* Routine Task */}
         <Route path="/asset/routine-task" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/routine-task/:assetId/:id" element={<AuthenticatedLayout><ViewRoutineTask /></AuthenticatedLayout>} />
-        
+
         {/* PPM Checklist */}
         <Route path="/asset/ppm-checklist" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-checklist/create" element={<AuthenticatedLayout><CreatePPMChecklist /></AuthenticatedLayout>} />
@@ -309,12 +311,12 @@ function App() {
         <Route path="/asset/ppm-checklist/:id/edit" element={<AuthenticatedLayout><EditPPMChecklist /></AuthenticatedLayout>} />
         <Route path="/admin/copy-ppm-checklist/:id" element={<AuthenticatedLayout><CopyChecklistPPM /></AuthenticatedLayout>} />
         <Route path="/assets/associate-ppm-checklist/:id" element={<AuthenticatedLayout><AssociateAssetChecklist /></AuthenticatedLayout>} />
-        
+
         {/* PPM Activity */}
         <Route path="/asset/ppm-activity" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-activity/create" element={<AuthenticatedLayout><CreatePPMActivity /></AuthenticatedLayout>} />
         <Route path="/asset/ppm-activity/:assetId/:id" element={<AuthenticatedLayout><ViewPPMActivity /></AuthenticatedLayout>} />
-        
+
         {/* PPM Calendar */}
         <Route path="/asset/ppm-calendar" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
 
@@ -332,17 +334,17 @@ function App() {
         <Route path="/asset/stock-items/:id/edit" element={<AuthenticatedLayout><EditStockItem /></AuthenticatedLayout>} />
 
         <Route path="/asset/overview" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        
+
         {/* QR Code */}
         <Route path="/asset/qr-code" element={<AuthenticatedLayout><AssetList /></AuthenticatedLayout>} />
-        
+
         {/* Soft Services - Service Tab */}
         <Route path="/soft-services" element={<AuthenticatedLayout><ServiceList /></AuthenticatedLayout>} />
         <Route path="/soft-services/create" element={<AuthenticatedLayout><CreateService /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id" element={<AuthenticatedLayout><ViewService /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id/usage" element={<AuthenticatedLayout><ServiceUsageAnalytics /></AuthenticatedLayout>} />
         <Route path="/soft-services/:id/edit" element={<AuthenticatedLayout><CreateService /></AuthenticatedLayout>} />
-        
+
         {/* Soft Services - Checklist Tab */}
         <Route path="/soft-services/checklist" element={<AuthenticatedLayout><ChecklistList /></AuthenticatedLayout>} />
         <Route path="/soft-services/checklist/create" element={<AuthenticatedLayout><SoftServiceCreateChecklist /></AuthenticatedLayout>} />
@@ -350,7 +352,7 @@ function App() {
         <Route path="/soft-services/checklist/:id/edit" element={<AuthenticatedLayout><SoftServiceCreateChecklist /></AuthenticatedLayout>} />
         <Route path="/soft-services/associate-checklist/:id" element={<AuthenticatedLayout><AssociateServiceChecklist /></AuthenticatedLayout>} />
         <Route path="/services/associate-checklist/:id" element={<AuthenticatedLayout><AssociateServiceChecklist /></AuthenticatedLayout>} />
-          
+
         {/* Soft Services - Task Tab */}
         <Route path="/soft-services/task" element={<AuthenticatedLayout><TaskList /></AuthenticatedLayout>} />
         <Route path="/soft-services/:serviceId/task/:taskId" element={<AuthenticatedLayout><SoftServiceTaskDetails /></AuthenticatedLayout>} />
@@ -370,7 +372,7 @@ function App() {
         <Route path="/service-desk/:id" element={<AuthenticatedLayout><TicketView /></AuthenticatedLayout>} />
         <Route path="/service-desk/:id/edit" element={<AuthenticatedLayout><TicketEdit /></AuthenticatedLayout>} />
 
-       {/* Contact Book */}
+        {/* Contact Book */}
         <Route path="/contact-book" element={<AuthenticatedLayout><ContactBook /></AuthenticatedLayout>} />
         <Route path="/contact-book/create" element={<AuthenticatedLayout><ContactBookCreate /></AuthenticatedLayout>} />
         <Route path="/contact-book/view/:id" element={<AuthenticatedLayout><ContactBookView /></AuthenticatedLayout>} />
@@ -386,7 +388,7 @@ function App() {
         <Route path="/amenities" element={<AuthenticatedLayout><AmenitiesList /></AuthenticatedLayout>} />
         <Route path="/amenities/book" element={<AuthenticatedLayout><BookAmenity /></AuthenticatedLayout>} />
         <Route path="/amenities/bookings/:id" element={<AuthenticatedLayout><ViewAmenityBooking /></AuthenticatedLayout>} />
-        
+
         {/* Hotel Bookings */}
         <Route path="/amenities/hotel" element={<AuthenticatedLayout><HotelBookingsList /></AuthenticatedLayout>} />
         <Route path="/amenities/hotel/book" element={<AuthenticatedLayout><BookHotel /></AuthenticatedLayout>} />
@@ -466,6 +468,7 @@ function App() {
         <Route path="/audit/operational/scheduled/create" element={<AuthenticatedLayout><ScheduleAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/operational/scheduled/view/:id" element={<AuthenticatedLayout><ScheduledListView /></AuthenticatedLayout>} />
         <Route path="/audit/operational/scheduled/edit/:id" element={<AuthenticatedLayout><ScheduledListEdit /></AuthenticatedLayout>} />
+        <Route path="/audit/operational/conducted/view/:id" element={<AuthenticatedLayout><ConductedListView /></AuthenticatedLayout>} />
         <Route path="/audit/operational/checklists/create" element={<AuthenticatedLayout><ChecklistAuditForm /></AuthenticatedLayout>} />
         <Route path="/audit/operational/checklists/view/:id" element={<AuthenticatedLayout><ChecklistView /></AuthenticatedLayout>} />
         <Route path="/audit/operational/checklists/edit/:id" element={<AuthenticatedLayout><ChecklistsList /></AuthenticatedLayout>} />
@@ -475,12 +478,12 @@ function App() {
         <Route path="/compliance" element={<AuthenticatedLayout><Compliance /></AuthenticatedLayout>} />
         <Route path="/compliance/add-compliance" element={<AuthenticatedLayout><AddCompliance /></AuthenticatedLayout>} />
         <Route path="/compliance/compliance-details/:id" element={<AuthenticatedLayout><ComplianceDetails /></AuthenticatedLayout>} />
-        
+
         {/* Parking - FM Module */}
         <Route path="/parking" element={<AuthenticatedLayout><Parkings /></AuthenticatedLayout>} />
         <Route path="/admin/book-parking" element={<AuthenticatedLayout><AddParking /></AuthenticatedLayout>} />
         <Route path="/parking/:id" element={<AuthenticatedLayout><ParkingDetails /></AuthenticatedLayout>} />
-        
+
         {/* Survey - FM Module */}
         <Route path="/survey" element={<AuthenticatedLayout><Survey /></AuthenticatedLayout>} />
         <Route path="/admin/add-survey" element={<AuthenticatedLayout><AddSurvey /></AuthenticatedLayout>} />
@@ -565,25 +568,26 @@ function App() {
         <Route path="/admin/edit-invoice-approval-setup/:id" element={<AuthenticatedLayout><EditInvoiceApprovalsSetup /></AuthenticatedLayout>} />
         {/* <Route path="/setup/user-tree" element={<AuthenticatedLayout><UserTreePage/></AuthenticatedLayout>} /> */}
         <Route path="/setup/user-tree/view/:id" element={<AuthenticatedLayout><UserTreeViewPage /></AuthenticatedLayout>} />
+        <Route path="/setup/user-tree/edit-user/:id" element={<AuthenticatedLayout><EditUserPage /></AuthenticatedLayout>} />
 
         {/* Safety Module - Tabbed Layout */}
         <Route path="/safety/module" element={<AuthenticatedLayout><SafetyLayout /></AuthenticatedLayout>}>
           <Route index element={<Navigate to="/safety/module/dashboard" replace />} />
           <Route path="dashboard" element={<SafetyDashboard />} />
-          
+
           {/* Safety Measures */}
           <Route path="safety-measures" element={<SafetyMeasuresList />} />
           <Route path="safety-measures/create" element={<CreateSafetyMeasure />} />
           <Route path="safety-measures/:id" element={<ViewSafetyMeasure />} />
           <Route path="safety-measures/:id/edit" element={<CreateSafetyMeasure />} />
-          
+
           {/* Safety Checklists */}
           <Route path="safety-checklists" element={<SafetyChecklistsList />} />
           <Route path="safety-checklists/create" element={<CreateSafetyChecklist />} />
           <Route path="safety-checklists/:id" element={<ViewSafetyChecklist />} />
           <Route path="safety-checklists/:id/edit" element={<CreateSafetyChecklist />} />
           <Route path="safety-checklists/:id/execute" element={<ExecuteSafetyChecklist />} />
-          
+
           {/* Safety Inspections */}
           <Route path="safety-inspections" element={<SafetyInspectionsList />} />
           <Route path="safety-inspections/create" element={<CreateSafetyInspection />} />
@@ -595,19 +599,19 @@ function App() {
         <Route path="/training/module" element={<AuthenticatedLayout><TrainingLayout /></AuthenticatedLayout>}>
           <Route index element={<Navigate to="/training/module/dashboard" replace />} />
           <Route path="dashboard" element={<TrainingDashboard />} />
-          
+
           {/* Training Programs */}
           <Route path="training-programs" element={<TrainingProgramsList />} />
           <Route path="training-programs/create" element={<CreateTrainingProgram />} />
           <Route path="training-programs/:id" element={<ViewTrainingProgram />} />
           <Route path="training-programs/:id/edit" element={<CreateTrainingProgram />} />
-          
+
           {/* Training Sessions */}
           <Route path="training-sessions" element={<TrainingSessionsList />} />
           <Route path="training-sessions/create" element={<CreateTrainingSession />} />
           <Route path="training-sessions/:id" element={<ViewTrainingSession />} />
           <Route path="training-sessions/:id/edit" element={<CreateTrainingSession />} />
-          
+
           {/* Training Materials */}
           <Route path="training-materials" element={<TrainingMaterialsList />} />
           <Route path="training-materials/:id" element={<ViewTrainingMaterial />} />
