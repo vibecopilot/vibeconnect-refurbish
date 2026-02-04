@@ -20,14 +20,9 @@ import {
   Maximize2,
   FileCheck,
 } from 'lucide-react';
-import Breadcrumb from '@/components/ui/Breadcrumb';
-import Table from '@/components/table/Table';
-import {
-  domainPrefix,
-  getReceiveInvoiceData,
-  getCamLogo,
-  downloadReceiptInvoice,
-} from '@/api';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
+import Table from '../../../components/table/Table';
+import { domainPrefix,getReceiveInvoiceData,getCamLogo,downloadReceiptInvoice } from '../../../api';
 import { toWords } from 'number-to-words';
 import toast from 'react-hot-toast';
 
@@ -184,7 +179,7 @@ const ViewReceiptInvoice: React.FC = () => {
         variants={container}
         initial="hidden"
         animate="show"
-        className="w-full px-6 pb-6 grid grid-cols-12 gap-4 auto-rows-[minmax(120px,auto)]"
+        className="w-full px-8 pb-6 grid grid-cols-12 gap-4 auto-rows-[minmax(120px,auto)] mt-3"
       >
         {/* Amount Received Card */}
         <motion.div 
@@ -329,7 +324,8 @@ const ViewReceiptInvoice: React.FC = () => {
               </div>
             )}
             <div className="text-center">
-              <p className="text-sm font-medium">For Company Limited</p>
+              <p className="text-sm font-bold">294, CST Road, Santacruz (E), Mumbai 400098 </p>
+              <span className="text-sm font-medium">For Company Limited</span>
             </div>
           </div>
         </motion.div>
@@ -360,10 +356,10 @@ const ViewReceiptInvoice: React.FC = () => {
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-xs text-muted-foreground mb-2">In Respect of</p>
-              <p className="font-medium">{receiptInvoice?.unit_name || 'Property Details'}</p>
+              <p className="font-bold">{receiptInvoice?.unit_name || 'Locketed Demo B-1505, 2nd Floor, Jyoti Tower, opposite Police Station, Mumbai maharashtra 400053'}</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-4">
-              <p className="text-xs text-muted-foreground mb-2">Towards</p>
+              <p className="text-xs text-muted-foreground mb-2">Notes</p>
               <p className="font-medium text-sm">{receiptInvoice?.notes || '-'}</p>
             </div>
             <div className="bg-primary/10 rounded-lg p-4">
@@ -382,25 +378,19 @@ const ViewReceiptInvoice: React.FC = () => {
         >
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground">Receipt Summary</p>
-              <p className="text-lg font-semibold mt-1">
-                Receipt #{receiptInvoice?.receipt_number || '-'} - {receiptInvoice?.customer_name || 'Customer'}
+              <p className="text-sm text-muted-foreground">Amount Received</p>
+              <p className="text-2xl font-bold text-primary mt-1">
+                ₹{ amount.toLocaleString()|| '-'} 
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Amount Received</p>
-                <p className="text-2xl font-bold text-primary mt-1">₹{amount.toLocaleString()}</p>
-              </div>
-              <div className="h-12 w-px bg-border" />
-              <div className="text-right">
+              <div className="h-12 w-px bg-border"/>
+              <div className="text-right justify-end">
                 <p className="text-sm text-muted-foreground">Amount in Words</p>
                 <p className="text-sm font-medium mt-1 text-foreground max-w-[200px]">
                   {amountInWords}
                 </p>
               </div>
             </div>
-          </div>
         </motion.div>
       </motion.div>
     </div>

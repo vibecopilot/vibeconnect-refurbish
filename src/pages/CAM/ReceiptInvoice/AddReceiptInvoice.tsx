@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import Breadcrumb from '@/components/ui/Breadcrumb';
-import { getCamBillingData, postInvoiceReceipt } from '@/api';
+import Breadcrumb from '../../../components/ui/Breadcrumb';
+import { getCamBillingData, postInvoiceReceipt } from '../../../api';
 import toast from 'react-hot-toast';
 
 const AddReceiptInvoice: React.FC = () => {
@@ -42,6 +42,22 @@ const AddReceiptInvoice: React.FC = () => {
       [name]: value,
     }));
   };
+
+  const handleReset = () => {
+  setFormData({
+    receiptNumber: '',
+    invoiceNumber: '',
+    paymentMode: '',
+    amountReceived: '',
+    transactionChequeNumber: '',
+    bankName: '',
+    branchName: '',
+    paymentDate: '',
+    receiptDate: '',
+    notes: '',
+  });
+};
+
 
   const handleSubmit = async () => {
     if (!formData.receiptNumber) { toast.error('Receipt Number is required'); return; }
@@ -85,7 +101,7 @@ const AddReceiptInvoice: React.FC = () => {
         />
       </div>
 
-      
+
 
       <div className="px-6">
         <div className="sm:border border-gray-400 p-1 md:px-10 rounded-lg mb-14">
@@ -103,7 +119,14 @@ const AddReceiptInvoice: React.FC = () => {
             </div>
             <div className="flex flex-col">
               <label className="font-semibold my-2">Invoice Number</label>
-              <select
+              <input
+                name="invoiceNumber"
+                value={formData.invoiceNumber}
+                onChange={handleChange}
+                placeholder="Enter Invoice Number"
+                className="border p-1 px-4 border-gray-500 rounded-md"
+              />
+              {/* <select
                 name="invoiceNumber"
                 value={formData.invoiceNumber}
                 onChange={handleChange}
@@ -113,7 +136,7 @@ const AddReceiptInvoice: React.FC = () => {
                 {camBilling.map((invoiceNumber, index) => (
                   <option key={index} value={invoiceNumber}>{invoiceNumber}</option>
                 ))}
-              </select>
+              </select> */}
             </div>
             <div className="flex flex-col">
               <label className="font-semibold my-2">Payment Mode</label>
@@ -209,16 +232,23 @@ const AddReceiptInvoice: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-center gap-4 my-5">
+          <div className="flex justify-end gap-4 my-5">
             <button
               onClick={() => navigate('/finance/cam/receipt-invoice')}
-              className="p-2 px-6 border-2 rounded-md font-medium"
+              className="p-2 px-6 border-2 rounded-lg font-medium"
             >
               Cancel
             </button>
             <button
+              onClick={handleReset}
+              className="p-2 px-6 border-2 rounded-lg text-white font-medium"
+              style={{ background: themeColor }}
+            >
+              Reset
+            </button>
+            <button
               onClick={handleSubmit}
-              className="p-2 px-6 border-2 rounded-md text-white font-medium"
+              className="p-2 px-6 border-2 rounded-lg text-white font-medium"
               style={{ background: themeColor }}
             >
               Submit
