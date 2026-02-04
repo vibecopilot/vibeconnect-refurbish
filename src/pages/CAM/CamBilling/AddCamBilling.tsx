@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { FiPlusCircle ,FiRefreshCw ,} from 'react-icons/fi';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import DatePicker from 'react-datepicker';
@@ -8,6 +9,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { postCamBill, getFloors, getUnits, getAddressSetup } from '@/api';
 import { getItemInLocalStorage } from '@/utils/localStorage';
 import toast from 'react-hot-toast';
+import { AiFillPlusCircle } from 'react-icons/ai';
 
 interface ChargeField {
   description: string;
@@ -39,7 +41,7 @@ const AddCamBilling: React.FC = () => {
   const [previousDueAmount, setPreviousDueAmount] = useState<number>(0);
   const [previousDueAmountInterest, setPreviousDueAmountInterest] = useState<number>(0);
 
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     invoice_type: '',
     invoiceAddress: '',
     invoice_number: '',
@@ -49,28 +51,33 @@ const AddCamBilling: React.FC = () => {
     floor_name: '',
     flat: '',
     notes: '',
-  });
+  };
+
+  const initialChargeField: ChargeField = {
+    description: '',
+    sacHsnCode: '',
+    qty: '',
+    unit: '',
+    rate: '',
+    totalValue: 0,
+    percentage: 0,
+    discount: 0,
+    taxableValue: 0,
+    cgstRate: 0,
+    cgstAmount: 0,
+    sgstRate: 0,
+    sgstAmount: 0,
+    igstRate: 0,
+    igstAmount: 0,
+    total: 0,
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
 
   const [fields, setFields] = useState<ChargeField[]>([
-    {
-      description: '',
-      sacHsnCode: '',
-      qty: '',
-      unit: '',
-      rate: '',
-      totalValue: 0,
-      percentage: 0,
-      discount: 0,
-      taxableValue: 0,
-      cgstRate: 0,
-      cgstAmount: 0,
-      sgstRate: 0,
-      sgstAmount: 0,
-      igstRate: 0,
-      igstAmount: 0,
-      total: 0,
-    },
+    { ...initialChargeField },
   ]);
+
 
   useEffect(() => {
     const fetchAddressSetup = async () => {
@@ -269,6 +276,18 @@ const AddCamBilling: React.FC = () => {
     }
   };
 
+  const handleReset = () => {
+    setFormData(initialFormData);
+    setFields([{ ...initialChargeField }]);
+    setBillingPeriod([null, null]);
+    setFloors([]);
+    setUnits([]);
+    setPreviousDueAmount(0);
+    setPreviousDueAmountInterest(0);
+
+    toast.success('Form reset successfully');
+  };
+
   const isFlatDisabled = !formData.block || !formData.floor_name || !units.length;
 
   return (
@@ -283,7 +302,7 @@ const AddCamBilling: React.FC = () => {
         />
       </div>
 
-      
+
 
       <div className="px-6">
         <div className="sm:border border-gray-400 p-1 md:px-10 rounded-lg mb-14">
@@ -605,13 +624,14 @@ const AddCamBilling: React.FC = () => {
 
           <div className="flex justify-between gap-2">
             <button
-              style={{ background: themeColor }}
-              className="text-white p-2 px-4 rounded-md font-medium"
               onClick={handleAdd}
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-white font-medium transition hover:opacity-90"
+              style={{ background: themeColor }}
             >
+              <FiPlusCircle className="text-lg" />
               Add
             </button>
-            <button 
+            <button
               className="text-white p-2 px-4 rounded-md font-medium"
               style={{ background: themeColor }}
             >
@@ -633,16 +653,23 @@ const AddCamBilling: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-center gap-4 my-5">
+          <div className="flex justify-end gap-4 my-5">
             <button
               onClick={() => navigate('/finance/cam/billing')}
-              className="p-2 px-6 border-2 rounded-md font-medium"
+              className="p-2 px-6 border-2 rounded-lg font-medium"
             >
               Cancel
             </button>
             <button
+              onClick={handleReset}
+              className="p-2 px-6 border-2 rounded-lg text-white font-medium"
+              style={{ background: themeColor }}
+            >
+              Reset
+            </button>
+            <button
               onClick={handleSubmit}
-              className="p-2 px-6 border-2 rounded-md text-white font-medium"
+              className="p-2 px-6 border-2 rounded-lg text-white font-medium"
               style={{ background: themeColor }}
             >
               Submit

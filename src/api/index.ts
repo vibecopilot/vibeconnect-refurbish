@@ -10448,10 +10448,12 @@ export const getReviewerAssignments = async (complianceId, auditorId) =>
   );
 
 //cam billing
-export const getCamBillingData = async () =>
+export const getCamBillingData = async ( page:Number=1,perPage:Number=10) =>
   axiosInstance.get("/cam_bills.json", {
     params: {
       token: token,
+      page:page,
+      per_page:perPage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ,
     },
   });
 
@@ -10466,7 +10468,7 @@ export const getCamBillingDownload = async (ids) =>
 
 export const getCamBillFilter = async (
   block,
-  floor_name,
+  floor_name,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
   flat,
   status,
   startDate,
@@ -10613,10 +10615,12 @@ export const gatReceiptInvoiceFilter = async (
     }
   );
 
-export const getInvoiceReceipt = async () =>
+export const getInvoiceReceipt = async (page:Number=1,perPage:Number=10) =>
   axiosInstance.get("/invoice_receipts.json", {
     params: {
       token: token,
+      page:page,
+      per_page:perPage    
     },
   });
 

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { BsEye } from 'react-icons/bs';
+import { BsEye, BsX } from 'react-icons/bs'; // Added BsX
 import { IoAddCircleOutline } from 'react-icons/io5';
 import { FaDownload, FaUpload } from 'react-icons/fa';
 import { BiFilterAlt } from 'react-icons/bi';
@@ -34,21 +34,20 @@ interface CamBillingItem {
   created_at: string;
 }
 
-const CamBillingList: React.FC = () => {
-  const themeColor = useSelector((state: any) => state.theme.color);
-  const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
-  const [billingPeriod, setBillingPeriod] = useState<[Date | null, Date | null]>([null, null]);
-  const [importModal, setImportModal] = useState(false);
-  const [filter, setFilter] = useState(false);
-  const [camBilling, setCamBilling] = useState<CamBillingItem[]>([]);
-  const [filteredData, setFilteredData] = useState<CamBillingItem[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+// ✅ NEW: CAM Billing Filter Modal Component
+interface CamBillingFilterModalProps {
+  onclose: () => void;
+  setFilterSearchData: (data: CamBillingItem[]) => void;
+  fetchData: () => void;
+  themeColor: string;
+}
 
-  const buildings = getItemInLocalStorage('Building') || [];
-  const [floors, setFloors] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
+const CamBillingFilterModal: React.FC<CamBillingFilterModalProps> = ({
+  onclose,
+  setFilterSearchData,
+  fetchData,
+  themeColor,
+}) => {
   const [formData, setFormData] = useState({
     block: '',
     floor_name: '',
@@ -57,30 +56,284 @@ const CamBillingList: React.FC = () => {
     dueDate: '',
   });
 
+  const [billingPeriod, setBillingPeriod] = useState<[Date | null, Date | null]>([null, null]);
+  const [floors, setFloors] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+
+  const buildings = getItemInLocalStorage('Building') || [];
+
   const ensureArray = (data: any): CamBillingItem[] => {
     if (Array.isArray(data)) return data;
-    if (data?.cam_billings) return data.cam_billings;
-    if (data?.billings) return data.billings;
-    if (data?.data) return Array.isArray(data.data) ? data.data : [];
+    if (Array.isArray(data?.cam_bills)) return data.cam_bills;
+    if (Array.isArray(data?.data)) return data.data;
     return [];
   };
 
-  const fetchCamBilling = async () => {
+  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    if (name === 'block') {
+      try {
+        const response = await getFloors(Number(value));
+        setFloors(response.data.map((item: any) => ({ name: item.name, id: item.id })));
+      } catch (error) {
+        console.error('Error fetching floors:', error);
+      }
+      setFormData((prev) => ({ ...prev, block: value, floor_name: '', flat: '' }));
+    } else if (name === 'floor_name') {
+      try {
+        const response = await getUnits(Number(value));
+        setUnits(response.data.map((item: any) => ({ name: item.name, id: item.id })));
+      } catch (error) {
+        console.error('Error fetching units:', error);
+      }
+      setFormData((prev) => ({ ...prev, floor_name: value, flat: '' }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleDateChange = (dates: [Date | null, Date | null]) => {
+    setBillingPeriod(dates);
+  };
+
+  const handleFilterData = async () => {
     try {
-      const response = await getCamBillingData();
+      const [startDate, endDate] = billingPeriod;
+      const resp = await getCamBillFilter(
+        formData.block,
+        formData.floor_name,
+        formData.flat,
+        formData.status,
+        startDate,
+        endDate,
+        formData.dueDate
+      );
+
+      const dataArray = ensureArray(resp.data);
+      setFilterSearchData(dataArray);
+      toast.success('Filters applied successfully');
+      onclose(); // Close modal on apply
+      
+    } catch (error) {
+      console.error('Error filtering data:', error);
+      toast.error('Failed to apply filters');
+    }
+  };
+
+  const isFlatDisabled = !formData.block || !formData.floor_name || !units.length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-lg font-semibold text-gray-800">Filter CAM Bills</h3>
+          <button onClick={onclose} className="text-gray-500 hover:text-gray-700">
+            <BsX size={20} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Building */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Building</label>
+              <select
+                className="border p-2 px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                onChange={handleChange}
+                value={formData.block}
+                name="block"
+              >
+                <option value="">Select Building</option>
+                {buildings?.map((building: any) => (
+                  <option key={building.id} value={building.id}>{building.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Floor */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Floor</label>
+              <select
+                className="border p-2 px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                onChange={handleChange}
+                value={formData.floor_name}
+                name="floor_name"
+                disabled={!floors.length}
+              >
+                <option value="">Select Floor</option>
+                {floors.map((floor) => (
+                  <option key={floor.id} value={floor.id}>{floor.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Flat */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Flat</label>
+              <select
+                name="flat"
+                value={formData.flat}
+                onChange={handleChange}
+                disabled={isFlatDisabled}
+                className="border p-2 px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Select Flat</option>
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>{unit.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Payment Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="border p-2 px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Select Payment Status</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="Partially Paid">Partially Paid</option>
+              </select>
+            </div>
+
+            {/* Due Date */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Due Date</label>
+              <input
+                type="date"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
+                className="border p-2 px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            {/* Billing Period */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Billing Period</label>
+              <DatePicker
+                selectsRange
+                startDate={billingPeriod[0]}
+                endDate={billingPeriod[1]}
+                onChange={handleDateChange}
+                placeholderText="Select Billing Period"
+                className="border p-2 px-3 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full"
+                isClearable
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
+          <button
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-100 font-medium"
+            onClick={() => { fetchData(); onclose(); }}
+          >
+            Reset
+          </button>
+          <button
+            className="px-6 py-2 text-white rounded-md font-medium"
+            style={{ background: themeColor }}
+            onClick={handleFilterData}
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CamBillingList: React.FC = () => {
+  const themeColor = useSelector((state: any) => state.theme.color);
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  
+  // Data States
+  const [camBilling, setCamBilling] = useState<CamBillingItem[]>([]);
+  const [filteredData, setFilteredData] = useState<CamBillingItem[]>([]);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+
+  // UI States
+  const [filterModal, setFilterModal] = useState(false); // ✅ Filter Modal State
+  const [importModal, setImportModal] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Unified Pagination State
+  const [pagination, setPagination] = useState({
+    page: 1,
+    perPage: 12, // Default to Grid
+    total: 0,
+    totalPages: 0,
+  });
+
+  const ensureArray = (data: any): CamBillingItem[] => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.cam_bills)) return data.cam_bills;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  };
+
+  // ✅ Helper to determine items per page
+  const getPerPage = (mode: 'grid' | 'table') => (mode === 'grid' ? 12 : 10);
+
+  const fetchCamBilling = async (page: number = pagination.page, limit: number = pagination.perPage) => {
+    setLoading(true);
+    try {
+      const response = await getCamBillingData(page, limit);
+
       const dataArray = ensureArray(response.data);
+      const totalCount = response.data?.total_count || 0;
+
       setCamBilling(dataArray);
       setFilteredData(dataArray);
+
+      // Update pagination state
+      setPagination((prev) => ({
+        ...prev,
+        page,
+        perPage: limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      }));
     } catch (err) {
       console.error('Failed to fetch CAM Billing data:', err);
       setCamBilling([]);
       setFilteredData([]);
+      setPagination((prev) => ({ ...prev, total: 0, totalPages: 0 }));
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Effect: Fetch data on mount
   useEffect(() => {
     fetchCamBilling();
   }, []);
+
+  // Effect: Update perPage when viewMode changes
+  useEffect(() => {
+    const newPerPage = getPerPage(viewMode);
+    setPagination((prev) => ({
+      ...prev,
+      perPage: newPerPage,
+      page: 1, // Reset to page 1 when switching views
+    }));
+  }, [viewMode]);
+
+  // Fetch data whenever pagination changes
+  useEffect(() => {
+    fetchCamBilling(pagination.page, pagination.perPage);
+  }, [pagination.page, pagination.perPage]);
 
   const columns = [
     {
@@ -113,10 +366,6 @@ const CamBillingList: React.FC = () => {
     { name: 'Created On', selector: (row: CamBillingItem) => row.created_at, sortable: true },
   ];
 
-  const handleDateChange = (dates: [Date | null, Date | null]) => {
-    setBillingPeriod(dates);
-  };
-
   const handleSelectedRows = (rows: CamBillingItem[]) => {
     const selectedId = rows.map((row) => row.id);
     setSelectedRows(selectedId);
@@ -146,64 +395,24 @@ const CamBillingList: React.FC = () => {
     }
   };
 
-  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
+const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value.toLowerCase();
+  setSearchText(value);
 
-    if (name === 'block') {
-      try {
-        const response = await getFloors(Number(value));
-        setFloors(response.data.map((item: any) => ({ name: item.name, id: item.id })));
-      } catch (error) {
-        console.error('Error fetching floors:', error);
-      }
-      setFormData((prev) => ({ ...prev, block: value, floor_name: '', flat: '' }));
-    } else if (name === 'floor_name') {
-      try {
-        const response = await getUnits(Number(value));
-        setUnits(response.data.map((item: any) => ({ name: item.name, id: item.id })));
-      } catch (error) {
-        console.error('Error fetching units:', error);
-      }
-      setFormData((prev) => ({ ...prev, floor_name: value, flat: '' }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
-  };
+  if (!value) {
+    fetchCamBilling(1, pagination.perPage);
+    return;
+  }
 
-  const handleFilterData = async () => {
-    try {
-      const [startDate, endDate] = billingPeriod;
-      const resp = await getCamBillFilter(
-        formData.block,
-        formData.floor_name,
-        formData.flat,
-        formData.status,
-        startDate,
-        endDate,
-        formData.dueDate
-      );
-      setFilteredData(ensureArray(resp.data));
-      setFilter(false);
-    } catch (error) {
-      console.error('Error filtering data:', error);
-    }
-  };
+  const result = camBilling.filter((item) =>
+    item.invoice_number?.toLowerCase().includes(value) ||
+    item.flat?.name?.toLowerCase().includes(value) ||
+    item.status?.toLowerCase().includes(value)
+  );
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchValue = e.target.value;
-    setSearchText(searchValue);
-    if (searchValue.trim() === '') {
-      setFilteredData(camBilling);
-    } else {
-      const filterResult = camBilling.filter(
-        (item) =>
-          item?.invoice_number?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item?.status?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item?.flat_id?.toLowerCase().includes(searchValue.toLowerCase())
-      );
-      setFilteredData(filterResult);
-    }
-  };
+  setFilteredData(result);
+};
+
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
@@ -224,7 +433,15 @@ const CamBillingList: React.FC = () => {
     return 'Paid';
   };
 
-  const isFlatDisabled = !formData.block || !formData.floor_name || !units.length;
+  // // ✅ Client-Side Pagination Logic
+  // const { filteredData, totalRecords, totalPages } = useMemo(() => {
+  //   const total = filteredData.length;
+  //   const pages = Math.ceil(total / pagination.perPage);
+  //   const start = (pagination.page - 1) * pagination.perPage;
+  //   const end = start + pagination.perPage;
+  //   const data = filteredData.slice(start, end);
+  //   return { filteredData: data, totalRecords: total, totalPages: pages };
+  // }, [filteredData, pagination.page, pagination.perPage]);
 
   return (
     <div className="space-y-4">
@@ -236,7 +453,7 @@ const CamBillingList: React.FC = () => {
             type="text"
             onChange={handleSearch}
             value={searchText}
-            placeholder="Search By Invoice No, Payment Status"
+            placeholder="Search By Invoice No, Flat, Payment Status"
             className="pl-10 pr-4 py-2 w-64 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,7 +480,7 @@ const CamBillingList: React.FC = () => {
         {/* Filter Button */}
         <button
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-accent transition-colors"
-          onClick={() => setFilter(!filter)}
+          onClick={() => setFilterModal(true)}
         >
           <BiFilterAlt className="w-4 h-4" />
           Filter
@@ -271,9 +488,9 @@ const CamBillingList: React.FC = () => {
 
         {/* Export Button */}
         <button
+          onClick={handleDownload}
           className="font-semibold text-white px-4 py-2 flex gap-2 items-center justify-center rounded-md"
           style={{ background: themeColor }}
-          onClick={handleDownload}
         >
           <FaDownload />
           Export
@@ -300,89 +517,25 @@ const CamBillingList: React.FC = () => {
         </Link>
       </div>
 
-      {/* Filter Panel */}
-      {filter && (
-        <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-100 rounded-lg">
-          <select
-            className="border p-2 px-4 border-gray-500 rounded-md"
-            onChange={handleChange}
-            value={formData.block}
-            name="block"
-          >
-            <option value="">Select Building</option>
-            {buildings?.map((building: any) => (
-              <option key={building.id} value={building.id}>{building.name}</option>
-            ))}
-          </select>
-          <select
-            className="border p-2 px-4 border-gray-500 rounded-md"
-            onChange={handleChange}
-            value={formData.floor_name}
-            name="floor_name"
-            disabled={!floors.length}
-          >
-            <option value="">Select Floor</option>
-            {floors.map((floor) => (
-              <option key={floor.id} value={floor.id}>{floor.name}</option>
-            ))}
-          </select>
-          <select
-            name="flat"
-            value={formData.flat}
-            onChange={handleChange}
-            disabled={isFlatDisabled}
-            className="border p-2 px-4 border-gray-500 rounded-md"
-          >
-            <option value="">Select Flat</option>
-            {units.map((unit) => (
-              <option key={unit.id} value={unit.id}>{unit.name}</option>
-            ))}
-          </select>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="border p-2 px-4 border-gray-500 rounded-md"
-          >
-            <option value="">Select Payment Status</option>
-            <option value="paid">Paid</option>
-            <option value="unpaid">Unpaid</option>
-            <option value="Partially Paid">Partially Paid</option>
-          </select>
-          <input
-            type="date"
-            name="dueDate"
-            value={formData.dueDate}
-            onChange={handleChange}
-            className="border p-2 px-4 border-gray-500 rounded-md"
-          />
-          <DatePicker
-            selectsRange
-            startDate={billingPeriod[0]}
-            endDate={billingPeriod[1]}
-            onChange={handleDateChange}
-            placeholderText="Select Billing Period"
-            className="border p-2 px-4 border-gray-500 rounded-md"
-            isClearable
-          />
-          <button
-            onClick={handleFilterData}
-            className="p-2 px-4 text-white rounded-md"
-            style={{ background: themeColor }}
-          >
-            Apply
-          </button>
-          <button
-            className="bg-red-400 p-2 px-4 text-white rounded-md"
-            onClick={() => { fetchCamBilling(); setFilter(false); }}
-          >
-            Reset
-          </button>
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center text-gray-400 py-10 bg-white rounded-lg border">
+            <div className="inline-block">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-2">Loading CAM Bills...</p>
+            </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && filteredData.length === 0 && (
+        <div className="text-center text-gray-400 py-10 bg-white rounded-lg border">
+          No records found.
         </div>
       )}
 
       {/* Grid View */}
-      {viewMode === 'grid' ? (
+      {!loading && viewMode === 'grid' && filteredData.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredData.map((billing) => (
             <div
@@ -395,18 +548,18 @@ const CamBillingList: React.FC = () => {
                   {getPaymentStatusText(billing.status)}
                 </span>
               </div>
-              
+
               <h3 className="font-semibold text-foreground text-sm mb-2">
                 Flat: {billing.flat_id}
               </h3>
-              
+
               <div className="space-y-1 text-xs text-muted-foreground mb-4">
                 <p><span className="font-medium">Period:</span> {formatDate(billing.bill_period_start_date)} - {formatDate(billing.bill_period_end_date)}</p>
                 <p><span className="font-medium">Amount:</span> ₹{billing.total_amount?.toFixed(2) || '0.00'}</p>
                 <p><span className="font-medium">Paid:</span> ₹{billing.amount_paid?.toFixed(2) || '0.00'}</p>
                 <p><span className="font-medium">Due Date:</span> {formatDate(billing.due_date)}</p>
               </div>
-              
+
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
                 <Link
                   to={`/finance/cam/billing/${billing.id}`}
@@ -418,13 +571,92 @@ const CamBillingList: React.FC = () => {
             </div>
           ))}
         </div>
-      ) : (
-        /* Table View */
-        <Table
-          columns={columns}
-          data={filteredData}
-          selectableRow={true}
-          onSelectedRows={handleSelectedRows}
+      )}
+
+      {/* Table View */}
+      {!loading && viewMode === 'table' && filteredData.length > 0 && (
+        <div className="border rounded-md bg-white overflow-hidden">
+          <Table
+            columns={columns}
+            data={filteredData}
+            selectableRow={true}
+            onSelectedRows={handleSelectedRows}
+            pagination={false} // Disable internal pagination to use custom one below
+          />
+        </div>
+      )}
+
+      {/* ✅ PAGINATION FOOTER */}
+      {!loading && filteredData.length > 0 && (
+  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white border rounded-md mt-4">
+
+    <div className="text-sm text-gray-600">
+      Showing {(pagination.page - 1) * pagination.perPage + 1}
+      {' '}to{' '}
+      {(pagination.page - 1) * pagination.perPage + filteredData.length}
+      {' '}of {pagination.total} records
+    </div>
+
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setPagination((p) => ({ ...p, page: 1 }))}
+        disabled={pagination.page === 1}
+      >
+        «
+      </button>
+
+      <button
+        onClick={() =>
+          setPagination((p) => ({ ...p, page: p.page - 1 }))
+        }
+        disabled={pagination.page === 1}
+      >
+        Prev
+      </button>
+
+      <span className="px-3 py-1 bg-primary text-white rounded mx-2">
+        {pagination.page}
+      </span>
+
+      <button
+        onClick={() =>
+          setPagination((p) => ({ ...p, page: p.page + 1 }))
+        }
+        disabled={pagination.page >= pagination.totalPages}
+      >
+        Next 
+      </button>
+
+      <button
+        onClick={() =>
+          setPagination((p) => ({ ...p, page: pagination.totalPages }))
+        }
+        disabled={pagination.page >= pagination.totalPages}
+      >
+        »
+      </button>
+    </div>
+    {/* Items per page */}
+     <select value={pagination.perPage} onChange={(e) => 
+      { setPagination((prev) => 
+      ({ ...prev, perPage: Number(e.target.value), page: 1, }));
+       }} 
+       className="px-3 py-1 border rounded bg-white text-sm" >
+         <option value={10}>10 / page</option>
+          <option value={12}>12 / page</option>
+           <option value={25}>25 / page</option> 
+           <option value={50}>50 / page</option> </select> 
+  </div>
+)}
+
+
+      {/* ✅ FILTER MODAL (Popup) */}
+      {filterModal && (
+        <CamBillingFilterModal
+          onclose={() => setFilterModal(false)}
+          setFilterSearchData={setFilteredData}
+          fetchData={fetchCamBilling}
+          themeColor={themeColor}
         />
       )}
 
