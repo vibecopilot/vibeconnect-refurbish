@@ -1,72 +1,58 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Loader2, Edit, ArrowLeft, FileText, DollarSign, User, Calendar, File } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Edit, FileText, DollarSign } from 'lucide-react';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { getOtherBillsDetails } from '../../api';
+import { getOtherBillsDetails  } from '../../api';
 import { dateFormatSTD } from '../../utils/dateUtils';
-import toast from 'react-hot-toast';
 
-interface BillDetails {
+interface OtherBill {
   id: number;
+  vendor_id?: number | string;
   description?: string;
+  suplier_name?: string;
   vendor_name?: string;
-  supplier_name?: string;
-  vendor_id?: number;
-  bill_date?: string;
-  invoice_number?: string;
-  related_to?: string;
-  base_amount?: number;
+  last_approved_by?: string;
+  total_amount?: number;
   deduction?: number;
-  deduction_remarks?: string;
-  amount?: number;
-  tds_rate?: number;
   tds_percentage?: number;
   tds_amount?: number;
   retention_percentage?: number;
   retention_amount?: number;
-  payment_tenure?: number;
-  additional_expenses?: number;
-  cgst_rate?: number;
-  cgst_amount?: number;
-  sgst_rate?: number;
-  sgst_amount?: number;
-  igst_rate?: number;
-  igst_amount?: number;
-  tcs_rate?: number;
-  tcs_amount?: number;
-  tax_amount?: number;
-  total_amount?: number;
   payable_amount?: number;
+  bill_date?: string;
+  invoice_number?: string;
+  gst_number?: string;
+  pan_number?: string;
+  payment_tenure?: number;
   amount_paid?: number;
   balance_amount?: number;
   payment_status?: string;
-  gst_number?: string;
-  pan_number?: string;
-  last_approved_by?: string;
   created_at?: string;
+  updated_at?: string;
   created_by_name?: string;
-  attachments?: { url: string; name: string }[];
+  created_by_id?: number;
 }
 
 const ViewOtherBill = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { id } = useParams();
-
+  const [bill, setBill] = useState<OtherBill | null>(null);
   const [loading, setLoading] = useState(true);
-  const [bill, setBill] = useState<BillDetails | null>(null);
 
   useEffect(() => {
-    fetchBillDetails();
+    fetchBillDetail();
   }, [id]);
 
-  const fetchBillDetails = async () => {
+  const fetchBillDetail = async () => {
     try {
       setLoading(true);
-      const res = await getOtherBillsDetails(id);
-      setBill(res.data);
+      const res = await getOtherBillsDetails (Number(id));
+      const data = res.data;
+      // Handle different response structures
+      const billData = data?.other_bill || data?.bill || data;
+      setBill(billData);
     } catch (error) {
       console.error('Error fetching bill details:', error);
-      toast.error('Failed to load bill details');
     } finally {
       setLoading(false);
     }
@@ -90,188 +76,322 @@ const ViewOtherBill = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!bill) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-muted-foreground">Bill not found</p>
-        <button
-          onClick={() => navigate('/finance/other-bills')}
-          className="mt-4 text-primary hover:underline"
-        >
-          Back to Bills
-        </button>
+      <div className="p-6">
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">Bill not found</p>
+          <button
+            onClick={() => navigate('/finance/other-bills')}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Back to List
+          </button>
+        </div>
       </div>
     );
   }
 
-  const DetailField = ({ label, value, className = '' }: { label: string; value: React.ReactNode; className?: string }) => (
-    <div className={className}>
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className="text-sm font-medium text-foreground">{value || '-'}</p>
-    </div>
-  );
-
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <Breadcrumb items={[
-        { label: 'Finance', path: '/finance/cam' },
-        { label: 'Other Bills', path: '/finance/other-bills' },
-        { label: `Bill #${bill.id}` }
-      ]} />
+    <div className="p-6 max-w mx-auto">
+      <Breadcrumb
+        items={[
+          // { label: 'FM Module', path: '/fm-module' },
+          // { label: 'Finance', path: '/finance' },
+          { label: 'Other Bill', path: '/finance/other-bills' },
+          { label: bill.description || `Bill #${bill.id}` },
+        ]}
+      />
 
-      {/* Header Actions */}
+      {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-foreground">Bill #{bill.id}</h1>
-          <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getStatusColor(bill.payment_status)}`}>
-            {bill.payment_status || 'Pending'}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/finance/other-bills')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => navigate(`/finance/other-bills/${bill.id}/edit`)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Edit className="w-4 h-4" />
-            Edit
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {bill.description || 'Other Bill'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {bill.invoice_number && (
+                <span className="inline-flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  {bill.invoice_number}
+                </span>
+              )}
+            </p>
+          </div>
         </div>
+        <Link
+          to={`/finance/other-bills/${bill.id}/edit`}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          <Edit className="w-4 h-4" />
+          Edit
+        </Link>
       </div>
 
+      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Details */}
+        {/* Left Column - Basic Info & Stock */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Basic Information */}
+          {/* Basic Info Card */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Basic Information
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <DetailField label="Supplier" value={bill.supplier_name || bill.vendor_name} />
-              <DetailField label="Bill Date" value={bill.bill_date ? dateFormatSTD(bill.bill_date) : '-'} />
-              <DetailField label="Invoice Number" value={bill.invoice_number} />
-              <DetailField label="Related To" value={bill.related_to} />
-              <DetailField label="GST Number" value={bill.gst_number} />
-              <DetailField label="PAN Number" value={bill.pan_number} />
-              <DetailField label="Description" value={bill.description} className="md:col-span-3" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Basic Info</h2>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm text-muted-foreground">Name</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.description || '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Description</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.description || '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Supplier/Vendor</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.suplier_name || bill.vendor_name || '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Invoice Number</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.invoice_number || '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Site ID</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.vendor_id || '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Created By ID</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.created_by_id || bill.created_by_name || '-'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Amount Details */}
+          {/* Financial Details Card */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              Amount Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <DetailField label="Base Amount" value={formatCurrency(bill.base_amount)} />
-              <DetailField label="Deduction" value={formatCurrency(bill.deduction)} />
-              <DetailField label="Deduction Remarks" value={bill.deduction_remarks} />
-              <DetailField label="Amount" value={formatCurrency(bill.amount)} />
-              <DetailField label="TDS Rate" value={`${bill.tds_rate || bill.tds_percentage || 0}%`} />
-              <DetailField label="TDS Amount" value={formatCurrency(bill.tds_amount)} />
-              <DetailField label="Retention (%)" value={`${bill.retention_percentage || 0}%`} />
-              <DetailField label="Retention Amount" value={formatCurrency(bill.retention_amount)} />
-              <DetailField label="Additional Expenses" value={formatCurrency(bill.additional_expenses)} />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-purple-500" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Financial Details</h2>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm text-muted-foreground">Total Amount</label>
+                <p className="text-foreground font-bold text-lg mt-1">
+                  {formatCurrency(bill.total_amount)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Payable Amount</label>
+                <p className="text-foreground font-bold text-lg mt-1">
+                  {formatCurrency(bill.payable_amount)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Deduction</label>
+                <p className="text-foreground font-medium mt-1">
+                  {formatCurrency(bill.deduction)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">TDS Percentage</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.tds_percentage ?? '-'}%
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">TDS Amount</label>
+                <p className="text-foreground font-medium mt-1">
+                  {formatCurrency(bill.tds_amount)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Retention Percentage</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.retention_percentage ?? '-'}%
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Retention Amount</label>
+                <p className="text-foreground font-medium mt-1">
+                  {formatCurrency(bill.retention_amount)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Amount Paid</label>
+                <p className="text-foreground font-medium mt-1">
+                  {formatCurrency(bill.amount_paid)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Balance Amount</label>
+                <p className="text-foreground font-medium mt-1">
+                  {formatCurrency(bill.balance_amount)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Payment Tenure</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.payment_tenure ?? '-'} days
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Tax Details */}
+          {/* Tax & Legal Information Card */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Tax Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <DetailField label="CGST Rate" value={`${bill.cgst_rate || 0}%`} />
-              <DetailField label="CGST Amount" value={formatCurrency(bill.cgst_amount)} />
-              <DetailField label="SGST Rate" value={`${bill.sgst_rate || 0}%`} />
-              <DetailField label="SGST Amount" value={formatCurrency(bill.sgst_amount)} />
-              <DetailField label="IGST Rate" value={`${bill.igst_rate || 0}%`} />
-              <DetailField label="IGST Amount" value={formatCurrency(bill.igst_amount)} />
-              <DetailField label="TCS Rate" value={`${bill.tcs_rate || 0}%`} />
-              <DetailField label="TCS Amount" value={formatCurrency(bill.tcs_amount)} />
-              <DetailField label="Tax Amount" value={formatCurrency(bill.tax_amount)} />
+            <h2 className="text-lg font-semibold text-foreground mb-6">
+              Tax & Legal Information
+            </h2>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm text-muted-foreground">GST Number</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.gst_number || '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">PAN Number</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.pan_number || '-'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar */}
+        {/* Right Column - Status & Dates */}
         <div className="space-y-6">
-          {/* Payment Summary */}
+          {/* Status Card */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Payment Summary</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-6">Payment Status</h2>
+
             <div className="space-y-4">
-              <div className="flex items-center justify-between py-2 border-b border-border">
-                <span className="text-sm text-muted-foreground">Total Amount</span>
-                <span className="text-lg font-bold text-foreground">{formatCurrency(bill.total_amount)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-border">
-                <span className="text-sm text-muted-foreground">Payable Amount</span>
-                <span className="text-lg font-semibold text-primary">{formatCurrency(bill.payable_amount)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-border">
-                <span className="text-sm text-muted-foreground">Amount Paid</span>
-                <span className="text-lg font-semibold text-green-600">{formatCurrency(bill.amount_paid)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Balance Amount</span>
-                <span className="text-lg font-semibold text-red-600">{formatCurrency(bill.balance_amount)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-t border-border">
-                <span className="text-sm text-muted-foreground">Payment Tenure</span>
-                <span className="text-sm font-medium text-foreground">{bill.payment_tenure || 0} days</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Audit Info */}
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Audit Information
-            </h2>
-            <div className="space-y-3">
-              <DetailField label="Last Approved By" value={bill.last_approved_by} />
-              <DetailField label="Created By" value={bill.created_by_name} />
-              <DetailField label="Created On" value={bill.created_at ? dateFormatSTD(bill.created_at) : '-'} />
-            </div>
-          </div>
-
-          {/* Attachments */}
-          {bill.attachments && bill.attachments.length > 0 && (
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <File className="w-5 h-5 text-primary" />
-                Attachments
-              </h2>
-              <div className="space-y-2">
-                {bill.attachments.map((attachment, index) => (
-                  <a
-                    key={index}
-                    href={attachment.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors text-sm text-primary hover:underline"
+              <div>
+                <label className="text-sm text-muted-foreground">Status</label>
+                <div className="mt-2">
+                  <span
+                    className={`inline-flex px-3 py-1.5 text-sm font-medium rounded-full border ${getStatusColor(
+                      bill.payment_status
+                    )}`}
                   >
-                    <File className="w-4 h-4" />
-                    {attachment.name || `Attachment ${index + 1}`}
-                  </a>
-                ))}
+                    {bill.payment_status || 'Pending'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Last Approved By</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.last_approved_by || '-'}
+                </p>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Dates Card */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Important Dates</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground">Bill Date</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.bill_date ? dateFormatSTD(bill.bill_date) : '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Created At</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.created_at ? dateFormatSTD(bill.created_at) : '-'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground">Updated At</label>
+                <p className="text-foreground font-medium mt-1">
+                  {bill.updated_at ? dateFormatSTD(bill.updated_at) : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats Card */}
+          <div className="bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Quick Stats</h2>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Payment Progress</span>
+                <span className="text-sm font-bold text-foreground">
+                  {bill.total_amount
+                    ? Math.round(((bill.amount_paid || 0) / bill.total_amount) * 100)
+                    : 0}%
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{
+                    width: `${
+                      bill.total_amount
+                        ? Math.min(
+                            100,
+                            ((bill.amount_paid || 0) / bill.total_amount) * 100
+                          )
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

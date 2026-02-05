@@ -563,6 +563,8 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
   // Check if we're on the setup page
   const isSetupPage = location.pathname.startsWith('/setup');
+  // check if we aree on dashboard page
+   const isDashboardpage = location.pathname.startsWith('/Dashboard');
 
   return (
     <header className="sticky top-0 z-50 bg-card border-b border-border">
@@ -751,7 +753,10 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
             </button>
           ))}
         </nav>
+      
 
+
+      
         {/* Collapse/Expand Button for Level 1 */}
         {currentModule && (
           <button
@@ -854,6 +859,11 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
       </>
       )}
+
+      {/* Hide all navigation when on Dashboard page */}
+      
+
+
       {/* Debug Info */}
       <div className="hidden debug-info p-2 text-xs text-muted-foreground border-t">
       </div>
