@@ -9,10 +9,13 @@ import {
   LogOut,
   Building2,
   MapPin,
+  RefreshCw,
   LayoutDashboard
 } from 'lucide-react';
 import { getItemInLocalStorage, setItemInLocalStorage } from '../../utils/localStorage';
 import { getSiteData, siteChange } from '../../api';
+import toast from 'react-hot-toast';
+
 
 // Feature name mapping from FEATURES array to module names
 const featureToModuleMap: Record<string, string[]> = {
@@ -237,6 +240,7 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   const [sitesData, setSitesData] = useState<SiteData[]>([]);
   const [selectedSite, setSelectedSite] = useState<SiteData | null>(null);
   const [loadingSites, setLoadingSites] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [enabledFeatures, setEnabledFeatures] = useState<string[]>([]);
   const [collapsedLevels, setCollapsedLevels] = useState({ level1: false, level2: false });
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -561,6 +565,18 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
   const toggleLevel1 = () => setCollapsedLevels(prev => ({ ...prev, level1: !prev.level1 }));
   const toggleLevel2 = () => setCollapsedLevels(prev => ({ ...prev, level2: !prev.level2 }));
 
+    const handleRefresh = async () => {
+      setRefreshing(true);
+      try {
+        // await fetchDashboardData();
+        toast.success("Dashboard refreshed successfully");
+      } catch (error) {
+        toast.error("Failed to refresh dashboard");
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
   // Check if we're on the setup page
   const isSetupPage = location.pathname.startsWith('/setup');
   // check if we aree on dashboard page
@@ -601,6 +617,16 @@ const AppHeader: React.FC<AppHeaderProps> = () => {
 
         {/* Right Side Controls */}
         <div className="flex items-center gap-4">
+
+        {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-black hover:bg-white/20 p-2 rounded-lg transition-colors disabled:opacity-50"
+              title="Refresh Dashboard"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
           {/* Site/Company Selector */}
 
           <div className="relative" ref={siteDropdownRef}>

@@ -65,7 +65,7 @@ const TicketSetupTab: React.FC = () => {
   return (
     <div className="w-full">
       {/* Sub-tab Navigation - Full Width with Equal Distribution */}
-      <div className="w-full bg-white border-b border-gray-200">
+      <div className="w-full bg-white border-b border-gray-200 ">
         <div className="w-full flex">
           <button
             onClick={() => setActiveSubTab('category')}
@@ -101,7 +101,7 @@ const TicketSetupTab: React.FC = () => {
       </div>
 
       {/* Sub-tab Content */}
-      <div className="w-full">
+      <div className="w-full -mx-6">
         {activeSubTab === 'category' && <TicketCategoryType />}
         {activeSubTab === 'status' && <TicketStatus />}
         {activeSubTab === 'operational' && <TicketOperationalDays />}

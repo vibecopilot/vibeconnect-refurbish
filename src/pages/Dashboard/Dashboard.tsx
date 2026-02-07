@@ -1671,7 +1671,7 @@ const Dashboard = () => {
       throw error;
     }
   };
-
+{}
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -1832,7 +1832,7 @@ const Dashboard = () => {
 
       <div className="w-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100 min-h-screen">
         {/* Header with Site Selector */}
-        <header
+        {/* <header
           style={{ background: themeColor }}
           className="w-full h-12 rounded-md my-1 flex justify-between items-center px-6"
         >
@@ -1840,10 +1840,10 @@ const Dashboard = () => {
             <h1 className="text-white text-xl font-semibold">
               Vibe Connect
             </h1>
-          </nav>
+          </nav> */}
 
-          <div className="flex items-center gap-4">
-            {/* Refresh Button */}
+          {/* <div className="flex items-center gap-4">
+            Refresh Button
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -1851,10 +1851,10 @@ const Dashboard = () => {
               title="Refresh Dashboard"
             >
               <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+            </button> */}
 
             {/* Site Selector */}
-            <div className="relative" ref={dropdownRef}>
+            {/* <div className="relative" ref={dropdownRef}>
               <div
                 onClick={toggleSite}
                 className="cursor-pointer flex items-center gap-2 font-medium p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
@@ -1884,7 +1884,7 @@ const Dashboard = () => {
               )}
             </div>
           </div>
-        </header>
+        </header> */}
 
         {/* Main Dashboard Content */}
         <div className="w-full px-6 py-4">
